@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "debug": "node --inspect-brk ./bin/cli.js",
     "lint": "biome check",
     "fmt": "biome format",
     "watch": "tsc -w"
