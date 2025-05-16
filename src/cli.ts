@@ -1,5 +1,5 @@
 import { Cli } from 'clipanion'
-import { BuildCommand } from './Build'
+import { BuildCommand, BuildDockerCommand } from './Build.js'
 
 const [node, app, ...args] = process.argv
 
@@ -10,4 +10,5 @@ const cli = new Cli({
 })
 
 cli.register(BuildCommand)
+cli.register(BuildDockerCommand)
 cli.runExit(args)

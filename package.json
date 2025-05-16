@@ -8,6 +8,7 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/node": "^22.15.18",
+    "@types/shelljs": "^0",
     "typescript": "^5.8.3"
   },
   "scripts": {
@@ -18,8 +19,11 @@
     "watch": "tsc -w"
   },
   "dependencies": {
+    "chalk": "^5.4.1",
     "clipanion": "^4.0.0-rc.4",
     "dotenv": "^16.5.0",
-    "execa": "^9.5.3"
+    "execa": "^9.5.3",
+    "shelljs": "^0.10.0",
+    "typanion": "^3.14.0"
   }
 }
