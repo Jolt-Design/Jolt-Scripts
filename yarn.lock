@@ -12,6 +12,7 @@ __metadata:
     "@types/node": "npm:^22.15.18"
     biome: "npm:^0.3.3"
     clipanion: "npm:^4.0.0-rc.4"
+    dotenv: "npm:^16.5.0"
     typescript: "npm:^5.8.3"
   bin:
     jolt: ./bin/cli.js
@@ -260,6 +261,13 @@ __metadata:
   version: 1.0.0
   resolution: "delayed-stream@npm:1.0.0"
   checksum: 10c0/d758899da03392e6712f042bec80aa293bbe9e9ff1b2634baae6a360113e708b91326594c8a486d475c69d6259afb7efacdc3537bfcda1c6c648e390ce601b19
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.5.0":
+  version: 16.5.0
+  resolution: "dotenv@npm:16.5.0"
+  checksum: 10c0/5bc94c919fbd955bf0ba44d33922a1e93d1078e64a1db5c30faeded1d996e7a83c55332cb8ea4fae5a9ca4d0be44cbceb95c5811e70f9f095298df09d1997dd9
   languageName: node
   linkType: hard
 
