@@ -4,6 +4,7 @@
   "bin": {
     "jolt": "./bin/cli.js"
   },
+  "type": "module",
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/node": "^22.15.18",
