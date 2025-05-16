@@ -16,6 +16,8 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
   return parsed
 }
 
+export const DEFAULT_AWS_REGION = 'eu-west-1'
+
 export class Config {
   private config: InternalConfig
 
@@ -99,6 +101,10 @@ export class Config {
         throw e
       }
     }
+  }
+
+  awsRegion(): string {
+    return process.env.AWS_REGION ?? DEFAULT_AWS_REGION
   }
 }
 
