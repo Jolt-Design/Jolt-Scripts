@@ -1,16 +1,8 @@
+import { readFile } from 'node:fs/promises'
 import dotenv from 'dotenv'
-import type { PathLike } from 'node:fs'
-import { stat, readFile } from 'node:fs/promises'
+import { constToCamel, fileExists } from './utils.js'
 
 type InternalConfig = Record<string, string>
-
-async function fileExists(path: PathLike): Promise<boolean> {
-  try {
-    return (await stat(path)).isFile()
-  } catch (e) {
-    return false
-  }
-}
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -20,14 +12,6 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
   }
 
   return parsed
-}
-
-function constToCamel(key: string): string {
-  let parts = key.split('_')
-  parts = parts.map((x) => x.toLocaleLowerCase().replace(/^./, (y) => y.toLocaleUpperCase()))
-  parts[0] = parts[0].toLocaleLowerCase()
-
-  return parts.join('')
 }
 
 class Config {
