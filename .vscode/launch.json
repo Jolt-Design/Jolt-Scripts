@@ -9,24 +9,15 @@
       "request": "launch",
       "name": "Launch Program",
       "cwd": "${workspaceFolder}",
-      "args": [
-        "build"
-      ],
+      "args": ["build"],
       "autoAttachChildProcesses": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
+      "skipFiles": ["<node_internals>/**"],
       "runtimeExecutable": "yarn",
-      "runtimeArgs": [
-        "run",
-        "debug"
-      ],
+      "runtimeArgs": ["run", "debug"],
       "smartStep": true,
       "program": "${workspaceFolder}/bin/cli.js",
       "sourceMaps": true,
-      "outFiles": [
-        "${workspaceFolder}/bin/**/*.js"
-      ]
+      "outFiles": ["${workspaceFolder}/bin/**/*.js"]
     }
   ]
 }

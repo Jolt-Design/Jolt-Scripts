@@ -5,8 +5,8 @@
     "jolt": "./bin/cli.js"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/node": "^22.15.18",
-    "biome": "^0.3.3",
     "typescript": "^5.8.3"
   },
   "scripts": {
