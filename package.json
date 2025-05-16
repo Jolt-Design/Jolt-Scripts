@@ -12,7 +12,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "biome check",
-    "fmt": "biome format"
+    "fmt": "biome format",
+    "watch": "tsc -w"
   },
   "dependencies": {
     "clipanion": "^4.0.0-rc.4",
