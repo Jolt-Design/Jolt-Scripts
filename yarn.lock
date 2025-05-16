@@ -5,16 +5,16 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@joltdesign/deploy@workspace:.":
+"@joltdesign/scripts@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@joltdesign/deploy@workspace:."
+  resolution: "@joltdesign/scripts@workspace:."
   dependencies:
     "@types/node": "npm:^22.15.18"
     biome: "npm:^0.3.3"
     clipanion: "npm:^4.0.0-rc.4"
     typescript: "npm:^5.8.3"
   bin:
-    deploy: ./bin/cli.js
+    jolt: ./bin/cli.js
   languageName: unknown
   linkType: soft
 

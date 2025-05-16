@@ -1,1 +1,1 @@
-# jolt-deploy
+# jolt-scripts

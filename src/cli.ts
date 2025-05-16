@@ -4,8 +4,8 @@ import { BuildCommand } from './Build'
 const [node, app, ...args] = process.argv
 
 const cli = new Cli({
-  binaryLabel: 'Jolt Deploy',
-  binaryName: '@joltdesign/deploy',
+  binaryLabel: 'Jolt Scripts',
+  binaryName: 'jolt',
   binaryVersion: '1.0.0',
 })
 
