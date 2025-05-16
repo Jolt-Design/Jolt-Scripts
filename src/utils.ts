@@ -24,7 +24,7 @@ export function constToCamel(key: string): string {
   return parts.join('')
 }
 
-export async function execC(command: string, args: string[], options: ExecCOptions = {}) {
+export async function execC(command: string, args: string[] = [], options: ExecCOptions = {}) {
   const allOptions = {
     shell: true,
     ...options,
