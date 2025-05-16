@@ -14,7 +14,7 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
   return parsed
 }
 
-class Config {
+export class Config {
   private config: InternalConfig
 
   constructor(config: InternalConfig = {}) {
