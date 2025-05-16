@@ -44,7 +44,7 @@ export class BuildDockerCommand extends BuildCommand {
     const config = await getConfig()
     const imageName = config.get('imageName')
     const imageType = this.dev ? 'dev' : this.prod ? 'prod' : 'unknown'
-    const dockerCommand = process.env.DOCKER_COMMAND ?? config.get('dockerCommand') ?? 'docker'
+    const dockerCommand = config.command('docker')
 
     if (!imageName) {
       stderr.write(chalk.red('Image name must be configured!\n'))

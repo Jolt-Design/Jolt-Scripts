@@ -21,6 +21,64 @@ export class Config {
     this.config = config
   }
 
+  command(name: string): string {
+    let envVar: string
+    let def: string
+
+    switch (name) {
+      case 'docker':
+        def = 'docker'
+        envVar = 'DOCKER_COMMAND'
+        break
+      case 'compose':
+      case 'docker compose':
+      case 'docker-compose':
+      case 'docker_compose':
+        def = 'docker compose'
+        envVar = 'COMPOSE_COMMAND'
+        break
+      case 'tofu':
+      case 'terraform':
+        def = which('tofu') ? 'tofu' : 'terraform'
+        envVar = 'TERRAFORM_COMMAND'
+        break
+      case 'node':
+        def = 'node'
+        envVar = 'NODE_COMMAND'
+        break
+      case 'yarn':
+        def = 'yarn'
+        envVar = 'YARN_COMMAND'
+        break
+      case 'aws':
+        def = 'aws'
+        envVar = 'AWS_COMMAND'
+        break
+      case 'ssh':
+        def = 'ssh'
+        envVar = 'SSH_COMMAND'
+        break
+      default:
+        return name
+    }
+
+    const toTry = [`JOLT_${envVar}`, envVar]
+
+    for (const varName of toTry) {
+      if (process.env[varName]) {
+        return process.env[varName]
+      }
+    }
+
+    const configuredValue = this.get(constToCamel(envVar))
+
+    if (configuredValue) {
+      return configuredValue
+    }
+
+    return def
+  }
+
   get(key: string): string | undefined {
     return this.config[key]
   }
