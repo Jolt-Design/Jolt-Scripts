@@ -1,5 +1,6 @@
 import { Cli } from 'clipanion'
 import { BuildCommand, BuildDockerCommand } from './Build.js'
+import { ECRLoginCommand } from './ECR.js'
 
 const [node, app, ...args] = process.argv
 
@@ -11,4 +12,5 @@ const cli = new Cli({
 
 cli.register(BuildCommand)
 cli.register(BuildDockerCommand)
+cli.register(ECRLoginCommand)
 cli.runExit(args)
