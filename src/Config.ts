@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import dotenv from 'dotenv'
-import { constToCamel, fileExists } from './utils.js'
+import { constToCamel, execC, fileExists } from './utils.js'
+import shelljs from 'shelljs'
+const { which } = shelljs
 
 type InternalConfig = Record<string, string>
 
@@ -81,6 +83,22 @@ export class Config {
 
   get(key: string): string | undefined {
     return this.config[key]
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: the TF var could be anything
+  async tfVar(key: string, throwOnFail = false): Promise<any> {
+    try {
+      const result = await execC(this.command('tofu'), ['output', '-json', key])
+      const output = result.stdout?.toString()
+
+      if (output !== undefined) {
+        return JSON.parse(output)
+      }
+    } catch (e) {
+      if (throwOnFail) {
+        throw e
+      }
+    }
   }
 }
 
