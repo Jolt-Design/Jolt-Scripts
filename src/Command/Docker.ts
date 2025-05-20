@@ -40,7 +40,7 @@ export class DockerBuildCommand extends DockerCommand {
 
     stdout.write(chalk.blue(`🐳 Building image ${imageName} for ${imageType} using ${dockerCommand}...\n`))
 
-    const args = this.buildArgs()
+    const args = await this.buildArgs()
     const command = [dockerCommand, ...args].join(' ')
     stdout.write(`Running command: ${command}\n`)
 
@@ -49,13 +49,12 @@ export class DockerBuildCommand extends DockerCommand {
     return result.exitCode
   }
 
-  buildArgs(): string[] {
+  async buildArgs(): Promise<string[]> {
     const { config, dev } = this
-    const imageName = config.get('imageName')
+    const imageName = await config.getDockerImageName(dev)
     const platform = config.get('buildPlatform')
     const context = config.get('buildContext')
     const dockerFile = config.get('dockerFile')
-    const buildSuffix = dev ? '-dev' : ''
     const buildArgs = dev ? '--build-arg=DEVBUILD=1' : ''
 
     return [
@@ -63,7 +62,7 @@ export class DockerBuildCommand extends DockerCommand {
       'build',
       platform && `--platform=${platform}`,
       dockerFile && `-f ${dockerFile}`,
-      `-t ${imageName}${buildSuffix}`,
+      `-t ${imageName}`,
       buildArgs,
       context ?? '.',
     ]
