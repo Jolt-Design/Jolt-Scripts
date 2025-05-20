@@ -212,6 +212,23 @@ export class Config {
     }
   }
 
+  async getComposeConfig(throwOnFail = false) {
+    try {
+      const result = await execC(this.command('docker compose'), ['config', '--format=json'])
+      const output = result.stdout?.toString()
+
+      if (output !== undefined) {
+        return JSON.parse(output)
+      }
+    } catch (e) {
+      if (throwOnFail) {
+        throw e
+      }
+
+      return undefined
+    }
+  }
+
   asJson() {
     return JSON.stringify(this.config)
   }
