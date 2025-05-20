@@ -42,7 +42,7 @@ export class BuildDockerCommand extends BuildCommand {
       context: { stdout, stderr },
     } = this
     const config = await getConfig()
-    const imageName = config.get('imageName')
+    const imageName = await config.getDockerImageName(this.dev)
     const imageType = this.dev ? 'dev' : this.prod ? 'prod' : 'unknown'
     const dockerCommand = config.command('docker')
 

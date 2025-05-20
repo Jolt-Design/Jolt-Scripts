@@ -24,7 +24,7 @@ export class TagCommand extends Command {
     this.config = await getConfig()
 
     const dockerCommand = this.config.command('docker')
-    const imageName = await this.getImageName()
+    const imageName = await this.config.getDockerImageName(this.dev)
     const remoteRepo = await this.getRemoteRepo()
     const localTag = 'latest'
     const remoteTag = 'latest'
@@ -49,45 +49,6 @@ export class TagCommand extends Command {
     const result = await execC(dockerCommand, args, { context })
 
     return result.exitCode
-  }
-
-  async getImageName(): Promise<string | undefined> {
-    const { config } = this
-    const isDev = this.dev
-
-    if (isDev) {
-      if (config.has('devImageName')) {
-        return config.get('devImageName')
-      }
-
-      const tfDevImageName = await config.tfVar('dev_docker_image_name')
-
-      if (tfDevImageName) {
-        return tfDevImageName
-      }
-
-      if (config.has('imageName')) {
-        return `${config.get('imageName')}-dev`
-      }
-
-      const tfImageName = await config.tfVar('docker_image_name')
-
-      if (tfImageName) {
-        return `${tfImageName}-dev`
-      }
-
-      return undefined
-    }
-
-    if (config.has('imageName')) {
-      return config.get('imageName')
-    }
-
-    const tfImageName = await config.tfVar('docker_image_name')
-
-    if (tfImageName) {
-      return tfImageName
-    }
   }
 
   async getRemoteRepo(): Promise<string | undefined> {

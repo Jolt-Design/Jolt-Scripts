@@ -110,6 +110,42 @@ export class Config {
   awsRegion(): string {
     return process.env.AWS_REGION ?? DEFAULT_AWS_REGION
   }
+
+  async getDockerImageName(isDev = false): Promise<string | undefined> {
+    if (isDev) {
+      if (this.has('devImageName')) {
+        return this.get('devImageName')
+      }
+
+      const tfDevImageName = await this.tfVar('dev_docker_image_name')
+
+      if (tfDevImageName) {
+        return tfDevImageName
+      }
+
+      if (this.has('imageName')) {
+        return `${this.get('imageName')}-dev`
+      }
+
+      const tfImageName = await this.tfVar('docker_image_name')
+
+      if (tfImageName) {
+        return `${tfImageName}-dev`
+      }
+
+      return undefined
+    }
+
+    if (this.has('imageName')) {
+      return this.get('imageName')
+    }
+
+    const tfImageName = await this.tfVar('docker_image_name')
+
+    if (tfImageName) {
+      return tfImageName
+    }
+  }
 }
 
 export default async function getConfig() {
