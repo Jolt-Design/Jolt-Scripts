@@ -39,7 +39,7 @@ export class BuildCommand extends Command {
 }
 
 export class BuildDockerCommand extends BuildCommand {
-  static paths = [['build', 'docker']]
+  static paths = [['docker', 'build']]
   static schema = [t.hasMutuallyExclusiveKeys(['--dev', '--prod'])]
 
   async execute(): Promise<number | undefined> {

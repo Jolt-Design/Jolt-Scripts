@@ -8,7 +8,7 @@ import { execC } from './utils.js'
 const { which } = shelljs
 
 export class TagCommand extends Command {
-  static paths = [['tag'], ['tag', 'docker']]
+  static paths = [['docker', 'tag']]
   static schema = [t.hasMutuallyExclusiveKeys(['--dev', '--prod'])]
 
   dev = Option.Boolean('--dev', false)

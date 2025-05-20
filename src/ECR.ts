@@ -4,7 +4,7 @@ import getConfig from './Config.js'
 import { execa, ExecaError } from 'execa'
 
 export class ECRLoginCommand extends Command {
-  static paths = [['login'], ['ecr', 'login']]
+  static paths = [['docker', 'login']]
 
   async execute(): Promise<number | undefined> {
     const config = await getConfig()
