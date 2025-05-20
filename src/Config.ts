@@ -191,6 +191,7 @@ export class Config {
   }
 }
 
+const logo = chalk.magentaBright('⚡')
 let cachedConfig: Config
 let configPath: string
 
@@ -233,7 +234,7 @@ export class ConfigCommand extends Command {
     const config = await getConfig()
 
     if (format === undefined || format === ConfigCommandFormat.Pretty) {
-      stdout.write(chalk.bold.magenta(`⚡${this.cli.binaryLabel} Config\n\n`))
+      stdout.write(chalk.bold.whiteBright(`${logo} ${this.cli.binaryLabel} Config\n\n`))
 
       await this.listCommands()
       stdout.write('\n')
