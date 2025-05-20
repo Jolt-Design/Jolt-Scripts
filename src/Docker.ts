@@ -1,12 +1,12 @@
 import chalk from 'chalk'
-import { Command, Option } from 'clipanion'
+import { Option } from 'clipanion'
 import { execa, ExecaError } from 'execa'
 import shelljs from 'shelljs'
-import getConfig, { type Config } from './Config.js'
+import JoltCommand from './JoltCommand.js'
 import { execC } from './utils.js'
 const { which } = shelljs
 
-export abstract class DockerCommand extends Command {
+export abstract class DockerCommand extends JoltCommand {
   dev = Option.Boolean('--dev', false)
   prod = !this.dev
 }
@@ -14,14 +14,14 @@ export abstract class DockerCommand extends Command {
 export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
-  async execute(): Promise<number | undefined> {
+  async command(): Promise<number | undefined> {
     const {
+      config,
       context,
       context: { stdout, stderr },
       dev,
       prod,
     } = this
-    const config = await getConfig()
     const imageName = await config.getDockerImageName(dev)
     const imageType = dev ? 'dev' : prod ? 'prod' : 'unknown'
     const dockerCommand = config.command('docker')
@@ -38,7 +38,7 @@ export class DockerBuildCommand extends DockerCommand {
 
     stdout.write(chalk.blue(`🐳 Building image ${imageName} for ${imageType} using ${dockerCommand}...\n`))
 
-    const args = this.buildArgs(config)
+    const args = this.buildArgs()
     const command = [dockerCommand, ...args].join(' ')
     stdout.write(`Running command: ${command}\n`)
 
@@ -47,8 +47,8 @@ export class DockerBuildCommand extends DockerCommand {
     return result.exitCode
   }
 
-  buildArgs(config: Config): string[] {
-    const { dev } = this
+  buildArgs(): string[] {
+    const { config, dev } = this
     const imageName = config.get('imageName')
     const platform = config.get('buildPlatform')
     const context = config.get('buildContext')
@@ -73,9 +73,9 @@ export class DockerBuildCommand extends DockerCommand {
 export class DockerLoginCommand extends DockerCommand {
   static paths = [['docker', 'login']]
 
-  async execute(): Promise<number | undefined> {
-    const config = await getConfig()
+  async command(): Promise<number | undefined> {
     const {
+      config,
       context: { stdout, stderr },
     } = this
 
@@ -107,13 +107,13 @@ export class DockerLoginCommand extends DockerCommand {
 export class DockerTagCommand extends DockerCommand {
   static paths = [['docker', 'tag']]
 
-  async execute(): Promise<number | undefined> {
+  async command(): Promise<number | undefined> {
     const {
+      config,
       dev,
       context,
       context: { stdout, stderr },
     } = this
-    const config = await getConfig()
     const dockerCommand = config.command('docker')
     const imageName = await config.getDockerImageName(dev)
     const remoteRepo = await config.getRemoteRepo(dev)

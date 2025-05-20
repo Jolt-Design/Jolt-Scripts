@@ -1,17 +1,17 @@
 import chalk from 'chalk'
-import { Command, Option } from 'clipanion'
-import getConfig from './Config.js'
+import { Option } from 'clipanion'
 import { execC } from './utils.js'
 import { userInfo } from 'node:os'
+import JoltCommand from './JoltCommand.js'
 
-export class WPCommand extends Command {
+export class WPCommand extends JoltCommand {
   static paths = [['wp'], ['wp-cli']]
 
   wpArgs = Option.Proxy()
 
-  async execute(): Promise<number | undefined> {
-    const config = await getConfig()
+  async command(): Promise<number | undefined> {
     const {
+      config,
       context,
       context: { stderr },
     } = this
@@ -41,7 +41,7 @@ export class WPCommand extends Command {
   }
 
   async getContainerName(): Promise<string | undefined> {
-    const config = await getConfig()
+    const { config } = this
 
     if (config.has('wpCliContainer')) {
       return config.get('wpCliContainer')
@@ -61,7 +61,7 @@ export class WPCommand extends Command {
   }
 
   async getContainerProfile(container: string): Promise<string | undefined> {
-    const config = await getConfig()
+    const { config } = this
 
     if (config.has('wpCliContainerProfile')) {
       return config.get('wpCliContainerProfile')

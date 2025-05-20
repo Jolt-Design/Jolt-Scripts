@@ -1,22 +1,23 @@
 import chalk from 'chalk'
-import { Command, Option } from 'clipanion'
-import getConfig from './Config.js'
+import { Option } from 'clipanion'
 import { DockerBuildCommand } from './Docker.js'
+import JoltCommand from './JoltCommand.js'
 
-export class BuildCommand extends Command {
+export class BuildCommand extends JoltCommand {
   static paths = [['build']]
 
   dev = Option.Boolean('--dev', false)
   prod = Option.Boolean('--prod', true)
 
-  async execute(): Promise<number | undefined> {
-    const config = await getConfig()
-    const imageName = config.get('imageName')
+  async command(): Promise<number | undefined> {
     const {
+      config,
       context,
       context: { stdout, stderr },
       dev,
     } = this
+
+    const imageName = config.get('imageName')
 
     if (imageName) {
       stdout.write(
