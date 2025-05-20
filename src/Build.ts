@@ -17,14 +17,20 @@ export class BuildCommand extends Command {
   async execute(): Promise<number | undefined> {
     const config = await getConfig()
     const imageName = config.get('imageName')
-    const { stdout, stderr } = this.context
+    const {
+      context,
+      context: { stdout, stderr },
+      dev,
+    } = this
 
     if (imageName) {
       stdout.write(
         chalk.yellow(`Found a configured image name (${imageName}) - assuming you wanted to build Docker.\n\n`),
       )
 
-      return await this.cli.run(['build', 'docker'])
+      const args = ['build', 'docker']
+      args.push(dev ? '--dev' : '--prod')
+      return await this.cli.run(args, context)
     }
 
     stderr.write(this.cli.usage(BuildDockerCommand))
