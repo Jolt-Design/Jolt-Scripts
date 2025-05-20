@@ -219,7 +219,7 @@ export class Config {
     }
 
     try {
-      const result = await execC(this.command('docker compose'), ['config', '--format=json'])
+      const result = await execC(this.command('docker compose'), ["--profile='*'", 'config', '--format=json'])
       const output = result.stdout?.toString()
 
       if (output !== undefined) {
