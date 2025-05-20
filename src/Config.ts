@@ -19,7 +19,13 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
 export const DEFAULT_AWS_REGION = 'eu-west-1'
 
 export class Config {
-  private config: InternalConfig
+  private config: InternalConfig;
+
+  *[Symbol.iterator](): IterableIterator<[string, string]> {
+    for (const entry of Object.entries(this.config)) {
+      yield entry
+    }
+  }
 
   constructor(config: InternalConfig = {}) {
     this.config = config
