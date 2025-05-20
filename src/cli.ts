@@ -1,7 +1,7 @@
 import { Cli } from 'clipanion'
 import { BuildCommand } from './Command/Build.js'
 import { ConfigCommand } from './Command/Config.js'
-import { DockerBuildCommand, DockerLoginCommand, DockerTagCommand } from './Command/Docker.js'
+import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
 import { WPCommand } from './Command/WP.js'
 
 const [node, app, ...args] = process.argv
@@ -17,5 +17,6 @@ cli.register(ConfigCommand)
 cli.register(DockerBuildCommand)
 cli.register(DockerLoginCommand)
 cli.register(DockerTagCommand)
+cli.register(DockerPushCommand)
 cli.register(WPCommand)
 cli.runExit(args)

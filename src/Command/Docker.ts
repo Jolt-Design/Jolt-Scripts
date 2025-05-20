@@ -145,3 +145,40 @@ export class DockerTagCommand extends DockerCommand {
     return result.exitCode
   }
 }
+
+export class DockerPushCommand extends DockerCommand {
+  static paths = [['docker', 'push']]
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      dev,
+      context,
+      context: { stdout, stderr },
+    } = this
+    const dockerCommand = config.command('docker')
+    const remoteRepo = await config.getRemoteRepo(dev)
+    const remoteTag = 'latest'
+
+    const args = ['push', `${remoteRepo}:${remoteTag}`]
+
+    if (!remoteRepo) {
+      stderr.write(chalk.red('Remote repo must be configured!\n'))
+      return 1
+    }
+
+    if (!which(dockerCommand)) {
+      stderr.write(chalk.red(`Could not find command ${dockerCommand}!\n`))
+      return 2
+    }
+
+    stdout.write(chalk.blue(`🐳 Pushing image ${remoteRepo}:${remoteTag}...\n`))
+
+    // const command = [dockerCommand, ...args].join(' ')
+    // stdout.write(`Running command: ${command}\n`)
+
+    const result = await execC(dockerCommand, args, { context })
+
+    return result.exitCode
+  }
+}
