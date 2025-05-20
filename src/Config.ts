@@ -1,8 +1,8 @@
 import chalk from 'chalk'
 import { Command, Option } from 'clipanion'
 import dotenv from 'dotenv'
-import type { PathLike } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { stderr } from 'node:process'
 import shelljs from 'shelljs'
 import * as t from 'typanion'
@@ -192,7 +192,7 @@ export class Config {
 }
 
 let cachedConfig: Config
-let configPath: PathLike
+let configPath: string
 
 export default async function getConfig() {
   if (!cachedConfig) {
@@ -295,7 +295,8 @@ export class ConfigCommand extends Command {
       context: { stdout },
     } = this
 
-    stdout.write(chalk.bold.blue('Config:\n'))
+    const sourceString = configPath ? chalk.dim(`[Source file: ${path.resolve(configPath)}]`) : ''
+    stdout.write(chalk.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
       stdout.write(chalk.bold(`${key}: `))
