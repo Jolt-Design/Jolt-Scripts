@@ -1,11 +1,8 @@
 import chalk from 'chalk'
-import { Command, Option } from 'clipanion'
 import dotenv from 'dotenv'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { stderr } from 'node:process'
 import shelljs from 'shelljs'
-import * as t from 'typanion'
 import { constToCamel, execC, fileExists } from './utils.js'
 const { which } = shelljs
 
@@ -15,11 +12,6 @@ type CommandOverride = {
   command: string
   source: string
   sourceType: string
-}
-
-enum ConfigCommandFormat {
-  Pretty = 'pretty',
-  Json = 'json',
 }
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
@@ -36,7 +28,12 @@ export const DEFAULT_AWS_REGION = 'eu-west-1'
 
 export class Config {
   private composeConfig: ComposeConfig | false | undefined
-  private config: InternalConfig;
+  private config: InternalConfig
+  private _configPath?: string
+
+  get configPath() {
+    return this._configPath
+  }
 
   *[Symbol.iterator](): IterableIterator<[string, string]> {
     for (const entry of Object.entries(this.config)) {
@@ -44,8 +41,12 @@ export class Config {
     }
   }
 
-  constructor(config: InternalConfig = {}) {
+  constructor(config: InternalConfig = {}, configPath: string | undefined = undefined) {
     this.config = config
+
+    if (configPath) {
+      this._configPath = path.resolve(configPath)
+    }
   }
 
   command(name: string): string {
@@ -244,7 +245,6 @@ export class Config {
 
 const logo = chalk.magentaBright('⚡')
 let cachedConfig: Config
-let configPath: string
 
 export default async function getConfig() {
   if (!cachedConfig) {
@@ -255,8 +255,7 @@ export default async function getConfig() {
         const contents = await readFile(path)
         const parsedConfig = parseEnvFile(dotenv.parse(contents))
 
-        cachedConfig = new Config(parsedConfig)
-        configPath = path
+        cachedConfig = new Config(parsedConfig, path)
         break
       }
     }
@@ -265,94 +264,4 @@ export default async function getConfig() {
   }
 
   return cachedConfig
-}
-
-export class ConfigCommand extends Command {
-  static paths = [['config']]
-
-  format: ConfigCommandFormat | undefined = Option.String('--format', {
-    required: false,
-    validator: t.isEnum(ConfigCommandFormat),
-  })
-
-  commands = ['aws', 'docker', 'docker-compose', 'node', 'ssh', 'tofu', 'yarn']
-
-  async execute(): Promise<number | undefined> {
-    const {
-      format,
-      context: { stdout },
-    } = this
-    const config = await getConfig()
-
-    if (format === undefined || format === ConfigCommandFormat.Pretty) {
-      stdout.write(chalk.bold.whiteBright(`${logo} ${this.cli.binaryLabel} Config\n\n`))
-
-      await this.listCommands()
-      stdout.write('\n')
-      await this.listConfig()
-      return 0
-    }
-
-    if (format === ConfigCommandFormat.Json) {
-      stderr.write(`${config.asJson()}\n`)
-      return 0
-    }
-
-    stderr.write(chalk.red(`Unknown format "${format}"\n`))
-    return 1
-  }
-
-  async listCommands() {
-    const {
-      commands,
-      context: { stdout },
-    } = this
-    const config = await getConfig()
-
-    stdout.write(chalk.bold.blue('Commands:\n'))
-
-    for (const commandName of commands) {
-      const { command, source, sourceType } = config.getCommandOverride(commandName)
-
-      stdout.write(chalk.bold(`${commandName}: `))
-
-      if (which(command)) {
-        stdout.write(chalk.green(command))
-      } else {
-        stdout.write(chalk.red(`${command} ${chalk.bold('[Missing!]')}`))
-      }
-
-      let sourceString = ''
-
-      switch (sourceType) {
-        case 'env':
-          sourceString = `[Env var: ${source}]`
-          break
-        case 'config':
-          sourceString = `[Config: ${source}]`
-          break
-      }
-
-      if (sourceString) {
-        stdout.write(` ${chalk.gray(sourceString)}`)
-      }
-
-      stdout.write('\n')
-    }
-  }
-
-  async listConfig() {
-    const config = await getConfig()
-    const {
-      context: { stdout },
-    } = this
-
-    const sourceString = configPath ? chalk.dim(`[Source file: ${path.resolve(configPath)}]`) : ''
-    stdout.write(chalk.bold.blue(`Config: ${sourceString}\n`))
-
-    for (const [key, value] of config) {
-      stdout.write(chalk.bold(`${key}: `))
-      stdout.write(`${value}\n`)
-    }
-  }
 }
