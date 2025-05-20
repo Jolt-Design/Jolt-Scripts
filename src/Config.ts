@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import shelljs from 'shelljs'
 import { constToCamel, execC, fileExists } from './utils.js'
 import chalk from 'chalk'
+import type { PathLike } from 'node:fs'
 const { which } = shelljs
 
 type InternalConfig = Record<string, string>
@@ -179,19 +180,28 @@ export class Config {
   }
 }
 
+let cachedConfig: Config
+let configPath: PathLike
+
 export default async function getConfig() {
-  const paths = ['./bin/.env', '.env']
+  if (!cachedConfig) {
+    const paths = ['./bin/.env', '.env']
 
-  for (const path of paths) {
-    if (await fileExists(path)) {
-      const contents = await readFile(path)
-      const config = parseEnvFile(dotenv.parse(contents))
+    for (const path of paths) {
+      if (await fileExists(path)) {
+        const contents = await readFile(path)
+        const parsedConfig = parseEnvFile(dotenv.parse(contents))
 
-      return new Config(config)
+        cachedConfig = new Config(parsedConfig)
+        configPath = path
+        break
+      }
     }
+
+    cachedConfig ||= new Config()
   }
 
-  return new Config()
+  return cachedConfig
 }
 
 export class ConfigCommand extends Command {
