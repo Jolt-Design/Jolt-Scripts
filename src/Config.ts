@@ -35,7 +35,7 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
 export const DEFAULT_AWS_REGION = 'eu-west-1'
 
 export class Config {
-  private composeConfig: object | false | undefined
+  private composeConfig: ComposeConfig | false | undefined
   private config: InternalConfig;
 
   *[Symbol.iterator](): IterableIterator<[string, string]> {
@@ -213,9 +213,9 @@ export class Config {
     }
   }
 
-  async getComposeConfig(throwOnFail = false) {
+  async getComposeConfig(throwOnFail = false): Promise<ComposeConfig | undefined> {
     if (this.composeConfig !== undefined) {
-      return this.composeConfig
+      return this.composeConfig || undefined
     }
 
     try {
