@@ -87,6 +87,10 @@ export class Config {
     return this.config[key]
   }
 
+  has(key: string): boolean {
+    return key in this.config
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: the TF var could be anything
   async tfVar(key: string, throwOnFail = false): Promise<any> {
     try {
