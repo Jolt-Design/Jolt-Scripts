@@ -18,14 +18,16 @@ export class TagCommand extends Command {
 
   async execute(): Promise<number | undefined> {
     const {
+      dev,
       context,
       context: { stdout, stderr },
     } = this
-    this.config = await getConfig()
+    const config = await getConfig()
+    this.config = config
 
-    const dockerCommand = this.config.command('docker')
-    const imageName = await this.config.getDockerImageName(this.dev)
-    const remoteRepo = await this.getRemoteRepo()
+    const dockerCommand = config.command('docker')
+    const imageName = await config.getDockerImageName(dev)
+    const remoteRepo = await config.getRemoteRepo(dev)
     const localTag = 'latest'
     const remoteTag = 'latest'
 
@@ -49,34 +51,5 @@ export class TagCommand extends Command {
     const result = await execC(dockerCommand, args, { context })
 
     return result.exitCode
-  }
-
-  async getRemoteRepo(): Promise<string | undefined> {
-    const { config } = this
-    const isDev = this.dev
-
-    if (isDev) {
-      if (config.has('devRemoteRepo')) {
-        return config.get('devRemoteRepo')
-      }
-
-      const tfDevEcrRepo = await config.tfVar('dev_ecr_url')
-
-      if (tfDevEcrRepo) {
-        return tfDevEcrRepo
-      }
-
-      return undefined
-    }
-
-    if (config.has('remoteRepo')) {
-      return config.get('remoteRepo')
-    }
-
-    const tfEcrRepo = await config.tfVar('ecr_url')
-
-    if (tfEcrRepo) {
-      return tfEcrRepo
-    }
   }
 }

@@ -186,6 +186,32 @@ export class Config {
     }
   }
 
+  async getRemoteRepo(isDev = false): Promise<string | undefined> {
+    if (isDev) {
+      if (this.has('devRemoteRepo')) {
+        return this.get('devRemoteRepo')
+      }
+
+      const tfDevEcrRepo = await this.tfVar('dev_ecr_url')
+
+      if (tfDevEcrRepo) {
+        return tfDevEcrRepo
+      }
+
+      return undefined
+    }
+
+    if (this.has('remoteRepo')) {
+      return this.get('remoteRepo')
+    }
+
+    const tfEcrRepo = await this.tfVar('ecr_url')
+
+    if (tfEcrRepo) {
+      return tfEcrRepo
+    }
+  }
+
   asJson() {
     return JSON.stringify(this.config)
   }
