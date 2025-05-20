@@ -46,10 +46,12 @@ export class BuildDockerCommand extends BuildCommand {
     const {
       context,
       context: { stdout, stderr },
+      dev,
+      prod,
     } = this
     const config = await getConfig()
-    const imageName = await config.getDockerImageName(this.dev)
-    const imageType = this.dev ? 'dev' : this.prod ? 'prod' : 'unknown'
+    const imageName = await config.getDockerImageName(dev)
+    const imageType = dev ? 'dev' : prod ? 'prod' : 'unknown'
     const dockerCommand = config.command('docker')
 
     if (!imageName) {
@@ -74,13 +76,13 @@ export class BuildDockerCommand extends BuildCommand {
   }
 
   buildArgs(config: Config): string[] {
+    const { dev } = this
     const imageName = config.get('imageName')
     const platform = config.get('buildPlatform')
     const context = config.get('buildContext')
     const dockerFile = config.get('dockerFile')
-    const isDev = this.dev
-    const buildSuffix = isDev ? '-dev' : ''
-    const buildArgs = isDev ? '--build-arg=DEVBUILD=1' : ''
+    const buildSuffix = dev ? '-dev' : ''
+    const buildArgs = dev ? '--build-arg=DEVBUILD=1' : ''
 
     return [
       'buildx',
