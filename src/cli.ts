@@ -3,6 +3,7 @@ import { BuildCommand, BuildDockerCommand } from './Build.js'
 import { ECRLoginCommand } from './ECR.js'
 import { TagCommand } from './Tag.js'
 import { ConfigCommand } from './Config.js'
+import { WPCommand } from './WP.js'
 
 const [node, app, ...args] = process.argv
 
@@ -17,4 +18,5 @@ cli.register(BuildDockerCommand)
 cli.register(ConfigCommand)
 cli.register(ECRLoginCommand)
 cli.register(TagCommand)
+cli.register(WPCommand)
 cli.runExit(args)
