@@ -35,6 +35,7 @@ function parseEnvFile(env: InternalConfig): InternalConfig {
 export const DEFAULT_AWS_REGION = 'eu-west-1'
 
 export class Config {
+  private composeConfig: object | false | undefined
   private config: InternalConfig;
 
   *[Symbol.iterator](): IterableIterator<[string, string]> {
@@ -213,18 +214,25 @@ export class Config {
   }
 
   async getComposeConfig(throwOnFail = false) {
+    if (this.composeConfig !== undefined) {
+      return this.composeConfig
+    }
+
     try {
       const result = await execC(this.command('docker compose'), ['config', '--format=json'])
       const output = result.stdout?.toString()
 
       if (output !== undefined) {
-        return JSON.parse(output)
+        const parsed = JSON.parse(output)
+        this.composeConfig = parsed
+        return parsed
       }
     } catch (e) {
       if (throwOnFail) {
         throw e
       }
 
+      this.composeConfig = false
       return undefined
     }
   }
