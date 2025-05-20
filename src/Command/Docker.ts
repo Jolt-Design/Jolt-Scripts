@@ -3,7 +3,7 @@ import { Option } from 'clipanion'
 import { execa, ExecaError } from 'execa'
 import shelljs from 'shelljs'
 import JoltCommand from './JoltCommand.js'
-import { execC } from './utils.js'
+import { execC } from '../utils.js'
 const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {

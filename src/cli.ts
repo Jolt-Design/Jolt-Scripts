@@ -1,8 +1,8 @@
 import { Cli } from 'clipanion'
-import { BuildCommand } from './Build.js'
+import { BuildCommand } from './Command/Build.js'
 import { ConfigCommand } from './Config.js'
-import { DockerBuildCommand, DockerLoginCommand, DockerTagCommand } from './Docker.js'
-import { WPCommand } from './WP.js'
+import { DockerBuildCommand, DockerLoginCommand, DockerTagCommand } from './Command/Docker.js'
+import { WPCommand } from './Command/WP.js'
 
 const [node, app, ...args] = process.argv
 

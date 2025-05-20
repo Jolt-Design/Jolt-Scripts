@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import { Command } from 'clipanion'
-import type { Config } from './Config.js'
-import getConfig from './Config.js'
+import type { Config } from '../Config.js'
+import getConfig from '../Config.js'
 
 export default abstract class JoltCommand extends Command {
   logo = chalk.magentaBright('⚡')
