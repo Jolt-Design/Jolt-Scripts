@@ -1,10 +1,12 @@
-import { Command } from 'clipanion'
-import dotenv from 'dotenv'
-import { readFile } from 'node:fs/promises'
-import shelljs from 'shelljs'
-import { constToCamel, execC, fileExists } from './utils.js'
 import chalk from 'chalk'
+import { Command, Option } from 'clipanion'
+import dotenv from 'dotenv'
 import type { PathLike } from 'node:fs'
+import { readFile } from 'node:fs/promises'
+import { stderr } from 'node:process'
+import shelljs from 'shelljs'
+import * as t from 'typanion'
+import { constToCamel, execC, fileExists } from './utils.js'
 const { which } = shelljs
 
 type InternalConfig = Record<string, string>
@@ -13,6 +15,11 @@ type CommandOverride = {
   command: string
   source: string
   sourceType: string
+}
+
+enum ConfigCommandFormat {
+  Pretty = 'pretty',
+  Json = 'json',
 }
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
@@ -178,6 +185,10 @@ export class Config {
       return tfImageName
     }
   }
+
+  asJson() {
+    return JSON.stringify(this.config)
+  }
 }
 
 let cachedConfig: Config
@@ -207,21 +218,36 @@ export default async function getConfig() {
 export class ConfigCommand extends Command {
   static paths = [['config']]
 
+  format: ConfigCommandFormat | undefined = Option.String('--format', {
+    required: false,
+    validator: t.isEnum(ConfigCommandFormat),
+  })
+
   commands = ['aws', 'docker', 'docker-compose', 'node', 'ssh', 'tofu', 'yarn']
 
   async execute(): Promise<number | undefined> {
     const {
-      context,
+      format,
       context: { stdout },
     } = this
+    const config = await getConfig()
 
-    stdout.write(chalk.bold.magenta(`⚡${this.cli.binaryLabel} Config\n\n`))
+    if (format === undefined || format === ConfigCommandFormat.Pretty) {
+      stdout.write(chalk.bold.magenta(`⚡${this.cli.binaryLabel} Config\n\n`))
 
-    await this.listCommands()
-    stdout.write('\n')
-    await this.listConfig()
+      await this.listCommands()
+      stdout.write('\n')
+      await this.listConfig()
+      return 0
+    }
 
-    return 0
+    if (format === ConfigCommandFormat.Json) {
+      stderr.write(`${config.asJson()}\n`)
+      return 0
+    }
+
+    stderr.write(chalk.red(`Unknown format "${format}"\n`))
+    return 1
   }
 
   async listCommands() {
