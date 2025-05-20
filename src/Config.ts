@@ -1,10 +1,18 @@
-import { readFile } from 'node:fs/promises'
+import { Command } from 'clipanion'
 import dotenv from 'dotenv'
-import { constToCamel, execC, fileExists } from './utils.js'
+import { readFile } from 'node:fs/promises'
 import shelljs from 'shelljs'
+import { constToCamel, execC, fileExists } from './utils.js'
+import chalk from 'chalk'
 const { which } = shelljs
 
 type InternalConfig = Record<string, string>
+
+type CommandOverride = {
+  command: string
+  source: string
+  sourceType: string
+}
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -32,10 +40,14 @@ export class Config {
   }
 
   command(name: string): string {
+    return this.getCommandOverride(name).command
+  }
+
+  getCommandOverride(command: string): CommandOverride {
     let envVar: string
     let def: string
 
-    switch (name) {
+    switch (command) {
       case 'docker':
         def = 'docker'
         envVar = 'DOCKER_COMMAND'
@@ -69,24 +81,37 @@ export class Config {
         envVar = 'SSH_COMMAND'
         break
       default:
-        return name
+        return { command, source: 'unknown', sourceType: 'unknown' }
     }
 
     const toTry = [`JOLT_${envVar}`, envVar]
 
     for (const varName of toTry) {
       if (process.env[varName]) {
-        return process.env[varName]
+        return {
+          command: process.env[varName],
+          source: varName,
+          sourceType: 'env',
+        }
       }
     }
 
-    const configuredValue = this.get(constToCamel(envVar))
+    const configName = constToCamel(envVar)
+    const configuredValue = this.get(configName)
 
     if (configuredValue) {
-      return configuredValue
+      return {
+        command: configuredValue,
+        source: configName,
+        sourceType: 'config',
+      }
     }
 
-    return def
+    return {
+      command: def,
+      source: 'Default',
+      sourceType: 'default',
+    }
   }
 
   get(key: string): string | undefined {
@@ -167,4 +192,78 @@ export default async function getConfig() {
   }
 
   return new Config()
+}
+
+export class ConfigCommand extends Command {
+  static paths = [['config']]
+
+  commands = ['aws', 'docker', 'docker-compose', 'node', 'ssh', 'tofu', 'yarn']
+
+  async execute(): Promise<number | undefined> {
+    const {
+      context,
+      context: { stdout },
+    } = this
+
+    stdout.write(chalk.bold.magenta(`⚡${this.cli.binaryLabel} Config\n\n`))
+
+    await this.listCommands()
+    stdout.write('\n')
+    await this.listConfig()
+
+    return 0
+  }
+
+  async listCommands() {
+    const {
+      commands,
+      context: { stdout },
+    } = this
+    const config = await getConfig()
+
+    stdout.write(chalk.bold.blue('Commands:\n'))
+
+    for (const commandName of commands) {
+      const { command, source, sourceType } = config.getCommandOverride(commandName)
+
+      stdout.write(chalk.bold(`${commandName}: `))
+
+      if (which(command)) {
+        stdout.write(chalk.green(command))
+      } else {
+        stdout.write(chalk.red(`${command} ${chalk.bold('[Missing!]')}`))
+      }
+
+      let sourceString = ''
+
+      switch (sourceType) {
+        case 'env':
+          sourceString = `[Env var: ${source}]`
+          break
+        case 'config':
+          sourceString = `[Config: ${source}]`
+          break
+      }
+
+      if (sourceString) {
+        stdout.write(` ${chalk.gray(sourceString)}`)
+      }
+
+      stdout.write('\n')
+    }
+  }
+
+  async listConfig() {
+    const config = await getConfig()
+    const {
+      context: { stdout },
+    } = this
+
+    stdout.write(chalk.bold.blue('Config:\n'))
+
+    for (const [key, value] of config) {
+      stdout.write(chalk.bold(`${key}: `))
+      stdout.write(`${value}\n`)
+    }
+  }
 }
