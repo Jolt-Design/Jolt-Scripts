@@ -1,7 +1,9 @@
 import chalk from 'chalk'
 import { Command } from 'clipanion'
+import shelljs from 'shelljs'
 import type { Config } from '../Config.js'
 import getConfig from '../Config.js'
+const { which } = shelljs
 
 export default abstract class JoltCommand extends Command {
   logo = chalk.magentaBright('⚡')
@@ -16,7 +18,34 @@ export default abstract class JoltCommand extends Command {
   }
 
   async execute(): Promise<number | undefined> {
-    this.config = await getConfig()
+    const { stderr } = this.context
+    const config = await getConfig()
+    this.config = config
+
+    if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {
+      const missingCommands = []
+
+      for (const baseCommand of this.requiredCommands) {
+        const realCommand = config.command(baseCommand)
+
+        if (!which(realCommand)) {
+          missingCommands.push(realCommand)
+        }
+      }
+
+      if (missingCommands.length > 0) {
+        stderr.write(this.getHeader())
+        stderr.write(chalk.red('Missing the following commands:\n'))
+
+        for (const missingCommand of missingCommands) {
+          stderr.write(chalk.red(`- ${missingCommand}\n`))
+        }
+
+        stderr.write('\n\nSee `jolt config` for more information.\n')
+        return 4
+      }
+    }
+
     return await this.command()
   }
 }

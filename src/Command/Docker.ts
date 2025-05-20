@@ -7,6 +7,8 @@ import { execC } from '../utils.js'
 const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {
+  requiredCommands = ['docker']
+
   dev = Option.Boolean('--dev', false)
   prod = !this.dev
 }
@@ -72,6 +74,8 @@ export class DockerBuildCommand extends DockerCommand {
 
 export class DockerLoginCommand extends DockerCommand {
   static paths = [['docker', 'login']]
+
+  requiredCommands = ['aws', 'docker']
 
   async command(): Promise<number | undefined> {
     const {
