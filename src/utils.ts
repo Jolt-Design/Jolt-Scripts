@@ -31,6 +31,7 @@ export async function execC(command: string, args: string[] = [], options: ExecC
   }
 
   if (options.context) {
+    allOptions.stdin ||= options.context.stdin
     allOptions.stdout ||= options.context.stdout
     allOptions.stderr ||= options.context.stderr
   }
