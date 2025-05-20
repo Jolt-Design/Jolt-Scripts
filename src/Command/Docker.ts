@@ -1,9 +1,9 @@
 import chalk from 'chalk'
 import { Option } from 'clipanion'
-import { execa, ExecaError } from 'execa'
+import { ExecaError, execa } from 'execa'
 import shelljs from 'shelljs'
-import JoltCommand from './JoltCommand.js'
 import { execC } from '../utils.js'
+import JoltCommand from './JoltCommand.js'
 const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {

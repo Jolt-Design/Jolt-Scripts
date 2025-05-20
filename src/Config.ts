@@ -1,7 +1,6 @@
-import chalk from 'chalk'
-import dotenv from 'dotenv'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import dotenv from 'dotenv'
 import shelljs from 'shelljs'
 import { constToCamel, execC, fileExists } from './utils.js'
 const { which } = shelljs
@@ -243,7 +242,6 @@ export class Config {
   }
 }
 
-const logo = chalk.magentaBright('⚡')
 let cachedConfig: Config
 
 export default async function getConfig() {

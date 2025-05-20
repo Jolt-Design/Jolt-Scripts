@@ -1,6 +1,6 @@
+import { stderr } from 'node:process'
 import chalk from 'chalk'
 import { Option } from 'clipanion'
-import { stderr } from 'node:process'
 import shelljs from 'shelljs'
 import * as t from 'typanion'
 import JoltCommand from './JoltCommand.js'

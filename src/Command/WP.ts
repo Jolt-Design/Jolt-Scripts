@@ -1,7 +1,7 @@
+import { userInfo } from 'node:os'
 import chalk from 'chalk'
 import { Option } from 'clipanion'
 import { execC } from '../utils.js'
-import { userInfo } from 'node:os'
 import JoltCommand from './JoltCommand.js'
 
 export class WPCommand extends JoltCommand {
