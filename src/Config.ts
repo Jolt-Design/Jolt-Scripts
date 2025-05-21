@@ -237,6 +237,12 @@ export class Config {
     }
   }
 
+  getComposeCommand(): [string, string[]] {
+    const command = this.command('docker compose')
+    const parts = command.split(' ')
+    return [parts[0], parts.slice(1)]
+  }
+
   asJson() {
     return JSON.stringify(this.config)
   }

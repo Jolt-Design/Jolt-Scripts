@@ -60,7 +60,7 @@ export class DBDumpCommand extends JoltCommand {
       filename = configSeed
     }
 
-    let composeCommand = config.command('docker compose')
+    const [composeCommand, args] = config.getComposeCommand()
     const containerInfo = await this.getContainerInfo()
 
     if (!containerInfo) {
@@ -78,7 +78,7 @@ export class DBDumpCommand extends JoltCommand {
 
     stdout.write(ansis.blue(`🛢️ Dumping contents of the DB in container '${container}' to ${filePath}...\n`))
 
-    const args: string[] = [
+    args.push(
       'exec',
       container || '',
       dumpCommand || '',
@@ -87,14 +87,7 @@ export class DBDumpCommand extends JoltCommand {
       credentials.user || '',
       `-p${credentials.pass}`,
       credentials.db || '',
-    ]
-
-    // If the command is a subcommand, like `docker compose`, we need to shift the compose part into the args array
-    if (composeCommand.includes(' ')) {
-      const parts = composeCommand.split(' ')
-      composeCommand = parts[0]
-      args.unshift(...parts.slice(1))
-    }
+    )
 
     const result = await execa(composeCommand, args, {
       buffer: { stdout: false },

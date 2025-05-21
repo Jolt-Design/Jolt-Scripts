@@ -27,16 +27,11 @@ export class WPCommand extends JoltCommand {
     // On Windows, uid is -1 so we shouldn't try to set the user
     const userArg = uid !== undefined && uid !== -1 && `--user='${uid}:${gid}'`
     const profile = await this.getContainerProfile(containerName)
-    const args = [
-      profile ? `--profile=${profile}` : '',
-      'run',
-      '--rm',
-      userArg || '',
-      containerName,
-      'wp',
-      ...this.wpArgs,
-    ]
-    const result = await execC(config.command('docker compose'), args, { context, reject: false })
+    const [composeCommand, args] = config.getComposeCommand()
+
+    args.push(profile ? `--profile=${profile}` : '', 'run', '--rm', userArg || '', containerName, 'wp', ...this.wpArgs)
+
+    const result = await execC(composeCommand, args, { context, reject: false })
     return result.exitCode
   }
 
