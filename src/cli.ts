@@ -4,6 +4,7 @@ import { ConfigCommand } from './Command/Config.js'
 import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
 import { WPCommand } from './Command/WP.js'
 import { ECSDeployCommand } from './Command/AWS.js'
+import { DBDumpCommand } from './Command/DB.js'
 
 const [node, app, ...args] = process.argv
 
@@ -21,4 +22,5 @@ cli.register(DockerTagCommand)
 cli.register(DockerPushCommand)
 cli.register(WPCommand)
 cli.register(ECSDeployCommand)
+cli.register(DBDumpCommand)
 cli.runExit(args)
