@@ -1,5 +1,5 @@
 import { stderr } from 'node:process'
-import chalk from 'chalk'
+import ansis from 'ansis'
 import { Option } from 'clipanion'
 import shelljs from 'shelljs'
 import * as t from 'typanion'
@@ -29,7 +29,7 @@ export class ConfigCommand extends JoltCommand {
     } = this
 
     if (format === undefined || format === ConfigCommandFormat.Pretty) {
-      stdout.write(chalk.bold.whiteBright(this.getHeader('Config')))
+      stdout.write(ansis.bold.whiteBright(this.getHeader('Config')))
 
       await this.listCommands()
       stdout.write('\n')
@@ -42,7 +42,7 @@ export class ConfigCommand extends JoltCommand {
       return 0
     }
 
-    stderr.write(chalk.red(`Unknown format "${format}"\n`))
+    stderr.write(ansis.red(`Unknown format "${format}"\n`))
     return 1
   }
 
@@ -53,17 +53,17 @@ export class ConfigCommand extends JoltCommand {
       context: { stdout },
     } = this
 
-    stdout.write(chalk.bold.blue('Commands:\n'))
+    stdout.write(ansis.bold.blue('Commands:\n'))
 
     for (const commandName of commands) {
       const { command, source, sourceType } = config.getCommandOverride(commandName)
 
-      stdout.write(chalk.bold(`${commandName}: `))
+      stdout.write(ansis.bold(`${commandName}: `))
 
       if (which(command)) {
-        stdout.write(chalk.green(command))
+        stdout.write(ansis.green(command))
       } else {
-        stdout.write(chalk.red(`${command} ${chalk.bold('[Missing!]')}`))
+        stdout.write(ansis.red(`${command} ${ansis.bold('[Missing!]')}`))
       }
 
       let sourceString = ''
@@ -78,7 +78,7 @@ export class ConfigCommand extends JoltCommand {
       }
 
       if (sourceString) {
-        stdout.write(` ${chalk.gray(sourceString)}`)
+        stdout.write(` ${ansis.gray(sourceString)}`)
       }
 
       stdout.write('\n')
@@ -91,11 +91,11 @@ export class ConfigCommand extends JoltCommand {
       context: { stdout },
     } = this
 
-    const sourceString = config.configPath ? chalk.dim(`[Source file: ${config.configPath}]`) : ''
-    stdout.write(chalk.bold.blue(`Config: ${sourceString}\n`))
+    const sourceString = config.configPath ? ansis.dim(`[Source file: ${config.configPath}]`) : ''
+    stdout.write(ansis.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
-      stdout.write(chalk.bold(`${key}: `))
+      stdout.write(ansis.bold(`${key}: `))
       stdout.write(`${value}\n`)
     }
   }

@@ -1,5 +1,5 @@
 import { userInfo } from 'node:os'
-import chalk from 'chalk'
+import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
@@ -19,7 +19,7 @@ export class WPCommand extends JoltCommand {
     const containerName = await this.getContainerName()
 
     if (!containerName) {
-      stderr.write(chalk.red(`Couldn't find a WP CLI container. Set it with the 'wpCliContainer' config key.\n`))
+      stderr.write(ansis.red(`Couldn't find a WP CLI container. Set it with the 'wpCliContainer' config key.\n`))
       return 1
     }
 

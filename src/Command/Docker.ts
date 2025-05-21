@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { ExecaError, execa } from 'execa'
 import shelljs from 'shelljs'
@@ -29,16 +29,16 @@ export class DockerBuildCommand extends DockerCommand {
     const dockerCommand = config.command('docker')
 
     if (!imageName) {
-      stderr.write(chalk.red('Image name must be configured!\n'))
+      stderr.write(ansis.red('Image name must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(chalk.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
-    stdout.write(chalk.blue(`🐳 Building image ${imageName} for ${imageType} using ${dockerCommand}...\n`))
+    stdout.write(ansis.blue(`🐳 Building image ${imageName} for ${imageType} using ${dockerCommand}...\n`))
 
     const args = await this.buildArgs()
     const command = [dockerCommand, ...args].join(' ')
@@ -86,7 +86,7 @@ export class DockerLoginCommand extends DockerCommand {
     const ecrBaseUrl = config.get('ecrBaseUrl') ?? (await config.tfVar('ecr_base_url'))
     const region = config.get('awsRegion') ?? (await config.tfVar('region')) ?? config.awsRegion()
 
-    stdout.write(chalk.blue(`🐳 Logging in to ECR repository ${ecrBaseUrl} on ${region}...\n`))
+    stdout.write(ansis.blue(`🐳 Logging in to ECR repository ${ecrBaseUrl} on ${region}...\n`))
 
     try {
       const result = await execa(config.command('aws'), ['ecr', 'get-login-password', '--region', region]).pipe(
@@ -98,7 +98,7 @@ export class DockerLoginCommand extends DockerCommand {
       return result.exitCode
     } catch (e) {
       if (e instanceof ExecaError) {
-        stderr.write(chalk.red(`Failed to log in! Reason: ${e.message}\n`))
+        stderr.write(ansis.red(`Failed to log in! Reason: ${e.message}\n`))
         return e.exitCode
       }
 
@@ -126,16 +126,16 @@ export class DockerTagCommand extends DockerCommand {
     const args = ['tag', `${imageName}:${localTag}`, `${remoteRepo}:${remoteTag}`]
 
     if (!imageName) {
-      stderr.write(chalk.red('Image name must be configured!\n'))
+      stderr.write(ansis.red('Image name must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(chalk.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
-    stdout.write(chalk.blue(`🐳 Tagging image ${imageName}:${localTag} as ${remoteRepo}:${remoteTag}...\n`))
+    stdout.write(ansis.blue(`🐳 Tagging image ${imageName}:${localTag} as ${remoteRepo}:${remoteTag}...\n`))
 
     // const command = [dockerCommand, ...args].join(' ')
     // stdout.write(`Running command: ${command}\n`)
@@ -163,16 +163,16 @@ export class DockerPushCommand extends DockerCommand {
     const args = ['push', `${remoteRepo}:${remoteTag}`]
 
     if (!remoteRepo) {
-      stderr.write(chalk.red('Remote repo must be configured!\n'))
+      stderr.write(ansis.red('Remote repo must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(chalk.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
-    stdout.write(chalk.blue(`🐳 Pushing image ${remoteRepo}:${remoteTag}...\n`))
+    stdout.write(ansis.blue(`🐳 Pushing image ${remoteRepo}:${remoteTag}...\n`))
 
     // const command = [dockerCommand, ...args].join(' ')
     // stdout.write(`Running command: ${command}\n`)

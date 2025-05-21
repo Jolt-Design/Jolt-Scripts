@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import ansis from 'ansis'
 import { Command } from 'clipanion'
 import shelljs from 'shelljs'
 import type { Config } from '../Config.js'
@@ -6,14 +6,14 @@ import getConfig from '../Config.js'
 const { which } = shelljs
 
 export default abstract class JoltCommand extends Command {
-  logo = chalk.magentaBright('⚡')
+  logo = ansis.magentaBright('⚡')
   config!: Config
   requiredCommands: string[] = []
 
   abstract command(): Promise<number | undefined>
 
   getHeader(suffix = '') {
-    const header = chalk.whiteBright(`${this.logo} ${this.cli.binaryLabel}`)
+    const header = ansis.whiteBright(`${this.logo} ${this.cli.binaryLabel}`)
     return [header, suffix, '\n\n'].filter((x) => !!x).join(' ')
   }
 
@@ -35,10 +35,10 @@ export default abstract class JoltCommand extends Command {
 
       if (missingCommands.length > 0) {
         stderr.write(this.getHeader())
-        stderr.write(chalk.red('Missing the following commands:\n'))
+        stderr.write(ansis.red('Missing the following commands:\n'))
 
         for (const missingCommand of missingCommands) {
-          stderr.write(chalk.red(`- ${missingCommand}\n`))
+          stderr.write(ansis.red(`- ${missingCommand}\n`))
         }
 
         stderr.write('\n\nSee `jolt config` for more information.\n')

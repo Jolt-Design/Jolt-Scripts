@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { DockerBuildCommand } from './Docker.js'
 import JoltCommand from './JoltCommand.js'
@@ -21,7 +21,7 @@ export class BuildCommand extends JoltCommand {
 
     if (imageName) {
       stdout.write(
-        chalk.yellow(`Found a configured image name (${imageName}) - assuming you wanted to build Docker.\n\n`),
+        ansis.yellow(`Found a configured image name (${imageName}) - assuming you wanted to build Docker.\n\n`),
       )
 
       const args = ['build', 'docker']
