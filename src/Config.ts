@@ -267,7 +267,7 @@ export class Config {
 
     if (!type) {
       const { image } = services[container]
-      const match = image?.match(/\b(?<type>redis|valkey)\b/i))
+      const match = image?.match(/\b(?<type>redis|valkey)\b/i)
 
       if (match) {
         type = match.groups?.type?.toLowerCase() ?? ''
