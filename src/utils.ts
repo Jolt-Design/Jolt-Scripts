@@ -38,3 +38,7 @@ export async function execC(command: string, args: string[] = [], options: ExecC
 
   return await execa(command, args, allOptions)
 }
+
+export function delay(ms: number): Promise<undefined> {
+  return new Promise((res) => setTimeout(res, ms, null))
+}
