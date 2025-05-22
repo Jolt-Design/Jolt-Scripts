@@ -26,7 +26,7 @@ export class CacheFlushCommand extends JoltCommand {
       return 1
     }
 
-    const { container, cliCommand } = cacheInfo
+    const { name: container, cliCommand } = cacheInfo
     stdout.write(ansis.blue(`🗃️ Clearing cache in container '${container}' using the ${cliCommand} command.\n`))
     args.push('exec', container, cliCommand, 'flushall')
     const result = await execC(composeCommand, args, { context })

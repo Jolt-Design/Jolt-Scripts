@@ -304,7 +304,7 @@ export class Config {
         return
     }
 
-    return { container, type, cliCommand, info: services[container] }
+    return { name: container, type, cliCommand, service: services[container] }
   }
 
   async getDBContainerInfo(): Promise<DBContainerInfo | undefined> {
