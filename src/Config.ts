@@ -15,6 +15,7 @@ type CommandOverride = {
 
 type DBContainerInfo = {
   name: string | undefined
+  type: 'mysql' | 'mariadb'
   service: ComposeService
   dumpCommand: string | undefined
   credentials: {
@@ -318,8 +319,9 @@ class Config {
       for (const [serviceName, service] of Object.entries(services)) {
         const match = service.image?.match(dbImageRegex)
 
-        if (match) {
+        if (match?.groups) {
           result.name = serviceName
+          result.type = match.groups.type.toLowerCase() as DBContainerInfo['type']
           result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type as string)
           result.credentials = {
             db: service.environment?.DB_NAME,
@@ -341,6 +343,7 @@ class Config {
 
       if (image) {
         const match = image.match(dbImageRegex)
+        result.type = match?.groups?.type.toLowerCase() as DBContainerInfo['type']
         result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string)
       }
     }
