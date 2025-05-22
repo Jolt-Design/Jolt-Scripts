@@ -4,19 +4,8 @@ import ansis from 'ansis'
 import { execa } from 'execa'
 import path from 'node:path'
 import shelljs from 'shelljs'
+import { execC } from '../utils.js'
 const { which } = shelljs
-
-type DBContainerInfo = {
-  name: string | undefined
-  dumpCommand: string | undefined
-  credentials: {
-    db: string | undefined
-    user: string | undefined
-    pass: string | undefined
-  }
-}
-
-const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
@@ -61,7 +50,7 @@ export class DBDumpCommand extends JoltCommand {
     }
 
     const [composeCommand, args] = config.getComposeCommand()
-    const containerInfo = await this.getContainerInfo()
+    const containerInfo = await config.getDBContainerInfo()
 
     if (!containerInfo) {
       stderr.write(ansis.red(`Couldn't find information about database container. Try setting config explicitly.\n`))
@@ -119,84 +108,5 @@ export class DBDumpCommand extends JoltCommand {
     stdout.write(ansis.blue(`🛢️ Successfully dumped contents of the DB in container '${container}' to ${filePath}.\n`))
 
     return result.exitCode
-  }
-
-  async getContainerInfo(): Promise<DBContainerInfo | undefined> {
-    const { config } = this
-    const result: Partial<DBContainerInfo> = {}
-    const composeConfig = await config.getComposeConfig()
-    const services = composeConfig?.services
-
-    if (config.has('dbContainer')) {
-      result.name = config.get('dbContainer') as string
-    } else if (services) {
-      for (const [serviceName, service] of Object.entries(services)) {
-        const match = service.image?.match(dbImageRegex)
-
-        if (match) {
-          result.name = serviceName
-          result.dumpCommand = this.getDumpCommandFromImageType(match.groups?.type as string)
-          result.credentials = {
-            db: service.environment?.DB_NAME,
-            user: service.environment?.DB_USER,
-            pass: service.environment?.DB_PASS,
-          }
-        }
-      }
-    }
-
-    if (!result.name) {
-      return
-    }
-
-    if (config.has('dbDumpCommand')) {
-      result.dumpCommand = config.get('dbDumpCommand')
-    } else if (services) {
-      const image = services[result.name]?.image
-
-      if (image) {
-        const match = image.match(dbImageRegex)
-        result.dumpCommand = this.getDumpCommandFromImageType(match?.groups?.type as string)
-      }
-    }
-
-    if (!result.dumpCommand) {
-      return
-    }
-
-    if (!result.credentials) {
-      result.credentials = {
-        db: undefined,
-        user: undefined,
-        pass: undefined,
-      }
-    }
-
-    if (config.has('dbName')) {
-      result.credentials.db = config.get('dbName')
-    }
-
-    if (config.has('dbUser')) {
-      result.credentials.user = config.get('dbUser')
-    }
-
-    if (config.has('dbPass')) {
-      result.credentials.pass = config.get('dbPass')
-    }
-
-    if (Object.values(result.credentials).findIndex((x) => x === undefined) !== -1) {
-      return
-    }
-
-    return result as DBContainerInfo
-  }
-
-  getDumpCommandFromImageType(type: string): string | undefined {
-    switch (type) {
-      case 'mysql':
-        return 'mysqldump'
-      case 'mariadb':
-        return 'mariadb-dump'
-    }
   }
 }

@@ -13,6 +13,19 @@ type CommandOverride = {
   sourceType: string
 }
 
+type DBContainerInfo = {
+  name: string | undefined
+  service: ComposeService
+  dumpCommand: string | undefined
+  credentials: {
+    db: string | undefined
+    user: string | undefined
+    pass: string | undefined
+  }
+}
+
+const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
+
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
 
@@ -294,8 +307,90 @@ export class Config {
     return { container, type, cliCommand, info: services[container] }
   }
 
+  async getDBContainerInfo(): Promise<DBContainerInfo | undefined> {
+    const result: Partial<DBContainerInfo> = {}
+    const composeConfig = await this.getComposeConfig()
+    const services = composeConfig?.services
+
+    if (this.has('dbContainer')) {
+      result.name = this.get('dbContainer') as string
+    } else if (services) {
+      for (const [serviceName, service] of Object.entries(services)) {
+        const match = service.image?.match(dbImageRegex)
+
+        if (match) {
+          result.name = serviceName
+          result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type as string)
+          result.credentials = {
+            db: service.environment?.DB_NAME,
+            user: service.environment?.DB_USER,
+            pass: service.environment?.DB_PASS,
+          }
+        }
+      }
+    }
+
+    if (!result.name) {
+      return
+    }
+
+    if (this.has('dbDumpCommand')) {
+      result.dumpCommand = this.get('dbDumpCommand')
+    } else if (services) {
+      const image = services[result.name]?.image
+
+      if (image) {
+        const match = image.match(dbImageRegex)
+        result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string)
+      }
+    }
+
+    if (!result.dumpCommand) {
+      return
+    }
+
+    if (!result.credentials) {
+      result.credentials = {
+        db: undefined,
+        user: undefined,
+        pass: undefined,
+      }
+    }
+
+    if (this.has('dbName')) {
+      result.credentials.db = this.get('dbName')
+    }
+
+    if (this.has('dbUser')) {
+      result.credentials.user = this.get('dbUser')
+    }
+
+    if (this.has('dbPass')) {
+      result.credentials.pass = this.get('dbPass')
+    }
+
+    if (Object.values(result.credentials).findIndex((x) => x === undefined) !== -1) {
+      return
+    }
+
+    if (services) {
+      result.service = services[result.name]
+    }
+
+    return result as DBContainerInfo
+  }
+
   asJson() {
     return JSON.stringify(this.config)
+  }
+
+  private getDBDumpCommandFromImageType(type: string): string | undefined {
+    switch (type) {
+      case 'mysql':
+        return 'mysqldump'
+      case 'mariadb':
+        return 'mariadb-dump'
+    }
   }
 }
 
