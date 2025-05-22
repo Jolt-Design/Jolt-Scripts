@@ -291,7 +291,7 @@ export class Config {
         return
     }
 
-    return { container, type, cliCommand }
+    return { container, type, cliCommand, info: services[container] }
   }
 
   asJson() {
