@@ -243,6 +243,57 @@ export class Config {
     return [parts[0], parts.slice(1)]
   }
 
+  async getCacheContainerInfo() {
+    const composeConfig = await this.getComposeConfig()
+    const services = composeConfig?.services
+    let container = this.get('cacheContainer') ?? this.get('redisContainer')
+    let type = ''
+
+    if (!container && services) {
+      for (const [serviceName, service] of Object.entries(services)) {
+        const match = service.image?.match(/\b(?<type>redis|valkey)\b/i)
+
+        if (match) {
+          container = serviceName
+          type = match.groups?.type ?? ''
+          break
+        }
+      }
+    }
+
+    if (!container || !services) {
+      return
+    }
+
+    if (!type) {
+      const { image } = services[container]
+      const match = image?.match(/\b(?<type>redis|valkey)\b/i))
+
+      if (match) {
+        type = match.groups?.type?.toLowerCase() ?? ''
+      }
+
+      if (!type) {
+        return
+      }
+    }
+
+    let cliCommand: string
+
+    switch (type) {
+      case 'redis':
+        cliCommand = 'redis-cli'
+        break
+      case 'valkey':
+        cliCommand = 'valkey-cli'
+        break
+      default:
+        return
+    }
+
+    return { container, type, cliCommand }
+  }
+
   asJson() {
     return JSON.stringify(this.config)
   }
