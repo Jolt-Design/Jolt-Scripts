@@ -93,3 +93,24 @@ export class S3SyncCommand extends JoltCommand {
     return result.exitCode
   }
 }
+
+export class LogsTailCommand extends JoltCommand {
+  static paths = [['aws', 'logs', 'tail']]
+  requiredCommands = ['aws']
+
+  group = Option.String()
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      context,
+      context: { stdout },
+    } = this
+
+    const group = await config.parseArg(this.group)
+
+    stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
+    const result = await execC(config.command('aws'), ['logs', 'tail', group, '--follow'], { context })
+    return result.exitCode
+  }
+}
