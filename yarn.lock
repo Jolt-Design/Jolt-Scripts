@@ -5,7 +5,7 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@biomejs/biome@npm:1.9.4":
+"@biomejs/biome@npm:^1.9.4":
   version: 1.9.4
   resolution: "@biomejs/biome@npm:1.9.4"
   dependencies:
@@ -100,7 +100,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@joltdesign/scripts@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:1.9.4"
+    "@biomejs/biome": "npm:^1.9.4"
     "@types/node": "npm:^22.15.18"
     "@types/shelljs": "npm:^0"
     ansis: "npm:^4.0.0"
