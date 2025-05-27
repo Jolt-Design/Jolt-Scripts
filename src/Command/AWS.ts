@@ -67,3 +67,29 @@ export class ECSDeployCommand extends JoltCommand {
     return result.exitCode
   }
 }
+
+export class S3SyncCommand extends JoltCommand {
+  static paths = [['aws', 's3', 'sync']]
+  requiredCommands = ['aws']
+
+  from = Option.String()
+  to = Option.String()
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      from,
+      to,
+      context: { stdout, stderr },
+    } = this
+
+    const parsedFrom = await config.parseArg(from)
+    const parsedTo = await config.parseArg(to)
+
+    stdout.write(ansis.blue(`⛅ Syncing ${parsedFrom} to ${parsedTo}...\n`))
+    const result = await execC(config.command('aws'), ['s3', 'sync', parsedFrom, parsedTo])
+    stdout.write(ansis.blue('⛅ Syncing complete.\n'))
+
+    return result.exitCode
+  }
+}
