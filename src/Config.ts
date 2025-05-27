@@ -17,6 +17,7 @@ type DBContainerInfo = {
   name: string | undefined
   type: 'mysql' | 'mariadb'
   service: ComposeService
+  cliCommand: string | undefined
   dumpCommand: string | undefined
   credentials: {
     db: string | undefined
@@ -324,6 +325,7 @@ class Config {
           result.name = serviceName
           result.type = match.groups.type.toLowerCase() as DBContainerInfo['type']
           result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type as string)
+          result.cliCommand = this.getDBCLICommandFromImageType(match.groups?.type as string)
           result.credentials = {
             db: service.environment?.DB_NAME,
             user: service.environment?.DB_USER,
@@ -346,6 +348,7 @@ class Config {
         const match = image.match(dbImageRegex)
         result.type = match?.groups?.type.toLowerCase() as DBContainerInfo['type']
         result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string)
+        result.cliCommand = this.getDBCLICommandFromImageType(match?.groups?.type as string)
       }
     }
 
@@ -408,6 +411,15 @@ class Config {
     }
 
     return substring
+  }
+
+  private getDBCLICommandFromImageType(type: string): string | undefined {
+    switch (type) {
+      case 'mysql':
+        return 'mysql'
+      case 'mariadb':
+        return 'mariadb'
+    }
   }
 
   private getDBDumpCommandFromImageType(type: string): string | undefined {
