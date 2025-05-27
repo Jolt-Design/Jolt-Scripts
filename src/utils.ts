@@ -42,3 +42,21 @@ export async function execC(command: string, args: string[] = [], options: ExecC
 export function delay(ms: number): Promise<undefined> {
   return new Promise((res) => setTimeout(res, ms, null))
 }
+
+export async function replaceAsync(
+  str: string,
+  replace: RegExp | string,
+  // biome-ignore lint/suspicious/noExplicitAny: this is the actual String.replace signature
+  asyncFn: (substring: string, ...args: any[]) => Promise<string>,
+) {
+  const promises: Promise<string>[] = []
+
+  str.replace(replace, (full, ...args) => {
+    promises.push(asyncFn(full, ...args))
+    return full
+  })
+
+  const data = await Promise.all(promises)
+
+  return str.replace(replace, () => data.shift() || '')
+}

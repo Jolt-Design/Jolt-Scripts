@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
 import shelljs from 'shelljs'
-import { constToCamel, execC, fileExists } from './utils.js'
+import { constToCamel, execC, fileExists, replaceAsync } from './utils.js'
 const { which } = shelljs
 
 type InternalConfig = Record<string, string>
@@ -26,6 +26,7 @@ type DBContainerInfo = {
 }
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
+const ARG_REGEX = /{(?<type>(?:tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -385,6 +386,28 @@ class Config {
 
   asJson() {
     return JSON.stringify(this.config)
+  }
+
+  async parseArg(arg: string): Promise<string> {
+    return await replaceAsync(arg, ARG_REGEX, async (x, ...args) => await this.parseArgCallback(x, ...args))
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: this is the actual String.replace signature
+  private async parseArgCallback(substring: string, ...args: any[]): Promise<string> {
+    const type: string = args[0]
+    const name: string = args[1]
+
+    switch (type?.toLowerCase()) {
+      case 'tf':
+      case 'tofu':
+      case 'terraform':
+        return (await this.tfVar(name)) ?? substring
+      case 'conf':
+      case 'config':
+        return this.get(name) ?? substring
+    }
+
+    return substring
   }
 
   private getDBDumpCommandFromImageType(type: string): string | undefined {
