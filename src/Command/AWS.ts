@@ -99,9 +99,11 @@ export class LogsTailCommand extends JoltCommand {
   requiredCommands = ['aws']
 
   group = Option.String()
+  args = Option.Proxy()
 
   async command(): Promise<number | undefined> {
     const {
+      args,
       config,
       context,
       context: { stdout },
@@ -110,7 +112,7 @@ export class LogsTailCommand extends JoltCommand {
     const group = await config.parseArg(this.group)
 
     stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
-    const result = await execC(config.command('aws'), ['logs', 'tail', group, '--follow'], { context })
+    const result = await execC(config.command('aws'), ['logs', 'tail', group, '--follow', ...args], { context })
     return result.exitCode
   }
 }
