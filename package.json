@@ -8,8 +8,8 @@
   "type": "module",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/node": "^22.15.18",
-    "@types/shelljs": "^0",
+    "@types/node": "^22.15.27",
+    "@types/shelljs": "^0.8.16",
     "typescript": "^5.8.3"
   },
   "files": [

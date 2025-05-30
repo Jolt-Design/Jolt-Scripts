@@ -101,8 +101,8 @@ __metadata:
   resolution: "@joltdesign/scripts@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^1.9.4"
-    "@types/node": "npm:^22.15.18"
-    "@types/shelljs": "npm:^0"
+    "@types/node": "npm:^22.15.27"
+    "@types/shelljs": "npm:^0.8.16"
     ansis: "npm:^4.0.0"
     clipanion: "npm:^4.0.0-rc.4"
     dotenv: "npm:^16.5.0"
@@ -173,7 +173,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.15.18":
+"@types/node@npm:*, @types/node@npm:^22.15.27":
   version: 22.15.27
   resolution: "@types/node@npm:22.15.27"
   dependencies:
@@ -182,7 +182,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/shelljs@npm:^0":
+"@types/shelljs@npm:^0.8.16":
   version: 0.8.16
   resolution: "@types/shelljs@npm:0.8.16"
   dependencies:
