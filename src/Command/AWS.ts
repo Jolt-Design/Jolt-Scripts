@@ -158,6 +158,12 @@ export class CodeBuildStartCommand extends JoltCommand {
       env: { AWS_PAGER: '' },
     })
 
+    stdout.write(
+      ansis.blue.bold(
+        '⛅ Tailing build logs, nothing will show until source download completes and the logs will not stop automatically - press Ctrl-C to close when ready...\n',
+      ),
+    )
+
     return await cli.run(['aws', 'logs', 'tail', `/aws/codebuild/${target}`, '--since=0s'])
   }
 }
