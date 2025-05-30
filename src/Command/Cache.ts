@@ -1,6 +1,6 @@
+import ansis from 'ansis'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
-import ansis from 'ansis'
 
 export class CacheFlushCommand extends JoltCommand {
   static paths = [

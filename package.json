@@ -12,9 +12,7 @@
     "@types/shelljs": "^0.8.16",
     "typescript": "^5.8.3"
   },
-  "files": [
-    "/bin"
-  ],
+  "files": ["/bin"],
   "scripts": {
     "build": "tsc",
     "debug": "node --inspect-brk ./bin/cli.js",

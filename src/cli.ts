@@ -1,11 +1,11 @@
 import { Cli } from 'clipanion'
+import { CodeBuildStartCommand, ECSDeployCommand, LogsTailCommand, S3SyncCommand } from './Command/AWS.js'
 import { BuildCommand } from './Command/Build.js'
+import { CacheFlushCommand } from './Command/Cache.js'
 import { ConfigCommand } from './Command/Config.js'
+import { DBDumpCommand, DBResetCommand } from './Command/DB.js'
 import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
 import { WPCommand } from './Command/WP.js'
-import { CodeBuildStartCommand, ECSDeployCommand, LogsTailCommand, S3SyncCommand } from './Command/AWS.js'
-import { DBDumpCommand, DBResetCommand } from './Command/DB.js'
-import { CacheFlushCommand } from './Command/Cache.js'
 
 const [node, app, ...args] = process.argv
 

@@ -1,8 +1,8 @@
-import { Option } from 'clipanion'
-import JoltCommand from './JoltCommand.js'
 import ansis from 'ansis'
+import { Option } from 'clipanion'
 import shelljs from 'shelljs'
 import { execC } from '../utils.js'
+import JoltCommand from './JoltCommand.js'
 const { which } = shelljs
 
 export class ECSDeployCommand extends JoltCommand {
