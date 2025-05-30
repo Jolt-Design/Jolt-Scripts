@@ -116,3 +116,48 @@ export class LogsTailCommand extends JoltCommand {
     return result.exitCode
   }
 }
+
+export class CodeBuildStartCommand extends JoltCommand {
+  static paths = [['aws', 'codebuild', 'start']]
+  requiredCommands = ['aws']
+
+  dev = Option.Boolean('--dev', false)
+  project = Option.String({ required: false })
+
+  async command(): Promise<number | undefined> {
+    const {
+      cli,
+      config,
+      context,
+      context: { stdout, stderr },
+      dev,
+      project,
+    } = this
+
+    let target: string | undefined
+
+    if (project) {
+      target = await config.parseArg(project)
+    } else {
+      target = config.get(dev ? 'devCodebuildProject' : 'codebuildProject')
+    }
+
+    if (!target) {
+      target = await config.tfVar(dev ? 'dev_codebuild_project_name' : 'codebuild_project_name')
+    }
+
+    if (!target) {
+      stderr.write(ansis.red('⛅ Failed to find a configured CodeBuild project\n'))
+      return 1
+    }
+
+    stdout.write(ansis.blue(`⛅ Starting the ${target} CodeBuild project...\n`))
+
+    const result = await execC(config.command('aws'), ['codebuild', 'start-build', `--project-name=${target}`], {
+      context,
+      env: { AWS_PAGER: '' },
+    })
+
+    return await cli.run(['aws', 'logs', 'tail', `/aws/codebuild/${target}`, '--since=0s'])
+  }
+}
