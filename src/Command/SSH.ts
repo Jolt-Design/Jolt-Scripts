@@ -38,7 +38,7 @@ export class RsyncCommand extends JoltCommand {
 
   dev = Option.Boolean('--dev', false)
   dryRun = Option.Boolean('--dry-run', false)
-  args = Option.Rest()
+  args = Option.Proxy()
 
   async command(): Promise<number | undefined> {
     const {
