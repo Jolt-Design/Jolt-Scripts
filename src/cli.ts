@@ -5,6 +5,7 @@ import { CacheFlushCommand } from './Command/Cache.js'
 import { ConfigCommand } from './Command/Config.js'
 import { DBDumpCommand, DBResetCommand } from './Command/DB.js'
 import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
+import { NexcessDeployCommand } from './Command/Nexcess.js'
 import { WPCommand } from './Command/WP.js'
 
 const [node, app, ...args] = process.argv
@@ -29,4 +30,5 @@ cli.register(CacheFlushCommand)
 cli.register(S3SyncCommand)
 cli.register(LogsTailCommand)
 cli.register(CodeBuildStartCommand)
+cli.register(NexcessDeployCommand)
 cli.runExit(args)
