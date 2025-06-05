@@ -1,7 +1,7 @@
 import path from 'node:path'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
-import { execC, fileExists } from '../utils.js'
+import { fileExists } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 export class NexcessDeployCommand extends JoltCommand {
@@ -12,25 +12,11 @@ export class NexcessDeployCommand extends JoltCommand {
 
   async command(): Promise<number | undefined> {
     const {
+      cli,
       config,
-      context,
-      context: { stdout, stderr },
+      context: { stdout },
       dev,
     } = this
-
-    const sshCommand = config.command('ssh')
-
-    if (!sshCommand) {
-      stderr.write(ansis.red('❎ Unable to find SSH command.\n'))
-      return 1
-    }
-
-    const sshAccount = dev ? config.get('devSshAccount') : config.get('sshAccount')
-
-    if (!sshAccount) {
-      stderr.write(ansis.red('❎ Missing sshAccount config variable.\n'))
-      return 1
-    }
 
     const deployFolder = dev ? config.get('devFolder') : config.get('liveFolder')
     const deployScript = config.get('nexcessDeployScript') ?? 'bin/nexcess-deploy-script.sh'
@@ -75,11 +61,11 @@ export class NexcessDeployCommand extends JoltCommand {
     }
 
     const command = commands.join(' && ')
-    const args = [sshAccount, '-T', '-C', `<<EOF\n${command}\nEOF`]
+    const args = ['ssh', '-T', '-C', `<<EOF\n${command}\nEOF`]
 
     stdout.write(ansis.blue(`❎ Cloning into ${folder} and deploying to ${deployFolder}...\n`))
 
-    const result = await execC(sshCommand, args, { context })
-    return result.exitCode
+    const result = await cli.run(args)
+    return result
   }
 }
