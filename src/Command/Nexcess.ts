@@ -69,3 +69,29 @@ export class NexcessDeployCommand extends JoltCommand {
     return result
   }
 }
+
+export class NexcessDeployLocalCommand extends JoltCommand {
+  static paths = [['nexcess', 'deploy-local']]
+
+  dev = Option.Boolean('--dev', false)
+  dryRun = Option.Boolean('--dry-run', false)
+  requiredCommands = ['rsync', 'ssh']
+
+  async command(): Promise<number | undefined> {
+    const { cli, config, dev, dryRun } = this
+    const excludeArg = (await fileExists('.rsyncignore')) ? '--exclude-from=.rsyncignore' : ''
+    const devArg = dev ? '--dev' : ''
+    const dryRunArg = dryRun ? '--dry-run' : ''
+
+    return await cli.run(
+      [
+        'rsync',
+        devArg,
+        dryRunArg,
+        excludeArg,
+        `./${config.get('codeSubfolder')}/`,
+        '{arg:acc}:~/{arg:contentFolder}',
+      ].filter((x) => !!x),
+    )
+  }
+}
