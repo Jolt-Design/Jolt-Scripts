@@ -27,7 +27,7 @@ type DBContainerInfo = {
 }
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
+const ARG_REGEX = /{(?<type>(?:arg|param|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -391,16 +391,23 @@ class Config {
     return JSON.stringify(this.config)
   }
 
-  async parseArg(arg: string): Promise<string> {
-    return await replaceAsync(arg, ARG_REGEX, async (x, ...args) => await this.parseArgCallback(x, ...args))
+  async parseArg(arg: string, params: Record<string, string> = {}): Promise<string> {
+    return await replaceAsync(arg, ARG_REGEX, async (x, ...args) => await this.parseArgCallback(x, params, ...args))
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: this is the actual String.replace signature
-  private async parseArgCallback(substring: string, ...args: any[]): Promise<string> {
+  private async parseArgCallback(
+    substring: string,
+    params: Record<string, string> = {},
+    // biome-ignore lint/suspicious/noExplicitAny: this is the actual String.replace signature
+    ...args: any[]
+  ): Promise<string> {
     const type: string = args[0]
     const name: string = args[1]
 
     switch (type?.toLowerCase()) {
+      case 'arg':
+      case 'param':
+        return params[name] ?? substring
       case 'tf':
       case 'tofu':
       case 'terraform':
