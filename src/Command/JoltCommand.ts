@@ -1,5 +1,5 @@
 import ansis from 'ansis'
-import { Command } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import shelljs from 'shelljs'
 import type { Config } from '../Config.js'
 import getConfig from '../Config.js'
@@ -9,6 +9,7 @@ export default abstract class JoltCommand extends Command {
   logo = ansis.magentaBright('⚡')
   config!: Config
   requiredCommands: string[] = []
+  site = Option.String('-s,--site', { required: false })
 
   abstract command(): Promise<number | undefined>
 
@@ -20,6 +21,11 @@ export default abstract class JoltCommand extends Command {
   async execute(): Promise<number | undefined> {
     const { stderr } = this.context
     const config = await getConfig()
+
+    if (this.site) {
+      config.setSite(this.site)
+    }
+
     this.config = config
 
     if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {

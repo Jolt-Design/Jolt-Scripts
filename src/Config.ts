@@ -45,6 +45,7 @@ class Config {
   private composeConfig: ComposeConfig | false | undefined
   private config: InternalConfig
   private _configPath?: string
+  private site: string | undefined
 
   get configPath() {
     return this._configPath
@@ -62,6 +63,10 @@ class Config {
     if (configPath) {
       this._configPath = path.resolve(configPath)
     }
+  }
+
+  setSite(site: string) {
+    this.site = site
   }
 
   command(name: string): string {
@@ -140,6 +145,15 @@ class Config {
   }
 
   get(key: string): string | undefined {
+    if (this.site) {
+      const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
+      const keyToTry = `${this.site}${capitalisedKey}`
+
+      if (this.config[keyToTry] !== undefined) {
+        return this.config[keyToTry]
+      }
+    }
+
     return this.config[key]
   }
 
@@ -148,7 +162,15 @@ class Config {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: the TF var could be anything
-  async tfVar(key: string, throwOnFail = false): Promise<any> {
+  async tfVar(key: string, throwOnFail = false, trySite = true): Promise<any> {
+    if (trySite && this.site) {
+      const siteResult = await this.tfVar(`${this.site}_${key}`, false, false)
+
+      if (siteResult) {
+        return siteResult
+      }
+    }
+
     try {
       const result = await execC(this.command('tofu'), ['output', '-json', key])
       const output = result.stdout?.toString()
