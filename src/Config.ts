@@ -158,6 +158,15 @@ class Config {
   }
 
   has(key: string): boolean {
+    if (this.site) {
+      const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
+      const keyToTry = `${this.site}${capitalisedKey}`
+
+      if (this.config[keyToTry] !== undefined) {
+        return true
+      }
+    }
+
     return key in this.config
   }
 
