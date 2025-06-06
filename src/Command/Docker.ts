@@ -16,6 +16,8 @@ export abstract class DockerCommand extends JoltCommand {
 export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
+  buildArgs = Option.Array('--build-arg', { required: false })
+
   async command(): Promise<number | undefined> {
     const {
       config,
@@ -40,7 +42,7 @@ export class DockerBuildCommand extends DockerCommand {
 
     stdout.write(ansis.blue(`🐳 Building image ${imageName} for ${imageType} using ${dockerCommand}...\n`))
 
-    const args = await this.buildArgs()
+    const args = await this.buildCommandArgs()
     const command = [dockerCommand, ...args].join(' ')
     stdout.write(`Running command: ${command}\n`)
 
@@ -49,13 +51,15 @@ export class DockerBuildCommand extends DockerCommand {
     return result.exitCode
   }
 
-  async buildArgs(): Promise<string[]> {
+  async buildCommandArgs(): Promise<string[]> {
     const { config, dev } = this
     const imageName = await config.getDockerImageName(dev)
     const platform = config.get('buildPlatform')
     const context = config.get('buildContext')
     const dockerFile = config.get('dockerFile')
-    const buildArgs = dev ? '--build-arg=DEVBUILD=1' : ''
+    const additionalBuildArgs = this.buildArgs?.map((x) => `--build-arg=${x}`) || []
+    const devBuildArg = dev ? '--build-arg=DEVBUILD=1' : ''
+    const buildArgs = [devBuildArg, ...additionalBuildArgs]
 
     return [
       'buildx',
@@ -63,7 +67,7 @@ export class DockerBuildCommand extends DockerCommand {
       platform && `--platform=${platform}`,
       dockerFile && `-f ${dockerFile}`,
       `-t ${imageName}`,
-      buildArgs,
+      ...buildArgs,
       context ?? '.',
     ]
       .filter((x) => !!x)
