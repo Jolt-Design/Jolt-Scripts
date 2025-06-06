@@ -5,7 +5,22 @@ import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 const { which } = shelljs
 
-export class ECSDeployCommand extends JoltCommand {
+abstract class AWSCommand extends JoltCommand {
+  region = Option.String('--region', { required: false })
+
+  protected async getRegionArg() {
+    const { config, region } = this
+
+    if (region) {
+      return `--region=${await config.parseArg(region)}`
+    }
+
+    const configRegion = config.get('awsRegion')
+    return configRegion ? `--region=${configRegion}` : ''
+  }
+}
+
+export class ECSDeployCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy']]
   requiredCommands = ['aws']
 
@@ -23,7 +38,14 @@ export class ECSDeployCommand extends JoltCommand {
     const cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
     const service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
 
-    const args = ['ecs', 'update-service', `--cluster='${cluster}'`, `--service='${service}'`, '--force-new-deployment']
+    const args = [
+      await this.getRegionArg(),
+      'ecs',
+      'update-service',
+      `--cluster='${cluster}'`,
+      `--service='${service}'`,
+      '--force-new-deployment',
+    ]
 
     if (!cluster) {
       stderr.write(ansis.red('ECS cluster must be configured!\n'))
@@ -68,7 +90,7 @@ export class ECSDeployCommand extends JoltCommand {
   }
 }
 
-export class S3SyncCommand extends JoltCommand {
+export class S3SyncCommand extends AWSCommand {
   static paths = [['aws', 's3', 'sync']]
   requiredCommands = ['aws']
 
@@ -87,14 +109,14 @@ export class S3SyncCommand extends JoltCommand {
     const parsedTo = await config.parseArg(to)
 
     stdout.write(ansis.blue(`⛅ Syncing ${parsedFrom} to ${parsedTo}...\n`))
-    const result = await execC(config.command('aws'), ['s3', 'sync', parsedFrom, parsedTo])
+    const result = await execC(config.command('aws'), [await this.getRegionArg(), 's3', 'sync', parsedFrom, parsedTo])
     stdout.write(ansis.blue('⛅ Syncing complete.\n'))
 
     return result.exitCode
   }
 }
 
-export class LogsTailCommand extends JoltCommand {
+export class LogsTailCommand extends AWSCommand {
   static paths = [['aws', 'logs', 'tail']]
   requiredCommands = ['aws']
 
@@ -112,12 +134,20 @@ export class LogsTailCommand extends JoltCommand {
     const group = await config.parseArg(this.group)
 
     stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
-    const result = await execC(config.command('aws'), ['logs', 'tail', group, '--follow', ...args], { context })
+
+    const result = await execC(
+      config.command('aws'),
+      [await this.getRegionArg(), 'logs', 'tail', group, '--follow', ...args],
+      {
+        context,
+      },
+    )
+
     return result.exitCode
   }
 }
 
-export class CodeBuildStartCommand extends JoltCommand {
+export class CodeBuildStartCommand extends AWSCommand {
   static paths = [['aws', 'codebuild', 'start']]
   requiredCommands = ['aws']
 
@@ -152,11 +182,16 @@ export class CodeBuildStartCommand extends JoltCommand {
     }
 
     stdout.write(ansis.blue(`⛅ Starting the ${target} CodeBuild project...\n`))
+    const regionArg = await this.getRegionArg()
 
-    const result = await execC(config.command('aws'), ['codebuild', 'start-build', `--project-name=${target}`], {
-      context,
-      env: { AWS_PAGER: '' },
-    })
+    const result = await execC(
+      config.command('aws'),
+      [regionArg, 'codebuild', 'start-build', `--project-name=${target}`],
+      {
+        context,
+        env: { AWS_PAGER: '' },
+      },
+    )
 
     stdout.write(
       ansis.blue.bold(
@@ -164,6 +199,6 @@ export class CodeBuildStartCommand extends JoltCommand {
       ),
     )
 
-    return await cli.run(['aws', 'logs', 'tail', `/aws/codebuild/${target}`, '--since=0s'])
+    return await cli.run(['aws', 'logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--since=0s'])
   }
 }
