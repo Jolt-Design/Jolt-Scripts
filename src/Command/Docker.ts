@@ -31,12 +31,12 @@ export class DockerBuildCommand extends DockerCommand {
     const dockerCommand = config.command('docker')
 
     if (!imageName) {
-      stderr.write(ansis.red('Image name must be configured!\n'))
+      stderr.write(ansis.red('🐳 Image name must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
@@ -102,7 +102,7 @@ export class DockerLoginCommand extends DockerCommand {
       return result.exitCode
     } catch (e) {
       if (e instanceof ExecaError) {
-        stderr.write(ansis.red(`Failed to log in! Reason: ${e.message}\n`))
+        stderr.write(ansis.red(`🐳 Failed to log in! Reason: ${e.message}\n`))
         return e.exitCode
       }
 
@@ -130,12 +130,12 @@ export class DockerTagCommand extends DockerCommand {
     const args = ['tag', `${imageName}:${localTag}`, `${remoteRepo}:${remoteTag}`]
 
     if (!imageName) {
-      stderr.write(ansis.red('Image name must be configured!\n'))
+      stderr.write(ansis.red('🐳 Image name must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
@@ -167,12 +167,12 @@ export class DockerPushCommand extends DockerCommand {
     const args = ['push', `${remoteRepo}:${remoteTag}`]
 
     if (!remoteRepo) {
-      stderr.write(ansis.red('Remote repo must be configured!\n'))
+      stderr.write(ansis.red('🐳 Remote repo must be configured!\n'))
       return 1
     }
 
     if (!which(dockerCommand)) {
-      stderr.write(ansis.red(`Could not find command ${dockerCommand}!\n`))
+      stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }
 
