@@ -8,6 +8,7 @@ import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCom
 import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexcess.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { WPCommand } from './Command/WP.js'
+import { CmdCommand } from './Command/Cmd.js'
 
 const [node, app, ...args] = process.argv
 
@@ -35,4 +36,5 @@ cli.register(NexcessDeployCommand)
 cli.register(NexcessDeployLocalCommand)
 cli.register(SSHCommand)
 cli.register(RsyncCommand)
+cli.register(CmdCommand)
 cli.runExit(args)
