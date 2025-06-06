@@ -27,7 +27,7 @@ type DBContainerInfo = {
 }
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:arg|param|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
+const ARG_REGEX = /{(?<type>(?:arg|param|cmd|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -439,6 +439,8 @@ class Config {
       case 'arg':
       case 'param':
         return params[name] ?? substring
+      case 'cmd':
+        return this.command(name)
       case 'tf':
       case 'tofu':
       case 'terraform':
