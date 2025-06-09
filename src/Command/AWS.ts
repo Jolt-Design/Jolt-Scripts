@@ -48,17 +48,17 @@ export class ECSDeployCommand extends AWSCommand {
     ]
 
     if (!cluster) {
-      stderr.write(ansis.red('ECS cluster must be configured!\n'))
+      stderr.write(ansis.red('⛅ ECS cluster must be configured!\n'))
       return 1
     }
 
     if (!service) {
-      stderr.write(ansis.red('ECS service must be configured!\n'))
+      stderr.write(ansis.red('⛅ ECS service must be configured!\n'))
       return 1
     }
 
     if (!which(awsCommand)) {
-      stderr.write(ansis.red(`Could not find command ${awsCommand}!\n`))
+      stderr.write(ansis.red(`⛅ Could not find command ${awsCommand}!\n`))
       return 2
     }
 
@@ -265,7 +265,7 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
       return 0
     }
 
-    stderr.write(ansis.red('Failed to invalidate!\n'))
+    stderr.write(ansis.red('⛅ Failed to invalidate!\n'))
 
     return result.exitCode
   }

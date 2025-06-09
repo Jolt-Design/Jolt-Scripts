@@ -26,7 +26,7 @@ export class DBDumpCommand extends JoltCommand {
 
     if (backup) {
       if (!backupPath) {
-        stderr.write(ansis.red('The DB backup location must be configured as dbBackupPath.\n'))
+        stderr.write(ansis.red('🛢️ The DB backup location must be configured as dbBackupPath.\n'))
         return 1
       }
 
@@ -42,7 +42,7 @@ export class DBDumpCommand extends JoltCommand {
       const configSeed = config.get('dbSeed')
 
       if (!configSeed) {
-        stderr.write(ansis.red('The DB seed location must be configured.\n'))
+        stderr.write(ansis.red('🛢️ The DB seed location must be configured.\n'))
         return 1
       }
 
@@ -53,7 +53,7 @@ export class DBDumpCommand extends JoltCommand {
     const containerInfo = await config.getDBContainerInfo()
 
     if (!containerInfo) {
-      stderr.write(ansis.red(`Couldn't find information about database container. Try setting config explicitly.\n`))
+      stderr.write(ansis.red(`🛢️ Couldn't find information about database container. Try setting config explicitly.\n`))
       return 2
     }
 
