@@ -27,7 +27,8 @@ export class SSHCommand extends JoltCommand {
       return 1
     }
 
-    const result = await execC(sshCommand, [sshAccount, ...args], { context })
+    const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
+    const result = await execC(sshCommand, [sshAccount, ...parsedArgs], { context })
     return result.exitCode
   }
 }

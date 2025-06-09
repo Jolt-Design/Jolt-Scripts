@@ -30,8 +30,9 @@ export class WPCommand extends JoltCommand {
     const [composeCommand, args] = config.getComposeCommand()
 
     args.push(profile ? `--profile=${profile}` : '', 'run', '--rm', userArg || '', containerName, 'wp', ...this.wpArgs)
+    const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
 
-    const result = await execC(composeCommand, args, { context, reject: false })
+    const result = await execC(composeCommand, parsedArgs, { context, reject: false })
     return result.exitCode
   }
 
