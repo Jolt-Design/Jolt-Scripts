@@ -202,3 +202,71 @@ export class CodeBuildStartCommand extends AWSCommand {
     return await cli.run(['aws', 'logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--since=0s'])
   }
 }
+
+export class CloudFrontInvalidateCommand extends AWSCommand {
+  static paths = [['aws', 'cf', 'invalidate']]
+  requiredCommands = ['aws']
+
+  distribution = Option.String({ required: true })
+  invalidationPaths = Option.Array('--path')
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      context: { stdout, stderr },
+      distribution,
+      invalidationPaths,
+    } = this
+
+    let target: string | undefined
+
+    if (distribution) {
+      target = await config.parseArg(distribution)
+    } else {
+      target = config.get('cloudfrontDistribution')
+    }
+
+    if (!target) {
+      target = await config.tfVar('cloudfront_distribution')
+    }
+
+    if (!target) {
+      stderr.write(
+        ansis.red(
+          '⛅ Failed to find a configured CloudFront distribution. Configure one or specify it as a parameter.\n',
+        ),
+      )
+
+      return 1
+    }
+
+    stdout.write(ansis.blue(`⛅ Invalidating the ${target} CloudFront distribution cache...\n`))
+    const regionArg = await this.getRegionArg()
+    const paths = invalidationPaths?.length ? invalidationPaths : ["'/*'"]
+    const pathArgs = paths.join(' ')
+
+    const result = await execC(config.command('aws'), [
+      regionArg,
+      'cloudfront',
+      'create-invalidation',
+      '--distribution',
+      target,
+      '--path',
+      pathArgs,
+    ])
+
+    const output = result.stdout?.toString()
+
+    if (!result.exitCode && output) {
+      const resultJson = JSON.parse(output)
+      const { Invalidation: invalidation } = resultJson
+      stdout.write(ansis.blue.bold('⛅ Started cache invalidation:\n'))
+      stdout.write(`${ansis.white('Invalidation ID:')} ${invalidation.Id}\n`)
+      return 0
+    }
+
+    stderr.write(ansis.red('Failed to invalidate!\n'))
+
+    return result.exitCode
+  }
+}

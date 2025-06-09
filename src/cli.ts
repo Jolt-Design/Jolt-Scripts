@@ -1,5 +1,11 @@
 import { Cli } from 'clipanion'
-import { CodeBuildStartCommand, ECSDeployCommand, LogsTailCommand, S3SyncCommand } from './Command/AWS.js'
+import {
+  CloudFrontInvalidateCommand,
+  CodeBuildStartCommand,
+  ECSDeployCommand,
+  LogsTailCommand,
+  S3SyncCommand,
+} from './Command/AWS.js'
 import { BuildCommand } from './Command/Build.js'
 import { CacheFlushCommand } from './Command/Cache.js'
 import { ConfigCommand } from './Command/Config.js'
@@ -37,4 +43,5 @@ cli.register(NexcessDeployLocalCommand)
 cli.register(SSHCommand)
 cli.register(RsyncCommand)
 cli.register(CmdCommand)
+cli.register(CloudFrontInvalidateCommand)
 cli.runExit(args)
