@@ -6,6 +6,7 @@ import JoltCommand from './JoltCommand.js'
 const { which } = shelljs
 
 abstract class AWSCommand extends JoltCommand {
+  requiredCommands = ['aws']
   region = Option.String('--region', { required: false })
 
   protected async getRegionArg() {
@@ -22,7 +23,6 @@ abstract class AWSCommand extends JoltCommand {
 
 export class ECSDeployCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy']]
-  requiredCommands = ['aws']
 
   dev = Option.Boolean('--dev', false)
   prod = !this.dev
@@ -92,7 +92,6 @@ export class ECSDeployCommand extends AWSCommand {
 
 export class S3SyncCommand extends AWSCommand {
   static paths = [['aws', 's3', 'sync']]
-  requiredCommands = ['aws']
 
   from = Option.String()
   to = Option.String()
@@ -118,7 +117,6 @@ export class S3SyncCommand extends AWSCommand {
 
 export class LogsTailCommand extends AWSCommand {
   static paths = [['aws', 'logs', 'tail']]
-  requiredCommands = ['aws']
 
   group = Option.String()
   args = Option.Proxy()
@@ -149,7 +147,6 @@ export class LogsTailCommand extends AWSCommand {
 
 export class CodeBuildStartCommand extends AWSCommand {
   static paths = [['aws', 'codebuild', 'start']]
-  requiredCommands = ['aws']
 
   dev = Option.Boolean('--dev', false)
   project = Option.String({ required: false })
@@ -205,7 +202,6 @@ export class CodeBuildStartCommand extends AWSCommand {
 
 export class CloudFrontInvalidateCommand extends AWSCommand {
   static paths = [['aws', 'cf', 'invalidate']]
-  requiredCommands = ['aws']
 
   distribution = Option.String({ required: true })
   invalidationPaths = Option.Array('--path')
