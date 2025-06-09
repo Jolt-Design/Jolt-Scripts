@@ -27,7 +27,7 @@ type DBContainerInfo = {
 }
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:arg|param|cmd|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
+const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -441,6 +441,8 @@ class Config {
         return params[name] ?? substring
       case 'cmd':
         return this.command(name)
+      case 'db':
+        return (await this.getDBConfigEntry(name)) ?? substring
       case 'tf':
       case 'tofu':
       case 'terraform':
@@ -451,6 +453,29 @@ class Config {
     }
 
     return substring
+  }
+
+  async getDBConfigEntry(key: string): Promise<string | undefined> {
+    const dbConfig = await this.getDBContainerInfo()
+
+    switch (key) {
+      case 'dumpCmd':
+        return dbConfig?.dumpCommand
+      case 'cliCmd':
+        return dbConfig?.cliCommand
+      case 'type':
+        return dbConfig?.type
+      case 'name':
+        return dbConfig?.credentials.db
+      case 'db':
+      case 'user':
+      case 'pass':
+        return dbConfig?.credentials[key]
+      case 'host':
+        return dbConfig?.name
+      default:
+        return
+    }
   }
 
   private getDBCLICommandFromImageType(type: string): string | undefined {
