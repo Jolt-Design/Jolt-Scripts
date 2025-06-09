@@ -8,7 +8,7 @@
   "type": "module",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/node": "^22.15.27",
+    "@types/node": "^22.15.30",
     "@types/shelljs": "^0.8.16",
     "typescript": "^5.8.3"
   },
@@ -21,10 +21,10 @@
     "watch": "tsc -w"
   },
   "dependencies": {
-    "ansis": "^4.0.0",
+    "ansis": "^4.1.0",
     "clipanion": "^4.0.0-rc.4",
     "dotenv": "^16.5.0",
-    "execa": "^9.5.3",
+    "execa": "^9.6.0",
     "shelljs": "^0.10.0",
     "typanion": "^3.14.0"
   }
