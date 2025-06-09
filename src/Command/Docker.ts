@@ -114,19 +114,25 @@ export class DockerLoginCommand extends DockerCommand {
 export class DockerTagCommand extends DockerCommand {
   static paths = [['docker', 'tag']]
 
+  gitTag = Option.Boolean('--git-tag', true)
+  tag = Option.String({ required: false })
+
   async command(): Promise<number | undefined> {
     const {
+      cli,
       config,
       dev,
       context,
       context: { stdout, stderr },
+      gitTag,
+      tag,
     } = this
+
     const dockerCommand = config.command('docker')
     const imageName = await config.getDockerImageName(dev)
     const remoteRepo = await config.getRemoteRepo(dev)
     const localTag = 'latest'
-    const remoteTag = 'latest'
-
+    const remoteTag = tag ?? 'latest'
     const args = ['tag', `${imageName}:${localTag}`, `${remoteRepo}:${remoteTag}`]
 
     if (!imageName) {
@@ -141,10 +147,30 @@ export class DockerTagCommand extends DockerCommand {
 
     stdout.write(ansis.blue(`🐳 Tagging image ${imageName}:${localTag} as ${remoteRepo}:${remoteTag}...\n`))
 
-    // const command = [dockerCommand, ...args].join(' ')
-    // stdout.write(`Running command: ${command}\n`)
-
     const result = await execC(dockerCommand, args, { context })
+
+    if (gitTag) {
+      const gitCommand = config.command('git')
+
+      if (gitCommand) {
+        const commitShaResult = await execC(gitCommand, ['rev-parse', 'HEAD'], { shell: false, reject: false, stderr })
+
+        if (commitShaResult.failed) {
+          stderr.write(ansis.yellow('🐳 Failed to find Git SHA.\n'))
+        } else {
+          const sha = commitShaResult.stdout?.toString()
+
+          if (sha) {
+            const shaTag = sha.slice(0, 8)
+            await cli.run(['docker', 'tag', '--no-git-tag', shaTag])
+          } else {
+            stderr.write(ansis.yellow('🐳 Cannot tag image with Git SHA because the tag command returned nothing.\n'))
+          }
+        }
+      } else {
+        stderr.write(ansis.yellow('🐳 Cannot tag image with Git SHA because git command was not found.\n'))
+      }
+    }
 
     return result.exitCode
   }
