@@ -267,3 +267,110 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
     return result.exitCode
   }
 }
+
+export class ECSDeploySpecificCommand extends AWSCommand {
+  static paths = [['aws', 'ecs', 'deploy-specific']]
+
+  dev = Option.Boolean('--dev', false)
+  prod = !this.dev
+  tag = Option.String({ required: true })
+
+  async command(): Promise<number | undefined> {
+    const {
+      cli,
+      config,
+      dev,
+      context,
+      context: { stdout, stderr },
+      tag,
+    } = this
+
+    const awsCommand = config.command('aws')
+    const cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
+    const service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
+    const family = await config.tfVar(dev ? 'ecs_task_definition_dev' : 'ecs_task_definition')
+
+    if (!tag) {
+      stderr.write(ansis.red('⛅ Image tag parameter must be specified\n'))
+      return 2
+    }
+
+    if (!cluster) {
+      stderr.write(ansis.red('⛅ ECS cluster must be configured!\n'))
+      return 1
+    }
+
+    if (!service) {
+      stderr.write(ansis.red('⛅ ECS service must be configured!\n'))
+      return 1
+    }
+
+    if (!family) {
+      stderr.write(ansis.red('⛅ ECS task definition must be configured!\n'))
+      return 1
+    }
+
+    const regionArg = await this.getRegionArg()
+
+    stdout.write(ansis.blue(`⛅ Updating ${family} to use image tag :${tag}...\n`))
+
+    // TODO: We probably don't need this anymore
+    const queryArgs = [
+      'containerDefinitions: taskDefinition.containerDefinitions',
+      'family: taskDefinition.family',
+      'taskRoleArn: taskDefinition.taskRoleArn',
+      'executionRoleArn: taskDefinition.executionRoleArn',
+      'networkMode: taskDefinition.networkMode',
+      'volumes: taskDefinition.volumes',
+      'placementConstraints: taskDefinition.placementConstraints',
+      'requiresCompatibilities: taskDefinition.requiresCompatibilities',
+      'cpu: taskDefinition.cpu',
+      'memory: taskDefinition.memory',
+    ]
+
+    const describeTaskDefinitionArgs = [
+      regionArg,
+      'ecs',
+      'describe-task-definition',
+      '--task-definition',
+      family,
+      '--query',
+      `{ ${queryArgs.join(', ')} }`,
+    ]
+
+    const taskDefinitionResult = await execC(awsCommand, describeTaskDefinitionArgs, {
+      env: {
+        AWS_PAGER: '',
+      },
+      shell: false,
+      extendEnv: true,
+    })
+
+    const taskDefinitionOutput = taskDefinitionResult.stdout?.toString()
+
+    if (taskDefinitionResult.exitCode || typeof taskDefinitionOutput !== 'string') {
+      stderr.write(ansis.redBright('⛅ Failure reading task definition!\n'))
+      return taskDefinitionResult.exitCode
+    }
+
+    const taskDefinition = JSON.parse(taskDefinitionOutput)
+    const oldImage: string = taskDefinition.containerDefinitions[0].image
+    taskDefinition.containerDefinitions[0].image = oldImage.replace(/:.+$/, `:${tag}`)
+
+    await execC(
+      awsCommand,
+      [
+        regionArg,
+        'ecs',
+        'register-task-definition',
+        '--family',
+        family,
+        '--cli-input-json',
+        JSON.stringify(taskDefinition),
+      ],
+      { shell: false },
+    )
+
+    return await cli.run(['aws', 'ecs', 'deploy', '--no-force-new-deployment'])
+  }
+}

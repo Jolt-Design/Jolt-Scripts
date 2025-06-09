@@ -3,6 +3,7 @@ import {
   CloudFrontInvalidateCommand,
   CodeBuildStartCommand,
   ECSDeployCommand,
+  ECSDeploySpecificCommand,
   LogsTailCommand,
   S3SyncCommand,
 } from './Command/AWS.js'
@@ -32,6 +33,7 @@ cli.register(DockerTagCommand)
 cli.register(DockerPushCommand)
 cli.register(WPCommand)
 cli.register(ECSDeployCommand)
+cli.register(ECSDeploySpecificCommand)
 cli.register(DBDumpCommand)
 cli.register(DBResetCommand)
 cli.register(CacheFlushCommand)
