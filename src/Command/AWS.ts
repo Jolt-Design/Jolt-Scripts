@@ -25,6 +25,7 @@ export class ECSDeployCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy']]
 
   dev = Option.Boolean('--dev', false)
+  forceNew = Option.Boolean('--force-new-deployment', true)
   prod = !this.dev
 
   async command(): Promise<number | undefined> {
@@ -44,7 +45,7 @@ export class ECSDeployCommand extends AWSCommand {
       'update-service',
       `--cluster='${cluster}'`,
       `--service='${service}'`,
-      '--force-new-deployment',
+      this.forceNew ? '--force-new-deployment' : '',
     ]
 
     if (!cluster) {
