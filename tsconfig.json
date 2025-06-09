@@ -3,7 +3,7 @@
     "target": "es2018",
     "module": "NodeNext",
     "moduleResolution": "nodenext",
-    "outDir": "./bin",
+    "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
