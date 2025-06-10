@@ -95,8 +95,16 @@ export class ConfigCommand extends JoltCommand {
     stdout.write(ansis.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
+      const parsedValue = await config.parseArg(value)
+
       stdout.write(ansis.bold(`${key}: `))
-      stdout.write(`${value}\n`)
+      stdout.write(`${parsedValue}`)
+
+      if (parsedValue !== value) {
+        stdout.write(ansis.dim(` [Parsed from: ${value}]`))
+      }
+
+      stdout.write('\n')
     }
   }
 }
