@@ -32,7 +32,7 @@ export default abstract class JoltCommand extends Command {
       const missingCommands = []
 
       for (const baseCommand of this.requiredCommands) {
-        const realCommand = config.command(baseCommand)
+        const realCommand = await config.command(baseCommand)
 
         if (!which(realCommand)) {
           missingCommands.push(realCommand)

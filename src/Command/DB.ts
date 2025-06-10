@@ -19,7 +19,7 @@ export class DBDumpCommand extends JoltCommand {
       context: { stdout, stderr },
     } = this
 
-    const backupPath = config.get('dbBackupPath')
+    const backupPath = await config.get('dbBackupPath')
 
     let filename: string
     let shouldGzip = backup
@@ -39,7 +39,7 @@ export class DBDumpCommand extends JoltCommand {
 
       filename = `backup-${date}.sql`
     } else {
-      const configSeed = config.get('dbSeed')
+      const configSeed = await config.get('dbSeed')
 
       if (!configSeed) {
         stderr.write(ansis.red('🛢️ The DB seed location must be configured.\n'))
@@ -49,7 +49,7 @@ export class DBDumpCommand extends JoltCommand {
       filename = configSeed
     }
 
-    const [composeCommand, args] = config.getComposeCommand()
+    const [composeCommand, args] = await config.getComposeCommand()
     const containerInfo = await config.getDBContainerInfo()
 
     if (!containerInfo) {
@@ -163,7 +163,7 @@ export class DBResetCommand extends JoltCommand {
       }
 
       stdout.write(ansis.blue(`🛢️ Deleting the following volumes: ${fullVolumeNames.join(', ')}\n`))
-      const volumeDeleteResult = await execC(config.command('docker'), ['volume', 'rm', ...fullVolumeNames], {
+      const volumeDeleteResult = await execC(await config.command('docker'), ['volume', 'rm', ...fullVolumeNames], {
         stdout: 'ignore',
         stderr,
         reject: false,
@@ -175,10 +175,10 @@ export class DBResetCommand extends JoltCommand {
 
     stdout.write(ansis.blue('🛢️ Bringing containers back up...\n'))
     const dcUpResult = await execC(composeCommand, [...args, 'up', '--detach'], { context })
-    const devPlugins = config.get('devPlugins')
+    const devPlugins = await await config.get('devPlugins')
 
     if (devPlugins) {
-      const devPluginDelay = config.get('devPluginDelay')
+      const devPluginDelay = await config.get('devPluginDelay')
       let delaySeconds = Number.parseFloat(devPluginDelay || '5')
 
       if (Number.isNaN(delaySeconds)) {

@@ -16,7 +16,7 @@ abstract class AWSCommand extends JoltCommand {
       return `--region=${await config.parseArg(region)}`
     }
 
-    const configRegion = config.get('awsRegion')
+    const configRegion = await config.get('awsRegion')
     return configRegion ? `--region=${configRegion}` : ''
   }
 }
@@ -35,7 +35,7 @@ export class ECSDeployCommand extends AWSCommand {
       context,
       context: { stdout, stderr },
     } = this
-    const awsCommand = config.command('aws')
+    const awsCommand = await config.command('aws')
     const cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
     const service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
 
@@ -109,7 +109,13 @@ export class S3SyncCommand extends AWSCommand {
     const parsedTo = await config.parseArg(to)
 
     stdout.write(ansis.blue(`⛅ Syncing ${parsedFrom} to ${parsedTo}...\n`))
-    const result = await execC(config.command('aws'), [await this.getRegionArg(), 's3', 'sync', parsedFrom, parsedTo])
+    const result = await execC(await config.command('aws'), [
+      await this.getRegionArg(),
+      's3',
+      'sync',
+      parsedFrom,
+      parsedTo,
+    ])
     stdout.write(ansis.blue('⛅ Syncing complete.\n'))
 
     return result.exitCode
@@ -135,7 +141,7 @@ export class LogsTailCommand extends AWSCommand {
     stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
 
     const result = await execC(
-      config.command('aws'),
+      await config.command('aws'),
       [await this.getRegionArg(), 'logs', 'tail', group, '--follow', ...args],
       {
         context,
@@ -167,7 +173,7 @@ export class CodeBuildStartCommand extends AWSCommand {
     if (project) {
       target = await config.parseArg(project)
     } else {
-      target = config.get(dev ? 'devCodebuildProject' : 'codebuildProject')
+      target = await await config.get(dev ? 'devCodebuildProject' : 'codebuildProject')
     }
 
     if (!target) {
@@ -183,7 +189,7 @@ export class CodeBuildStartCommand extends AWSCommand {
     const regionArg = await this.getRegionArg()
 
     const result = await execC(
-      config.command('aws'),
+      await config.command('aws'),
       [regionArg, 'codebuild', 'start-build', `--project-name=${target}`],
       {
         context,
@@ -220,7 +226,7 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
     if (distribution) {
       target = await config.parseArg(distribution)
     } else {
-      target = config.get('cloudfrontDistribution')
+      target = await await config.get('cloudfrontDistribution')
     }
 
     if (!target) {
@@ -242,7 +248,7 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
     const paths = invalidationPaths?.length ? invalidationPaths : ["'/*'"]
     const pathArgs = paths.join(' ')
 
-    const result = await execC(config.command('aws'), [
+    const result = await execC(await config.command('aws'), [
       regionArg,
       'cloudfront',
       'create-invalidation',
@@ -285,7 +291,7 @@ export class ECSDeploySpecificCommand extends AWSCommand {
       tag,
     } = this
 
-    const awsCommand = config.command('aws')
+    const awsCommand = await config.command('aws')
     const cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
     const service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
     const family = await config.tfVar(dev ? 'ecs_task_definition_dev' : 'ecs_task_definition')

@@ -18,12 +18,12 @@ export class NexcessDeployCommand extends JoltCommand {
       dev,
     } = this
 
-    const deployFolder = dev ? config.get('devFolder') : config.get('liveFolder')
-    const deployScript = config.get('nexcessDeployScript') ?? 'bin/nexcess-deploy-script.sh'
-    const cleanupScript = config.get('nexcessCleanupScript') ?? 'bin/nexcess-cleanup.sh'
-    const branch = dev ? config.get('devBranch') : config.get('branch')
-    const repo = config.get('repo')
-    const codeSubfolder = config.get('codeSubfolder')
+    const deployFolder = dev ? await config.get('devFolder') : await config.get('liveFolder')
+    const deployScript = (await config.get('nexcessDeployScript')) ?? 'bin/nexcess-deploy-script.sh'
+    const cleanupScript = (await config.get('nexcessCleanupScript')) ?? 'bin/nexcess-cleanup.sh'
+    const branch = dev ? await config.get('devBranch') : await config.get('branch')
+    const repo = await config.get('repo')
+    const codeSubfolder = await config.get('codeSubfolder')
     const now = new Date()
     const date = now
       .toISOString()
@@ -89,7 +89,7 @@ export class NexcessDeployLocalCommand extends JoltCommand {
         devArg,
         dryRunArg,
         excludeArg,
-        `./${config.get('codeSubfolder')}/`,
+        `./${await config.get('codeSubfolder')}/`,
         '{arg:acc}:~/{arg:contentFolder}',
       ].filter((x) => !!x),
     )

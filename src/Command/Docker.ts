@@ -28,7 +28,7 @@ export class DockerBuildCommand extends DockerCommand {
     } = this
     const imageName = await config.getDockerImageName(dev)
     const imageType = dev ? 'dev' : prod ? 'prod' : 'unknown'
-    const dockerCommand = config.command('docker')
+    const dockerCommand = await config.command('docker')
 
     if (!imageName) {
       stderr.write(ansis.red('🐳 Image name must be configured!\n'))
@@ -54,9 +54,9 @@ export class DockerBuildCommand extends DockerCommand {
   async buildCommandArgs(): Promise<string[]> {
     const { config, dev } = this
     const imageName = await config.getDockerImageName(dev)
-    const platform = config.get('buildPlatform')
-    const context = config.get('buildContext')
-    const dockerFile = config.get('dockerFile')
+    const platform = await config.get('buildPlatform')
+    const context = await config.get('buildContext')
+    const dockerFile = await config.get('dockerFile')
     const additionalBuildArgs = this.buildArgs?.map((x) => `--build-arg=${x}`) || []
     const devBuildArg = dev ? '--build-arg=DEVBUILD=1' : ''
     const buildArgs = [devBuildArg, ...additionalBuildArgs]
@@ -87,14 +87,14 @@ export class DockerLoginCommand extends DockerCommand {
     } = this
 
     // TODO get URL from ecr_repo_url, get region from repo URL
-    const ecrBaseUrl = config.get('ecrBaseUrl') ?? (await config.tfVar('ecr_base_url'))
-    const region = config.get('awsRegion') ?? (await config.tfVar('region')) ?? config.awsRegion()
+    const ecrBaseUrl = (await config.get('ecrBaseUrl')) ?? (await config.tfVar('ecr_base_url'))
+    const region = (await config.get('awsRegion')) ?? (await config.tfVar('region')) ?? config.awsRegion()
 
     stdout.write(ansis.blue(`🐳 Logging in to ECR repository ${ecrBaseUrl} on ${region}...\n`))
 
     try {
-      const result = await execa(config.command('aws'), ['ecr', 'get-login-password', '--region', region]).pipe(
-        config.command('docker'),
+      const result = await execa(await config.command('aws'), ['ecr', 'get-login-password', '--region', region]).pipe(
+        await config.command('docker'),
         ['login', '--username', 'AWS', '--password-stdin', ecrBaseUrl],
         { stdout, stderr },
       )
@@ -128,7 +128,7 @@ export class DockerTagCommand extends DockerCommand {
       tag,
     } = this
 
-    const dockerCommand = config.command('docker')
+    const dockerCommand = await config.command('docker')
     const imageName = await config.getDockerImageName(dev)
     const remoteRepo = await config.getRemoteRepo(dev)
     const localTag = 'latest'
@@ -150,7 +150,7 @@ export class DockerTagCommand extends DockerCommand {
     const result = await execC(dockerCommand, args, { context })
 
     if (gitTag) {
-      const gitCommand = config.command('git')
+      const gitCommand = await config.command('git')
 
       if (gitCommand) {
         const commitShaResult = await execC(gitCommand, ['rev-parse', 'HEAD'], { shell: false, reject: false, stderr })
@@ -186,7 +186,7 @@ export class DockerPushCommand extends DockerCommand {
       context,
       context: { stdout, stderr },
     } = this
-    const dockerCommand = config.command('docker')
+    const dockerCommand = await config.command('docker')
     const remoteRepo = await config.getRemoteRepo(dev)
     const remoteTag = 'latest'
 

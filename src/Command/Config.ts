@@ -56,7 +56,7 @@ export class ConfigCommand extends JoltCommand {
     stdout.write(ansis.bold.blue('Commands:\n'))
 
     for (const commandName of commands) {
-      const { command, source, sourceType } = config.getCommandOverride(commandName)
+      const { command, source, sourceType } = await config.getCommandOverride(commandName)
 
       stdout.write(ansis.bold(`${commandName}: `))
 

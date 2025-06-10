@@ -27,7 +27,7 @@ export class WPCommand extends JoltCommand {
     // On Windows, uid is -1 so we shouldn't try to set the user
     const userArg = uid !== undefined && uid !== -1 && `--user='${uid}:${gid}'`
     const profile = await this.getContainerProfile(containerName)
-    const [composeCommand, args] = config.getComposeCommand()
+    const [composeCommand, args] = await config.getComposeCommand()
 
     args.push(profile ? `--profile=${profile}` : '', 'run', '--rm', userArg || '', containerName, 'wp', ...this.wpArgs)
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
@@ -40,7 +40,7 @@ export class WPCommand extends JoltCommand {
     const { config } = this
 
     if (config.has('wpCliContainer')) {
-      return config.get('wpCliContainer')
+      return await config.get('wpCliContainer')
     }
 
     const composeConfig = await config.getComposeConfig()
@@ -60,7 +60,7 @@ export class WPCommand extends JoltCommand {
     const { config } = this
 
     if (config.has('wpCliContainerProfile')) {
-      return config.get('wpCliContainerProfile')
+      return await config.get('wpCliContainerProfile')
     }
 
     const composeConfig = await config.getComposeConfig()

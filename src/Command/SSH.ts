@@ -19,8 +19,8 @@ export class SSHCommand extends JoltCommand {
       dev,
     } = this
 
-    const sshCommand = config.command('ssh')
-    const sshAccount = dev ? config.get('devSshAccount') : config.get('sshAccount')
+    const sshCommand = await config.command('ssh')
+    const sshAccount = dev ? await config.get('devSshAccount') : await config.get('sshAccount')
 
     if (!sshAccount) {
       stderr.write(ansis.red('Missing sshAccount config variable.\n'))
@@ -51,11 +51,11 @@ export class RsyncCommand extends JoltCommand {
       dryRun,
     } = this
 
-    const sshCommand = config.command('ssh')
-    const rsyncCommand = config.command('rsync')
-    const sshPort = config.get('sshPort') || '22'
+    const sshCommand = await config.command('ssh')
+    const rsyncCommand = await config.command('rsync')
+    const sshPort = (await config.get('sshPort')) || '22'
     const dryRunArg = dryRun ? '--dry-run' : ''
-    const sshAccount = dev ? config.get('devSshAccount') : config.get('sshAccount')
+    const sshAccount = dev ? await config.get('devSshAccount') : await config.get('sshAccount')
 
     if (!sshAccount) {
       stderr.write(ansis.red('Missing sshAccount config variable.\n'))
@@ -64,7 +64,7 @@ export class RsyncCommand extends JoltCommand {
 
     const params = {
       acc: sshAccount,
-      contentFolder: (dev ? config.get('devFolder') : config.get('liveFolder')) ?? '',
+      contentFolder: (dev ? await config.get('devFolder') : await config.get('liveFolder')) ?? '',
     }
 
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x, params)))

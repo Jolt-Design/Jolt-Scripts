@@ -69,11 +69,11 @@ class Config {
     this.site = site
   }
 
-  command(name: string): string {
-    return this.getCommandOverride(name).command
+  async command(name: string): Promise<string> {
+    return (await this.getCommandOverride(name)).command
   }
 
-  getCommandOverride(command: string): CommandOverride {
+  async getCommandOverride(command: string): Promise<CommandOverride> {
     let envVar: string
     let def: string
 
@@ -127,7 +127,7 @@ class Config {
     }
 
     const configName = constToCamel(envVar)
-    const configuredValue = this.get(configName)
+    const configuredValue = await this.get(configName)
 
     if (configuredValue) {
       return {
@@ -144,17 +144,17 @@ class Config {
     }
   }
 
-  get(key: string): string | undefined {
+  async get(key: string): Promise<string | undefined> {
     if (this.site) {
       const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
       const keyToTry = `${this.site}${capitalisedKey}`
 
       if (this.config[keyToTry] !== undefined) {
-        return this.config[keyToTry]
+        return await this.parseArg(this.config[keyToTry])
       }
     }
 
-    return this.config[key]
+    return this.config[key] === undefined ? undefined : await this.parseArg(this.config[key])
   }
 
   has(key: string): boolean {
@@ -181,7 +181,7 @@ class Config {
     }
 
     try {
-      const result = await execC(this.command('tofu'), ['output', '-json', key])
+      const result = await execC(await this.command('tofu'), ['output', '-json', key])
       const output = result.stdout?.toString()
 
       if (output !== undefined) {
@@ -201,7 +201,7 @@ class Config {
   async getDockerImageName(isDev = false): Promise<string | undefined> {
     if (isDev) {
       if (this.has('devImageName')) {
-        return this.get('devImageName')
+        return await this.get('devImageName')
       }
 
       const tfDevImageName = await this.tfVar('dev_docker_image_name')
@@ -211,7 +211,7 @@ class Config {
       }
 
       if (this.has('imageName')) {
-        return `${this.get('imageName')}-dev`
+        return `${await this.get('imageName')}-dev`
       }
 
       const tfImageName = await this.tfVar('docker_image_name')
@@ -224,7 +224,7 @@ class Config {
     }
 
     if (this.has('imageName')) {
-      return this.get('imageName')
+      return await this.get('imageName')
     }
 
     const tfImageName = await this.tfVar('docker_image_name')
@@ -237,7 +237,7 @@ class Config {
   async getRemoteRepo(isDev = false): Promise<string | undefined> {
     if (isDev) {
       if (this.has('devRemoteRepo')) {
-        return this.get('devRemoteRepo')
+        return await this.get('devRemoteRepo')
       }
 
       const tfDevEcrRepo = await this.tfVar('dev_ecr_url')
@@ -250,7 +250,7 @@ class Config {
     }
 
     if (this.has('remoteRepo')) {
-      return this.get('remoteRepo')
+      return await this.get('remoteRepo')
     }
 
     const tfEcrRepo = await this.tfVar('ecr_url')
@@ -266,7 +266,7 @@ class Config {
     }
 
     try {
-      const result = await execC(this.command('docker compose'), ["--profile='*'", 'config', '--format=json'])
+      const result = await execC(await this.command('docker compose'), ["--profile='*'", 'config', '--format=json'])
       const output = result.stdout?.toString()
 
       if (output !== undefined) {
@@ -284,8 +284,8 @@ class Config {
     }
   }
 
-  getComposeCommand(): [string, string[]] {
-    const command = this.command('docker compose')
+  async getComposeCommand(): Promise<[string, string[]]> {
+    const command = await this.command('docker compose')
     const parts = command.split(' ')
     return [parts[0], parts.slice(1)]
   }
@@ -293,7 +293,7 @@ class Config {
   async getCacheContainerInfo() {
     const composeConfig = await this.getComposeConfig()
     const services = composeConfig?.services
-    let container = this.get('cacheContainer') ?? this.get('redisContainer')
+    let container = (await this.get('cacheContainer')) ?? (await this.get('redisContainer'))
     let type = ''
 
     if (!container && services) {
@@ -347,7 +347,7 @@ class Config {
     const services = composeConfig?.services
 
     if (this.has('dbContainer')) {
-      result.name = this.get('dbContainer') as string
+      result.name = (await this.get('dbContainer')) as string
     } else if (services) {
       for (const [serviceName, service] of Object.entries(services)) {
         const match = service.image?.match(dbImageRegex)
@@ -371,7 +371,7 @@ class Config {
     }
 
     if (this.has('dbDumpCommand')) {
-      result.dumpCommand = this.get('dbDumpCommand')
+      result.dumpCommand = await this.get('dbDumpCommand')
     } else if (services) {
       const image = services[result.name]?.image
 
@@ -396,15 +396,15 @@ class Config {
     }
 
     if (this.has('dbName')) {
-      result.credentials.db = this.get('dbName')
+      result.credentials.db = await this.get('dbName')
     }
 
     if (this.has('dbUser')) {
-      result.credentials.user = this.get('dbUser')
+      result.credentials.user = await this.get('dbUser')
     }
 
     if (this.has('dbPass')) {
-      result.credentials.pass = this.get('dbPass')
+      result.credentials.pass = await this.get('dbPass')
     }
 
     if (Object.values(result.credentials).findIndex((x) => x === undefined) !== -1) {
@@ -449,7 +449,7 @@ class Config {
         return (await this.tfVar(name)) ?? substring
       case 'conf':
       case 'config':
-        return this.get(name) ?? substring
+        return (await this.get(name)) ?? substring
     }
 
     return substring

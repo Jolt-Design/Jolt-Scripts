@@ -17,7 +17,7 @@ export class BuildCommand extends JoltCommand {
       dev,
     } = this
 
-    const imageName = config.get('imageName')
+    const imageName = await config.get('imageName')
 
     if (imageName) {
       stdout.write(

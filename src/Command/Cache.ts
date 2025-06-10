@@ -18,7 +18,7 @@ export class CacheFlushCommand extends JoltCommand {
       context: { stdout, stderr },
     } = this
 
-    const [composeCommand, args] = config.getComposeCommand()
+    const [composeCommand, args] = await config.getComposeCommand()
     const cacheInfo = await config.getCacheContainerInfo()
 
     if (!cacheInfo) {
