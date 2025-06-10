@@ -50,14 +50,15 @@ export class DockerBuildCommand extends DockerCommand {
   }
 
   async buildCommandArgs(): Promise<string[]> {
-    const { config, dev } = this
+    const { buildArgs, config, dev } = this
     const imageName = await config.getDockerImageName(dev)
     const platform = await config.get('buildPlatform')
     const context = await config.get('buildContext')
     const dockerFile = await config.get('dockerFile')
-    const additionalBuildArgs = this.buildArgs?.map((x) => `--build-arg=${x}`) || []
+    const parsedBuildArgs = await Promise.all((buildArgs || []).map((x) => config.parseArg(x)))
+    const additionalBuildArgs = parsedBuildArgs?.map((x) => `--build-arg=${x}`) || []
     const devBuildArg = dev ? '--build-arg=DEVBUILD=1' : ''
-    const buildArgs = [devBuildArg, ...additionalBuildArgs]
+    const allBuildArgs = [devBuildArg, ...additionalBuildArgs]
 
     return [
       'buildx',
@@ -65,7 +66,7 @@ export class DockerBuildCommand extends DockerCommand {
       platform && `--platform=${platform}`,
       dockerFile && `-f ${dockerFile}`,
       `-t ${imageName}`,
-      ...buildArgs,
+      ...allBuildArgs,
       context ?? '.',
     ]
       .filter((x) => !!x)
