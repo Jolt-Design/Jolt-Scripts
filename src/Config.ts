@@ -110,6 +110,10 @@ class Config {
         def = 'ssh'
         envVar = 'SSH_COMMAND'
         break
+      case 'rsync':
+        def = 'rsync'
+        envVar = 'RSYNC_COMMAND'
+        break
       default:
         return { command, source: 'unknown', sourceType: 'unknown' }
     }
