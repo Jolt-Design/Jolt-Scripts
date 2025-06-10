@@ -38,7 +38,7 @@ export class ConfigCommand extends JoltCommand {
     }
 
     if (format === ConfigCommandFormat.Json) {
-      stderr.write(`${config.asJson()}\n`)
+      stdout.write(`${config.asJson()}\n`)
       return 0
     }
 
