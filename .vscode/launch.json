@@ -15,9 +15,9 @@
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["run", "debug"],
       "smartStep": true,
-      "program": "${workspaceFolder}/bin/cli.js",
+      "program": "${workspaceFolder}/dist/cli.js",
       "sourceMaps": true,
-      "outFiles": ["${workspaceFolder}/bin/**/*.js"]
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
     }
   ]
 }
