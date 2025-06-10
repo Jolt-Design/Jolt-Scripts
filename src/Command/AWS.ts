@@ -26,7 +26,6 @@ export class ECSDeployCommand extends AWSCommand {
 
   dev = Option.Boolean('--dev', false)
   forceNew = Option.Boolean('--force-new-deployment', true)
-  prod = !this.dev
 
   async command(): Promise<number | undefined> {
     const {
@@ -278,7 +277,6 @@ export class ECSDeploySpecificCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy-specific']]
 
   dev = Option.Boolean('--dev', false)
-  prod = !this.dev
   tag = Option.String({ required: true })
 
   async command(): Promise<number | undefined> {

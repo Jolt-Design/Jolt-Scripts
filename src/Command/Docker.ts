@@ -8,9 +8,7 @@ const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {
   requiredCommands = ['docker']
-
   dev = Option.Boolean('--dev', false)
-  prod = !this.dev
 }
 
 export class DockerBuildCommand extends DockerCommand {
@@ -24,10 +22,10 @@ export class DockerBuildCommand extends DockerCommand {
       context,
       context: { stdout, stderr },
       dev,
-      prod,
     } = this
+
     const imageName = await config.getDockerImageName(dev)
-    const imageType = dev ? 'dev' : prod ? 'prod' : 'unknown'
+    const imageType = dev ? 'dev' : 'prod'
     const dockerCommand = await config.command('docker')
 
     if (!imageName) {

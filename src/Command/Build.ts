@@ -7,7 +7,6 @@ export class BuildCommand extends JoltCommand {
   static paths = [['build']]
 
   dev = Option.Boolean('--dev', false)
-  prod = Option.Boolean('--prod', true)
 
   async command(): Promise<number | undefined> {
     const {
@@ -25,7 +24,7 @@ export class BuildCommand extends JoltCommand {
       )
 
       const args = ['build', 'docker']
-      args.push(dev ? '--dev' : '--prod')
+      args.push(dev ? '--dev' : '')
       return await this.cli.run(args, context)
     }
 
