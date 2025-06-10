@@ -114,6 +114,10 @@ class Config {
         def = 'rsync'
         envVar = 'RSYNC_COMMAND'
         break
+      case 'git':
+        def = 'git'
+        envVar = 'GIT_COMMAND'
+        break
       default:
         return { command, source: 'unknown', sourceType: 'unknown' }
     }
