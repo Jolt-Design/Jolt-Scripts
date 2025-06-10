@@ -501,12 +501,26 @@ let cachedConfig: Config
 
 export default async function getConfig() {
   if (!cachedConfig) {
-    const paths = ['./bin/.env', '.env']
+    const paths = ['.jolt.json', './bin/.env', '.env']
 
     for (const path of paths) {
       if (await fileExists(path)) {
         const contents = await readFile(path)
-        const parsedConfig = parseEnvFile(dotenv.parse(contents))
+
+        if (contents.length === 0) {
+          continue
+        }
+
+        let parsedConfig: InternalConfig
+
+        if (path.endsWith('.env')) {
+          parsedConfig = parseEnvFile(dotenv.parse(contents))
+        } else if (path.endsWith('.json')) {
+          parsedConfig = JSON.parse(contents.toString())
+        } else {
+          console.error(`Unknown config file type for path ${path}`)
+          process.exit(10)
+        }
 
         cachedConfig = new Config(parsedConfig, path)
         break
