@@ -201,12 +201,7 @@ export class DockerPushCommand extends DockerCommand {
     }
 
     stdout.write(ansis.blue(`🐳 Pushing image ${remoteRepo}:${remoteTag}...\n`))
-
-    // const command = [dockerCommand, ...args].join(' ')
-    // stdout.write(`Running command: ${command}\n`)
-
     const result = await execC(dockerCommand, args, { context })
-
     return result.exitCode
   }
 }
