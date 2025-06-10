@@ -26,6 +26,13 @@ type DBContainerInfo = {
   }
 }
 
+type TerraformOutputJson = {
+  sensitive: boolean
+  type: string
+  // TODO: Not necessarily a string - could be an object
+  value: string
+}
+
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
 
@@ -46,6 +53,7 @@ class Config {
   private config: InternalConfig
   private _configPath?: string
   private site: string | undefined
+  private tfCache: Record<string, string> | undefined
 
   get configPath() {
     return this._configPath
@@ -188,18 +196,30 @@ class Config {
       }
     }
 
-    try {
-      const result = await execC(await this.command('tofu'), ['output', '-json', key])
-      const output = result.stdout?.toString()
+    if (this.tfCache === undefined) {
+      try {
+        const result = await execC(await this.command('tofu'), ['output', '-json'])
+        const output = result.stdout?.toString()
 
-      if (output !== undefined) {
-        return JSON.parse(output)
-      }
-    } catch (e) {
-      if (throwOnFail) {
-        throw e
+        if (output !== undefined) {
+          const cache = JSON.parse(output)
+
+          if (typeof cache === 'object') {
+            this.tfCache = this.parseTfJson(cache)
+          }
+        }
+      } catch (e) {
+        if (throwOnFail) {
+          throw e
+        }
       }
     }
+
+    if (this.tfCache?.[key]) {
+      return this.tfCache[key]
+    }
+
+    return undefined
   }
 
   awsRegion(): string {
@@ -502,6 +522,16 @@ class Config {
       case 'mariadb':
         return 'mariadb-dump'
     }
+  }
+
+  private parseTfJson(json: Record<string, TerraformOutputJson>) {
+    const result: Record<string, string> = {}
+
+    for (const [key, value] of Object.entries(json)) {
+      result[key] = value.value
+    }
+
+    return result
   }
 }
 
