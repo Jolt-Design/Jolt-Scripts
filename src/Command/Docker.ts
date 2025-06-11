@@ -178,16 +178,23 @@ export class DockerTagCommand extends DockerCommand {
 export class DockerPushCommand extends DockerCommand {
   static paths = [['docker', 'push']]
 
+  gitTag = Option.Boolean('--git-tag', true)
+  tag = Option.String({ required: false })
+
   async command(): Promise<number | undefined> {
     const {
+      cli,
       config,
-      dev,
       context,
       context: { stdout, stderr },
+      dev,
+      gitTag,
+      tag,
     } = this
+
     const dockerCommand = await config.command('docker')
     const remoteRepo = await config.getRemoteRepo(dev)
-    const remoteTag = 'latest'
+    const remoteTag = tag ?? 'latest'
 
     const args = ['push', `${remoteRepo}:${remoteTag}`]
 
@@ -203,6 +210,30 @@ export class DockerPushCommand extends DockerCommand {
 
     stdout.write(ansis.blue(`🐳 Pushing image ${remoteRepo}:${remoteTag}...\n`))
     const result = await execC(dockerCommand, args, { context })
+
+    if (gitTag) {
+      const gitCommand = await config.command('git')
+
+      if (gitCommand) {
+        const commitShaResult = await execC(gitCommand, ['rev-parse', 'HEAD'], { shell: false, reject: false, stderr })
+
+        if (commitShaResult.failed) {
+          stderr.write(ansis.yellow('🐳 Failed to find Git SHA.\n'))
+        } else {
+          const sha = commitShaResult.stdout?.toString()
+
+          if (sha) {
+            const shaTag = sha.slice(0, 8)
+            await cli.run(['docker', 'push', '--no-git-tag', shaTag])
+          } else {
+            stderr.write(ansis.yellow('🐳 Cannot tag image with Git SHA because the tag command returned nothing.\n'))
+          }
+        }
+      } else {
+        stderr.write(ansis.yellow('🐳 Cannot tag image with Git SHA because git command was not found.\n'))
+      }
+    }
+
     return result.exitCode
   }
 }
