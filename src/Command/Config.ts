@@ -19,7 +19,7 @@ export class ConfigCommand extends JoltCommand {
     validator: t.isEnum(ConfigCommandFormat),
   })
 
-  commands = ['aws', 'docker', 'docker-compose', 'git', 'node', 'rsync', 'ssh', 'tofu', 'yarn']
+  commands = ['aws', 'docker', 'docker-compose', 'git', 'gzip', 'node', 'rsync', 'ssh', 'tofu', 'yarn']
 
   async command(): Promise<number | undefined> {
     const {

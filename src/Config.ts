@@ -126,6 +126,10 @@ class Config {
         def = 'git'
         envVar = 'GIT_COMMAND'
         break
+      case 'gzip':
+        def = 'gzip'
+        envVar = 'GZIP_COMMAND'
+        break
       default:
         return { command, source: 'unknown', sourceType: 'unknown' }
     }
