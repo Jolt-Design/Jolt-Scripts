@@ -34,7 +34,7 @@ type TerraformOutputJson = {
 }
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config)):(?<variable>[a-z0-9_-]+)}/gi
+const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_-]+)}/gi
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -482,6 +482,8 @@ class Config {
       case 'conf':
       case 'config':
         return (await this.get(name)) ?? substring
+      case 'git':
+        return (await this.gitVar(name)) ?? substring
     }
 
     return substring
@@ -536,6 +538,34 @@ class Config {
     }
 
     return result
+  }
+
+  private async gitVar(name: string): Promise<string | undefined> {
+    const gitCommand = await this.command('git')
+
+    if (!gitCommand) {
+      return
+    }
+
+    switch (name) {
+      case 'sha':
+      case 'shortSha':
+        return (await this.gitVar('longSha'))?.slice(0, 8)
+      case 'longSha':
+      case 'fullSha': {
+        const commitShaResult = await execC(gitCommand, ['rev-parse', 'HEAD'], { shell: false, reject: false })
+
+        if (commitShaResult.failed) {
+          return
+        }
+
+        const sha = commitShaResult.stdout?.toString()
+
+        if (sha) {
+          return sha
+        }
+      }
+    }
   }
 }
 
