@@ -214,7 +214,9 @@ export class CodeBuildStartCommand extends AWSCommand {
       ),
     )
 
-    return await cli.run(['aws', 'logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--since=0s'])
+    return await cli.run(
+      ['aws', 'logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--since=0s'].filter((x) => !!x),
+    )
   }
 }
 
