@@ -165,10 +165,12 @@ export class CodeBuildStartCommand extends AWSCommand {
   static paths = [['aws', 'codebuild', 'start']]
 
   dev = Option.Boolean('--dev', false)
+  batch = Option.Boolean('--batch', false)
   project = Option.String({ required: false })
 
   async command(): Promise<number | undefined> {
     const {
+      batch,
       cli,
       config,
       context,
@@ -199,7 +201,7 @@ export class CodeBuildStartCommand extends AWSCommand {
 
     const result = await execC(
       await config.command('aws'),
-      [regionArg, 'codebuild', 'start-build', `--project-name=${target}`],
+      [regionArg, 'codebuild', batch ? 'start-build-batch' : 'start-build', `--project-name=${target}`],
       {
         context,
         env: { AWS_PAGER: '' },
