@@ -298,7 +298,7 @@ class Config {
     }
 
     try {
-      const result = await execC(await this.command('docker compose'), ["--profile='*'", 'config', '--format=json'])
+      const result = await execC(await this.command('compose'), ["--profile='*'", 'config', '--format=json'])
       const output = result.stdout?.toString()
 
       if (output !== undefined) {
@@ -317,7 +317,7 @@ class Config {
   }
 
   async getComposeCommand(): Promise<[string, string[]]> {
-    const command = await this.command('docker compose')
+    const command = await this.command('compose')
     const parts = command.split(' ')
     return [parts[0], parts.slice(1)]
   }
