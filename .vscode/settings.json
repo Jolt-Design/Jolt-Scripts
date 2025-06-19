@@ -9,5 +9,6 @@
   },
   "typescript.tsdk": ".yarn/sdks/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "typescript.preferences.preferTypeOnlyAutoImports": true
+  "typescript.preferences.preferTypeOnlyAutoImports": true,
+  "biome.lsp.bin": ".yarn/unplugged/@biomejs-cli-*/node_modules/@biomejs/cli-*/biome"
 }
