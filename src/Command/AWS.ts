@@ -111,6 +111,7 @@ export class S3SyncCommand extends AWSCommand {
       config,
       from,
       to,
+      context,
       context: { stdout, stderr },
     } = this
 
@@ -118,13 +119,11 @@ export class S3SyncCommand extends AWSCommand {
     const parsedTo = await config.parseArg(to)
 
     stdout.write(ansis.blue(`⛅ Syncing ${parsedFrom} to ${parsedTo}...\n`))
-    const result = await execC(await config.command('aws'), [
-      await this.getRegionArg(),
-      's3',
-      'sync',
-      parsedFrom,
-      parsedTo,
-    ])
+    const result = await execC(
+      await config.command('aws'),
+      [await this.getRegionArg(), 's3', 'sync', parsedFrom, parsedTo],
+      { context },
+    )
     stdout.write(ansis.blue('⛅ Syncing complete.\n'))
 
     return result.exitCode
