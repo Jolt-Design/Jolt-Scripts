@@ -3,6 +3,7 @@ import { Command, Option } from 'clipanion'
 import shelljs from 'shelljs'
 import type { Config } from '../Config.js'
 import getConfig from '../Config.js'
+
 const { which } = shelljs
 
 export default abstract class JoltCommand extends Command {

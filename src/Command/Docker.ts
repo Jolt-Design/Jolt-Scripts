@@ -4,6 +4,7 @@ import { ExecaError, execa } from 'execa'
 import shelljs from 'shelljs'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
+
 const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {

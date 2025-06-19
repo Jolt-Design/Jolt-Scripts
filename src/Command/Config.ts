@@ -4,6 +4,7 @@ import { Option } from 'clipanion'
 import shelljs from 'shelljs'
 import * as t from 'typanion'
 import JoltCommand from './JoltCommand.js'
+
 const { which } = shelljs
 
 enum ConfigCommandFormat {
