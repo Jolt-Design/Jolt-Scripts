@@ -387,6 +387,6 @@ export class ECSDeploySpecificCommand extends AWSCommand {
       { shell: false },
     )
 
-    return await cli.run(['aws', 'ecs', 'deploy', '--no-force-new-deployment'])
+    return await cli.run(['aws', 'ecs', 'deploy'])
   }
 }
