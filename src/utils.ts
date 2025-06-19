@@ -6,6 +6,7 @@ import { execa } from 'execa'
 
 type ExecCOptions = Options & {
   context?: BaseContext
+  cleanArgs?: boolean
 }
 
 export async function fileExists(path: PathLike): Promise<boolean> {
@@ -24,9 +25,10 @@ export function constToCamel(key: string): string {
   return parts.join('')
 }
 
-export async function execC(command: string, args: string[] = [], options: ExecCOptions = {}) {
+export async function execC(command: string, args: (string | null | undefined)[] = [], options: ExecCOptions = {}) {
   const allOptions = {
     shell: true,
+    cleanArgs: true,
     ...options,
   }
 
@@ -36,7 +38,13 @@ export async function execC(command: string, args: string[] = [], options: ExecC
     allOptions.stderr ||= options.context.stderr
   }
 
-  return await execa(command, args, allOptions)
+  let argsToUse = args
+
+  if (allOptions.cleanArgs) {
+    argsToUse = args.filter((x) => !!x)
+  }
+
+  return await execa(command, argsToUse as string[], allOptions)
 }
 
 export function delay(ms: number): Promise<undefined> {
