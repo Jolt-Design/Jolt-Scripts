@@ -32,7 +32,6 @@ export class ECSDeployCommand extends AWSCommand {
     const {
       config,
       dev,
-      context,
       context: { stdout, stderr },
     } = this
     const awsCommand = await config.command('aws')
@@ -113,7 +112,7 @@ export class S3SyncCommand extends AWSCommand {
       from,
       to,
       context,
-      context: { stdout, stderr },
+      context: { stdout },
     } = this
 
     const parsedFrom = await config.parseArg(from)
@@ -199,7 +198,7 @@ export class CodeBuildStartCommand extends AWSCommand {
     stdout.write(ansis.blue(`⛅ Starting the ${target} CodeBuild project...\n`))
     const regionArg = await this.getRegionArg()
 
-    const result = await execC(
+    await execC(
       await config.command('aws'),
       [regionArg, 'codebuild', batch ? 'start-build-batch' : 'start-build', `--project-name=${target}`],
       {
@@ -298,7 +297,6 @@ export class ECSDeploySpecificCommand extends AWSCommand {
       cli,
       config,
       dev,
-      context,
       context: { stdout, stderr },
       tag,
     } = this

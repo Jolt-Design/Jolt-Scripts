@@ -88,7 +88,7 @@ export class DBDumpCommand extends JoltCommand {
     if (shouldGzip) {
       if (which('gzip')) {
         stderr.write(ansis.blue('🛢️ Gzipping file...\n'))
-        const gzipResult = await execa('gzip', ['--force', filePath], { stdout, stderr })
+        await execa('gzip', ['--force', filePath], { stdout, stderr })
         filePath = `${filePath}.gz`
       } else {
         if (backup) {
@@ -134,7 +134,7 @@ export class DBResetCommand extends JoltCommand {
 
     const [composeCommand, args] = await config.getComposeCommand()
     stdout.write(ansis.blue('🛢️ Bringing containers down...\n'))
-    const dcDownResult = await execC(composeCommand, [...args, 'down'], { context })
+    await execC(composeCommand, [...args, 'down'], { context })
 
     const composeConfig = await config.getComposeConfig()
     const services = composeConfig?.services
@@ -164,7 +164,7 @@ export class DBResetCommand extends JoltCommand {
       }
 
       stdout.write(ansis.blue(`🛢️ Deleting the following volumes: ${fullVolumeNames.join(', ')}\n`))
-      const volumeDeleteResult = await execC(await config.command('docker'), ['volume', 'rm', ...fullVolumeNames], {
+      await execC(await config.command('docker'), ['volume', 'rm', ...fullVolumeNames], {
         stdout: 'ignore',
         stderr,
         reject: false,
@@ -175,7 +175,7 @@ export class DBResetCommand extends JoltCommand {
     }
 
     stdout.write(ansis.blue('🛢️ Bringing containers back up...\n'))
-    const dcUpResult = await execC(composeCommand, [...args, 'up', '--detach'], { context })
+    await execC(composeCommand, [...args, 'up', '--detach'], { context })
     const devPlugins = await await config.get('devPlugins')
 
     if (devPlugins) {

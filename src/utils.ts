@@ -11,7 +11,7 @@ type ExecCOptions = Options & {
 export async function fileExists(path: PathLike): Promise<boolean> {
   try {
     return (await stat(path)).isFile()
-  } catch (e) {
+  } catch {
     return false
   }
 }

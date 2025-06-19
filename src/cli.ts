@@ -17,7 +17,7 @@ import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexce
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { WPCommand } from './Command/WP.js'
 
-const [node, app, ...args] = process.argv
+const [_node, _app, ...args] = process.argv
 
 const cli = new Cli({
   binaryLabel: 'Jolt Scripts',
