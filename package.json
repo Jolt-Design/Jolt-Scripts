@@ -7,12 +7,14 @@
   "version": "0.12.1",
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.0.0",
     "@types/node": "^24.0.3",
     "@types/shelljs": "^0.8.16",
     "typescript": "^5.8.3"
   },
-  "files": ["/dist"],
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "build": "tsc",
     "debug": "node --inspect-brk ./dist/cli.js",
