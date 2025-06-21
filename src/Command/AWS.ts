@@ -1,6 +1,7 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import shelljs from 'shelljs'
+import * as t from 'typanion'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
@@ -225,13 +226,17 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
   static paths = [['aws', 'cf', 'invalidate']]
 
   distribution = Option.String({ required: true })
-  invalidationPaths = Option.Array('--path')
+  invalidationPaths = Option.Array('--path', { required: false })
+  invalidationBatch = Option.String('--invalidation-batch', { required: false })
+
+  static schema = [t.hasMutuallyExclusiveKeys(['invalidationPaths', 'invalidationBatch'], { missingIf: 'falsy' })]
 
   async command(): Promise<number | undefined> {
     const {
       config,
       context: { stdout, stderr },
       distribution,
+      invalidationBatch,
       invalidationPaths,
     } = this
 
@@ -259,8 +264,15 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
 
     stdout.write(ansis.blue(`⛅ Invalidating the ${target} CloudFront distribution cache...\n`))
     const regionArg = await this.getRegionArg()
-    const paths = invalidationPaths?.length ? invalidationPaths : ["'/*'"]
-    const pathArgs = paths.join(' ')
+    let additionalArgs = []
+
+    if (invalidationBatch) {
+      additionalArgs = ['--invalidation-batch', invalidationBatch]
+    } else {
+      const paths = invalidationPaths?.length ? invalidationPaths : ["'/*'"]
+      const pathArgs = paths.join(' ')
+      additionalArgs = ['--path', pathArgs]
+    }
 
     const result = await execC(await config.command('aws'), [
       regionArg,
@@ -268,8 +280,7 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
       'create-invalidation',
       '--distribution',
       target,
-      '--path',
-      pathArgs,
+      ...additionalArgs,
     ])
 
     const output = result.stdout?.toString()
