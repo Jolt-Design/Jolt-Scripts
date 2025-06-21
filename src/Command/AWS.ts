@@ -103,16 +103,18 @@ export class ECSDeployCommand extends AWSCommand {
 export class S3SyncCommand extends AWSCommand {
   static paths = [['aws', 's3', 'sync']]
 
+  deleteOpt = Option.Boolean('--delete')
   from = Option.String()
   to = Option.String()
 
   async command(): Promise<number | undefined> {
     const {
       config,
-      from,
-      to,
       context,
       context: { stdout },
+      deleteOpt,
+      from,
+      to,
     } = this
 
     const parsedFrom = await config.parseArg(from)
@@ -121,7 +123,7 @@ export class S3SyncCommand extends AWSCommand {
     stdout.write(ansis.blue(`⛅ Syncing ${parsedFrom} to ${parsedTo}...\n`))
     const result = await execC(
       await config.command('aws'),
-      [await this.getRegionArg(), 's3', 'sync', parsedFrom, parsedTo],
+      [await this.getRegionArg(), 's3', 'sync', deleteOpt && '--delete', parsedFrom, parsedTo],
       { context },
     )
     stdout.write(ansis.blue('⛅ Syncing complete.\n'))
