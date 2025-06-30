@@ -101,7 +101,7 @@ __metadata:
   resolution: "@joltdesign/scripts@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.0.6"
-    "@types/node": "npm:^24.0.5"
+    "@types/node": "npm:^24.0.7"
     "@types/shelljs": "npm:^0.8.16"
     ansis: "npm:^4.1.0"
     clipanion: "npm:^4.0.0-rc.4"
@@ -182,12 +182,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.0.5":
-  version: 24.0.5
-  resolution: "@types/node@npm:24.0.5"
+"@types/node@npm:^24.0.7":
+  version: 24.0.7
+  resolution: "@types/node@npm:24.0.7"
   dependencies:
     undici-types: "npm:~7.8.0"
-  checksum: 10c0/5e0f6aedce6984087d0e62cd5e4147276b8fc14f5ec2987ef1cd89ff20ea79566db5c61ffa7bdfd9dfe67f22794422e3b2b922ad4b22e769d1ef67095e66b331
+  checksum: 10c0/be3849816dafc54ec79e6be6dafcf60bdb6466beaf0081b941142d260e2b2864855210dfe5b4395c59b276468528695aefcf4f060ac95cc433b2968e80a311f9
   languageName: node
   linkType: hard
 
