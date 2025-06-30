@@ -26,7 +26,7 @@
   "dependencies": {
     "ansis": "^4.1.0",
     "clipanion": "^4.0.0-rc.4",
-    "dotenv": "^16.6.1",
+    "dotenv": "^17.0.0",
     "execa": "^9.6.0",
     "shelljs": "^0.10.0",
     "typanion": "^3.14.0"
