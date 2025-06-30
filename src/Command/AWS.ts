@@ -40,13 +40,13 @@ export class ECSDeployCommand extends AWSCommand {
     let cluster = await config.get(dev ? 'devEcsCluster' : 'ecsCluster')
 
     if (!cluster) {
-      cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
+      cluster = await config.tfVar(dev ? 'dev_ecs_cluster' : 'ecs_cluster')
     }
 
     let service = await config.get(dev ? 'devEcsService' : 'ecsService')
 
     if (!service) {
-      service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
+      service = await config.tfVar(dev ? 'dev_ecs_service' : 'ecs_service')
     }
 
     const args = [
