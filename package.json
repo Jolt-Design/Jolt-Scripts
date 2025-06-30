@@ -20,6 +20,7 @@
     "debug": "node --inspect-brk ./dist/cli.js",
     "lint": "biome check",
     "fmt": "biome format",
+    "prepack": "run build",
     "watch": "tsc -w"
   },
   "dependencies": {
