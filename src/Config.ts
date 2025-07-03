@@ -33,6 +33,7 @@ type TerraformOutputJson = {
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_-]+)}/gi
+const DEFAULT_DEV_PLUGIN_DELAY = 30
 
 function parseEnvFile(env: InternalConfig): InternalConfig {
   const parsed: InternalConfig = {}
@@ -533,6 +534,18 @@ class Config {
     }
 
     return this.packageJsonCache || undefined
+  }
+
+  async getDevPluginDelay(): Promise<number> {
+    const delayString = await this.get('devPluginDelay')
+
+    if (!delayString) {
+      return DEFAULT_DEV_PLUGIN_DELAY
+    }
+
+    const delaySeconds = Number.parseInt(delayString)
+
+    return delaySeconds || DEFAULT_DEV_PLUGIN_DELAY
   }
 
   private getDBCLICommandFromImageType(type: string): string | undefined {
