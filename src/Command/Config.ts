@@ -1,11 +1,9 @@
 import { stderr } from 'node:process'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
-import shelljs from 'shelljs'
 import * as t from 'typanion'
+import { which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
-
-const { which } = shelljs
 
 enum ConfigCommandFormat {
   Pretty = 'pretty',
@@ -61,7 +59,7 @@ export class ConfigCommand extends JoltCommand {
 
       stdout.write(ansis.bold(`${commandName}: `))
 
-      if (which(command)) {
+      if (await which(command)) {
         stdout.write(ansis.green(command))
       } else {
         stdout.write(ansis.red(`${command} ${ansis.bold('[Missing!]')}`))

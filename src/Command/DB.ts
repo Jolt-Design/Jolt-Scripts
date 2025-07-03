@@ -2,11 +2,8 @@ import path from 'node:path'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { execa } from 'execa'
-import shelljs from 'shelljs'
-import { delay, execC } from '../utils.js'
+import { delay, execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
-
-const { which } = shelljs
 
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
@@ -86,7 +83,7 @@ export class DBDumpCommand extends JoltCommand {
     })
 
     if (shouldGzip) {
-      if (which('gzip')) {
+      if (await which('gzip')) {
         stderr.write(ansis.blue('🛢️ Gzipping file...\n'))
         await execa('gzip', ['--force', filePath], { stdout, stderr })
         filePath = `${filePath}.gz`

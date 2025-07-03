@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises'
 import type { BaseContext } from 'clipanion'
 import type { Options } from 'execa'
 import { execa } from 'execa'
+import realWhich from 'which'
 
 type ExecCOptions = Options & {
   context?: BaseContext
@@ -71,4 +72,14 @@ export async function replaceAsync(
   const data = await Promise.all(promises)
 
   return str.replace(replace, () => data.shift() || '')
+}
+
+export async function which(cmd: string): Promise<string | null> {
+  const parts = cmd.split(' ')
+  if (parts[1] === 'compose') {
+    // TODO: Check for compose extension?
+    return await which(parts[0])
+  }
+
+  return await realWhich(cmd, { nothrow: true })
 }

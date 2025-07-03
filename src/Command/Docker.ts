@@ -1,11 +1,8 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { ExecaError, execa } from 'execa'
-import shelljs from 'shelljs'
-import { execC } from '../utils.js'
+import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
-
-const { which } = shelljs
 
 export abstract class DockerCommand extends JoltCommand {
   requiredCommands = ['docker']
@@ -34,7 +31,7 @@ export class DockerBuildCommand extends DockerCommand {
       return 1
     }
 
-    if (!which(dockerCommand)) {
+    if (!(await which(dockerCommand))) {
       stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }
@@ -140,7 +137,7 @@ export class DockerTagCommand extends DockerCommand {
       return 1
     }
 
-    if (!which(dockerCommand)) {
+    if (!(await which(dockerCommand))) {
       stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }
@@ -204,7 +201,7 @@ export class DockerPushCommand extends DockerCommand {
       return 1
     }
 
-    if (!which(dockerCommand)) {
+    if (!(await which(dockerCommand))) {
       stderr.write(ansis.red(`🐳 Could not find command ${dockerCommand}!\n`))
       return 2
     }

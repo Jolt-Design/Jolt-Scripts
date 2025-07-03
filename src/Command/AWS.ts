@@ -1,11 +1,8 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
-import shelljs from 'shelljs'
 import * as t from 'typanion'
-import { execC } from '../utils.js'
+import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
-
-const { which } = shelljs
 
 abstract class AWSCommand extends JoltCommand {
   requiredCommands = ['aws']
@@ -68,7 +65,7 @@ export class ECSDeployCommand extends AWSCommand {
       return 1
     }
 
-    if (!which(awsCommand)) {
+    if (!(await which(awsCommand))) {
       stderr.write(ansis.red(`⛅ Could not find command ${awsCommand}!\n`))
       return 2
     }

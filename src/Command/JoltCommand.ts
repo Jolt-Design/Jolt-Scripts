@@ -1,10 +1,8 @@
 import ansis from 'ansis'
 import { Command, Option } from 'clipanion'
-import shelljs from 'shelljs'
 import type { Config } from '../Config.js'
 import getConfig from '../Config.js'
-
-const { which } = shelljs
+import { which } from '../utils.js'
 
 export default abstract class JoltCommand extends Command {
   logo = ansis.magentaBright('⚡')
@@ -35,7 +33,7 @@ export default abstract class JoltCommand extends Command {
       for (const baseCommand of this.requiredCommands) {
         const realCommand = await config.command(baseCommand)
 
-        if (!which(realCommand)) {
+        if (!(await which(realCommand))) {
           missingCommands.push(realCommand)
         }
       }

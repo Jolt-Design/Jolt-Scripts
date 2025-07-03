@@ -1,10 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
-import shelljs from 'shelljs'
-import { constToCamel, execC, fileExists, replaceAsync } from './utils.js'
-
-const { which } = shelljs
+import { constToCamel, execC, fileExists, replaceAsync, which } from './utils.js'
 
 type InternalConfig = Record<string, string>
 
@@ -100,7 +97,7 @@ class Config {
         break
       case 'tofu':
       case 'terraform':
-        def = which('tofu') ? 'tofu' : 'terraform'
+        def = (await which('tofu')) ? 'tofu' : 'terraform'
         envVar = 'TERRAFORM_COMMAND'
         break
       case 'node':
