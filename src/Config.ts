@@ -52,6 +52,7 @@ class Config {
   private _configPath?: string
   private site: string | undefined
   private tfCache: Record<string, string> | undefined
+  private packageJsonCache: PackageJson | false | undefined
 
   get configPath() {
     return this._configPath
@@ -508,6 +509,30 @@ class Config {
       default:
         return
     }
+  }
+
+  async getPackageJson(): Promise<PackageJson | undefined> {
+    if (this.packageJsonCache === undefined) {
+      const exists = await fileExists('package.json')
+
+      if (exists) {
+        const packageJsonContents = await readFile('package.json')
+
+        try {
+          const packageJson = JSON.parse(packageJsonContents.toString())
+
+          if (typeof packageJson === 'object') {
+            this.packageJsonCache = packageJson as PackageJson
+          }
+        } catch {}
+      }
+
+      if (!this.packageJsonCache) {
+        this.packageJsonCache = false
+      }
+    }
+
+    return this.packageJsonCache || undefined
   }
 
   private getDBCLICommandFromImageType(type: string): string | undefined {
