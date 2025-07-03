@@ -18,6 +18,14 @@ export async function fileExists(path: PathLike): Promise<boolean> {
   }
 }
 
+export async function directoryExists(path: PathLike): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 export function constToCamel(key: string): string {
   let parts = key.split('_')
   parts = parts.map((x) => x.toLocaleLowerCase().replace(/^./, (y) => y.toLocaleUpperCase()))
