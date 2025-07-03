@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
   "files": {
-    "includes": ["**", "!**/dist/**/*", "!**/.pnp.*"]
+    "includes": ["src/**/*.ts", "**/*.json", "!**/dist/**/*", "!**/.yarn/**/*", "!**/.pnp.*"]
   },
   "formatter": {
     "enabled": true,
@@ -27,7 +27,13 @@
       }
     }
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
