@@ -431,8 +431,12 @@ class Config {
 
     for (const entry of this.config.prepareCommands) {
       if (typeof entry === 'string') {
-        ret.push({ cmd: entry })
+        ret.push({ cmd: entry, fail: true })
       } else {
+        if (entry.fail === undefined) {
+          entry.fail = true
+        }
+
         ret.push(entry)
       }
     }
