@@ -1,6 +1,7 @@
 import { readdir } from 'node:fs/promises'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
+import * as t from 'typanion'
 import getConfig from '../Config.js'
 import { delay, directoryExists, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
@@ -37,6 +38,14 @@ export class PrepareCommand extends JoltCommand {
   static paths = [['prepare']]
 
   devPlugins = Option.Boolean('--dev-plugins', true)
+  husky = Option.Boolean('--husky', true)
+  tofu = Option.Boolean('--tofu', true)
+  dbSeeds = Option.Boolean('--download-db-seeds', true)
+
+  pluginDelay = Option.String('--plugin-delay', {
+    required: false,
+    validator: t.cascade(t.isNumber(), [t.isInteger(), t.isPositive()]),
+  })
 
   async command(): Promise<number | undefined> {
     const {
@@ -44,29 +53,33 @@ export class PrepareCommand extends JoltCommand {
       config,
       context,
       context: { stdout },
+      dbSeeds,
       devPlugins,
+      husky,
+      pluginDelay,
+      tofu,
     } = this
 
     const indent = '  '
 
     stdout.write(ansis.blue.bold('📋 Preparing repo...\n'))
 
-    if (await shouldPrepareHusky()) {
+    if (husky && (await shouldPrepareHusky())) {
       stdout.write(ansis.white(`${indent}🐕 Preparing Husky hooks... `))
       // TODO: Check if husky is installed in the repo and use yarn if so
       await execC(await config.command('npx'), ['--yes', '--prefer-offline', 'husky'])
       stdout.write(ansis.green('OK\n'))
     }
 
-    if (await shouldPrepareTofu()) {
+    if (tofu && (await shouldPrepareTofu())) {
       stdout.write(ansis.white(`${indent}🌍 Preparing Terraform variables... `))
-      const tofu = await config.command('tofu')
-      await execC(tofu, ['init'])
-      await execC(tofu, ['refresh'])
+      const tofuCmd = await config.command('tofu')
+      await execC(tofuCmd, ['init'])
+      await execC(tofuCmd, ['refresh'])
       stdout.write(ansis.green('OK\n'))
     }
 
-    if (await shouldPrepareDbSeeds()) {
+    if (dbSeeds && (await shouldPrepareDbSeeds())) {
       stdout.write(ansis.white(`${indent}🛢️  Downloading DB seeds... `))
       const yarn = await config.command('yarn')
       await execC(yarn, ['run', 'download-db-seeds'])
@@ -79,7 +92,7 @@ export class PrepareCommand extends JoltCommand {
         const [compose, args] = await config.getComposeCommand()
         await execC(compose, [...args, 'up', '--build', '-d'], { context })
 
-        const delaySeconds = await config.getDevPluginDelay()
+        const delaySeconds = pluginDelay && pluginDelay > 0 ? pluginDelay : await config.getDevPluginDelay()
         stdout.write(ansis.white(`${indent}🕘 Waiting ${delaySeconds} seconds for DB to populate... `))
         await delay(1000 * delaySeconds)
         stdout.write(ansis.green('OK\n'))
