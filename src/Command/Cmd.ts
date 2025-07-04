@@ -6,6 +6,7 @@ import JoltCommand from './JoltCommand.js'
 export class CmdCommand extends JoltCommand {
   static paths = [['cmd']]
 
+  cwd = Option.String('-c,--cwd', { required: false })
   quiet = Option.Boolean('-q,--quiet', false)
   args = Option.Proxy()
 
@@ -17,16 +18,40 @@ export class CmdCommand extends JoltCommand {
       context: { stdout },
     } = this
 
-    // TODO: Clipanion should pick up the quiet arg properly without this but it isn't for some reason
-    const quiet = ['-q', '--quiet'].includes(args[0])
-    const cleanedArgs = quiet ? args.slice(1) : args
-    const parsedArgs = await Promise.all(cleanedArgs.map((x) => config.parseArg(x)))
+    // See: https://github.com/arcanis/clipanion/issues/85
+    const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
+    let proxyArgs = parsedArgs
+    let quiet = false
+    let parsingCwd = false
+    let cwdArg: string | undefined
 
-    if (!quiet) {
-      stdout.write(ansis.blue(`Running command: ${parsedArgs.join(' ')}...\n`))
+    // Horrible custom arg parsing
+    while (true) {
+      if (parsingCwd) {
+        cwdArg = proxyArgs[0]
+        parsingCwd = false
+        proxyArgs = proxyArgs.slice(1)
+      } else if (['-q', '--quiet'].includes(proxyArgs[0])) {
+        quiet = true
+        proxyArgs = proxyArgs.slice(1)
+      } else if (['-c', '--cwd'].includes(proxyArgs[0])) {
+        // This is a short cwd arg or two part cwd arg, e.g. `-c x/y` or `--cwd x/y`
+        parsingCwd = true
+        proxyArgs = proxyArgs.slice(1)
+      } else if (proxyArgs[0]?.match(/^--cwd=/)) {
+        // This is a one part long cwd arg, e.g. `--cwd=x/y`
+        cwdArg = proxyArgs[0].replace(/^--cwd=/, '')
+        proxyArgs = proxyArgs.slice(1)
+      } else {
+        break
+      }
     }
 
-    const result = await execC(parsedArgs[0], parsedArgs.slice(1), { context, shell: true })
+    if (!quiet) {
+      stdout.write(ansis.blue(`Running command: ${proxyArgs.join(' ')}...\n`))
+    }
+
+    const result = await execC(proxyArgs[0], proxyArgs.slice(1), { cwd: cwdArg, context, shell: true })
     return result.exitCode
   }
 }
