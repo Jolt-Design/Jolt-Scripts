@@ -16,6 +16,7 @@ import { ConfigCommand } from './Command/Config.js'
 import { DBDumpCommand, DBResetCommand } from './Command/DB.js'
 import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
 import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexcess.js'
+import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { WPCommand } from './Command/WP.js'
 
@@ -48,4 +49,5 @@ cli.register(SSHCommand)
 cli.register(RsyncCommand)
 cli.register(CmdCommand)
 cli.register(CloudFrontInvalidateCommand)
+cli.register(PrepareCommand)
 cli.runExit(args)
