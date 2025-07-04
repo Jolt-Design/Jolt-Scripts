@@ -104,14 +104,15 @@ export class ConfigCommand extends JoltCommand {
           stdout.write(ansis.dim(` [Parsed from: ${value}]`))
         }
       } else if (Array.isArray(value)) {
-        const parsedEntries = await Promise.all(value.map((x) => config.parseArg(x)))
+        const parsedEntries = await Promise.all(value.map((x) => config.parseArg(typeof x === 'string' ? x : x.cmd)))
         const outputs: string[] = []
 
         for (const [i, entry] of parsedEntries.entries()) {
           let line = `  ${entry}`
+          const compare = typeof value[i] === 'string' ? value[i] : value[i].cmd
 
-          if (entry !== value[i]) {
-            line += ansis.dim(` [Parsed from: ${value[i]}]`)
+          if (entry !== compare) {
+            line += ansis.dim(` [Parsed from: ${compare}]`)
           }
 
           outputs.push(line)

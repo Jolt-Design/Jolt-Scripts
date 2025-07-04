@@ -1,7 +1,13 @@
-type ConfigEntry = string | string[]
+type PrepareCommandConfig = {
+  cmd: string
+  name?: string
+  fail?: boolean
+}
+
+type ConfigEntry = string | Array<string | PrepareCommandConfig>
 
 type InternalConfig = Record<string, string> & {
-  prepareCommands?: string[]
+  prepareCommands?: Array<string | PrepareCommandConfig>
 }
 
 type CommandOverride = {

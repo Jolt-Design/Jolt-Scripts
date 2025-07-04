@@ -52,7 +52,7 @@ export class PrepareCommand extends JoltCommand {
       cli,
       config,
       context,
-      context: { stdout },
+      context: { stderr, stdout },
       dbSeeds,
       devPlugins,
       husky,
@@ -110,9 +110,16 @@ export class PrepareCommand extends JoltCommand {
 
     if (additionalCommands.length > 0) {
       for (const command of additionalCommands) {
-        const parsedCommand = await config.parseArg(command)
-        stdout.write(ansis.white(`${indent}➕ Running command from config: ${ansis.blue(parsedCommand)}\n`))
-        await cli.run(['cmd', '--quiet', command], context)
+        const name = command.name || command.cmd
+
+        stdout.write(ansis.white(`${indent}➕ Running command from config: ${ansis.blue(name)}...\n`))
+
+        const retval = await cli.run(['cmd', command.cmd], context)
+
+        if (command.fail && retval > 0) {
+          stderr.write(ansis.red(`Error running prepare step ${name}: Returned code ${retval}\n`))
+          return retval
+        }
       }
     }
 

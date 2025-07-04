@@ -422,8 +422,22 @@ class Config {
     return result as DBContainerInfo
   }
 
-  getPrepareCommands(): string[] {
-    return this.config.prepareCommands || []
+  getPrepareCommands(): PrepareCommandConfig[] {
+    if (!this.config.prepareCommands) {
+      return []
+    }
+
+    const ret: PrepareCommandConfig[] = []
+
+    for (const entry of this.config.prepareCommands) {
+      if (typeof entry === 'string') {
+        ret.push({ cmd: entry })
+      } else {
+        ret.push(entry)
+      }
+    }
+
+    return ret
   }
 
   asJson() {
