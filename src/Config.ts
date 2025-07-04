@@ -3,7 +3,11 @@ import path from 'node:path'
 import dotenv from 'dotenv'
 import { constToCamel, execC, fileExists, replaceAsync, which } from './utils.js'
 
-type InternalConfig = Record<string, string>
+type ConfigEntry = string | string[]
+
+type InternalConfig = Record<string, string> & {
+  prepareCommands?: string[]
+}
 
 type CommandOverride = {
   command: string
@@ -35,7 +39,7 @@ const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_-]+)}/gi
 const DEFAULT_DEV_PLUGIN_DELAY = 30
 
-function parseEnvFile(env: InternalConfig): InternalConfig {
+function parseEnvFile(env: Record<string, string>): InternalConfig {
   const parsed: InternalConfig = {}
 
   for (const [k, v] of Object.entries(env)) {
@@ -59,7 +63,7 @@ class Config {
     return this._configPath
   }
 
-  *[Symbol.iterator](): IterableIterator<[string, string]> {
+  *[Symbol.iterator](): IterableIterator<[string, ConfigEntry]> {
     for (const entry of Object.entries(this.config)) {
       yield entry
     }
@@ -448,6 +452,10 @@ class Config {
     }
 
     return result as DBContainerInfo
+  }
+
+  getPrepareCommands(): string[] {
+    return this.config.prepareCommands || []
   }
 
   asJson() {

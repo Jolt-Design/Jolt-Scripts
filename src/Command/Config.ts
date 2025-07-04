@@ -94,13 +94,33 @@ export class ConfigCommand extends JoltCommand {
     stdout.write(ansis.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
-      const parsedValue = await config.parseArg(value)
-
       stdout.write(ansis.bold(`${key}: `))
-      stdout.write(`${parsedValue}`)
 
-      if (parsedValue !== value) {
-        stdout.write(ansis.dim(` [Parsed from: ${value}]`))
+      if (typeof value === 'string') {
+        const parsedValue = await config.parseArg(value)
+        stdout.write(parsedValue)
+
+        if (parsedValue !== value) {
+          stdout.write(ansis.dim(` [Parsed from: ${value}]`))
+        }
+      } else if (Array.isArray(value)) {
+        const parsedEntries = await Promise.all(value.map((x) => config.parseArg(x)))
+        const outputs: string[] = []
+
+        for (const [i, entry] of parsedEntries.entries()) {
+          let line = `  ${entry}`
+
+          if (entry !== value[i]) {
+            line += ansis.dim(` [Parsed from: ${value[i]}]`)
+          }
+
+          outputs.push(line)
+        }
+
+        const output = parsedEntries.length ? `[\n${outputs.join('\n')}\n]` : '[]'
+        stdout.write(output)
+      } else {
+        stdout.write(`Unsupported type: ${JSON.stringify(value)}`)
       }
 
       stdout.write('\n')
