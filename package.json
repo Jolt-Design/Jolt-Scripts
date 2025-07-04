@@ -21,6 +21,7 @@
     "lint": "biome check",
     "fmt": "biome format",
     "prepack": "run build",
+    "prepare": "jolt prepare",
     "watch": "tsc -w"
   },
   "dependencies": {
