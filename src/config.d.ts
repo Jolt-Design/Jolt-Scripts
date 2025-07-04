@@ -2,6 +2,7 @@ type PrepareCommandConfig = {
   cmd: string
   name?: string
   fail?: boolean
+  dir?: string
 }
 
 type ConfigEntry = string | Array<string | PrepareCommandConfig>

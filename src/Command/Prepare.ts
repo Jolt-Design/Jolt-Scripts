@@ -114,7 +114,9 @@ export class PrepareCommand extends JoltCommand {
 
         stdout.write(ansis.white(`${indent}➕ Running command from config: ${ansis.blue(name)}...\n`))
 
-        const retval = await cli.run(['cmd', command.cmd], context)
+        const cwdArgs = command.dir ? ['--cwd', command.dir] : []
+        const args = ['cmd', ...cwdArgs, command.cmd]
+        const retval = await cli.run(args, context)
 
         if (command.fail && retval > 0) {
           stderr.write(ansis.red(`Error running prepare step ${name}: Returned code ${retval}\n`))
