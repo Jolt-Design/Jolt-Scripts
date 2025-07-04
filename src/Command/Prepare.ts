@@ -80,7 +80,7 @@ export class PrepareCommand extends JoltCommand {
         await execC(compose, [...args, 'up', '--build', '-d'], { context })
 
         const delaySeconds = await config.getDevPluginDelay()
-        stdout.write(ansis.white(`${indent}🕘 Waiting ${delaySeconds} for DB to populate... `))
+        stdout.write(ansis.white(`${indent}🕘 Waiting ${delaySeconds} seconds for DB to populate... `))
         await delay(1000 * delaySeconds)
         stdout.write(ansis.green('OK\n'))
 
