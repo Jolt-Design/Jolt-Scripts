@@ -413,6 +413,24 @@ class Config {
 
     if (services) {
       result.service = services[result.name]
+
+      const env = services[result.name]?.environment
+
+      if (!env) {
+        return
+      }
+
+      if (!result.credentials.db) {
+        result.credentials.db = env?.MYSQL_DATABASE
+      }
+
+      if (!result.credentials.user) {
+        result.credentials.user = env?.MYSQL_USER
+      }
+
+      if (!result.credentials.pass) {
+        result.credentials.pass = env?.MYSQL_PASSWORD
+      }
     }
 
     return result as DBContainerInfo
