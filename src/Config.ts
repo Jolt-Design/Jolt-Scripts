@@ -411,10 +411,6 @@ class Config {
       result.credentials.pass = await this.get('dbPass')
     }
 
-    if (Object.values(result.credentials).findIndex((x) => x === undefined) !== -1) {
-      return
-    }
-
     if (services) {
       result.service = services[result.name]
     }
