@@ -5,5 +5,24 @@
   ],
   "ignorePaths": [
     "**/.yarn/**"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "recreateWhen": "always",
+    "schedule": [
+      "after 8am on monday"
+    ],
+    "automerge": true,
+    "automergeStrategy": "rebase"
+  },
+  "packageRules": [
+    {
+      "groupName": "types",
+      "groupSlug": "types",
+      "matchPackageNames": [
+        "@types/*"
+      ],
+      "automerge": true
+    }
   ]
 }
