@@ -20,7 +20,7 @@
       "groupName": "types",
       "groupSlug": "types",
       "matchPackageNames": [
-        "@types/*"
+        "@types/**"
       ],
       "automerge": true
     }
