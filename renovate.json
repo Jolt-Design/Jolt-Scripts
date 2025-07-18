@@ -1,17 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>Jolt-Design/Renovate-Config"
-  ],
-  "ignorePaths": [
-    "**/.yarn/**"
-  ],
+  "extends": ["github>Jolt-Design/Renovate-Config"],
+  "ignorePaths": ["**/.yarn/**"],
   "lockFileMaintenance": {
     "enabled": true,
     "recreateWhen": "always",
-    "schedule": [
-      "after 8am on monday"
-    ],
+    "schedule": ["after 8am on monday"],
     "automerge": true,
     "automergeStrategy": "rebase"
   },
@@ -19,9 +13,7 @@
     {
       "groupName": "types",
       "groupSlug": "types",
-      "matchPackageNames": [
-        "@types/**"
-      ],
+      "matchPackageNames": ["@types/**"],
       "automerge": true
     }
   ]
