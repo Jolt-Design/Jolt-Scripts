@@ -27,7 +27,7 @@
   "dependencies": {
     "ansis": "^4.1.0",
     "clipanion": "^4.0.0-rc.4",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "execa": "^9.6.0",
     "typanion": "^3.14.0",
     "which": "^5.0.0"
