@@ -3,7 +3,7 @@ import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
 import getConfig from '../Config.js'
-import { delay, directoryExists, execC } from '../utils.js'
+import { directoryExists, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 async function shouldPrepareHusky(): Promise<boolean> {
@@ -93,8 +93,8 @@ export class PrepareCommand extends JoltCommand {
         await execC(compose, [...args, 'up', '--build', '-d'], { context })
 
         const delaySeconds = pluginDelay && pluginDelay > 0 ? pluginDelay : await config.getDevPluginDelay()
-        stdout.write(ansis.white(`${indent}🕘 Waiting ${delaySeconds} seconds for DB to populate... `))
-        await delay(1000 * delaySeconds)
+        stdout.write(ansis.white(`${indent}🕘 Waiting up to ${delaySeconds} seconds for DB to populate... `))
+        await cli.run(['db', 'await', `--timeout=${delaySeconds}`, '--quiet'], context)
         stdout.write(ansis.green('OK\n'))
 
         stdout.write(ansis.white(`${indent}🔌 Activating dev plugins... `))
