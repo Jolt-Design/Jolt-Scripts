@@ -21,6 +21,7 @@ type DBContainerInfo = {
   name: string | undefined
   type: 'mysql' | 'mariadb'
   service: ComposeService
+  adminCommand: string | undefined
   cliCommand: string | undefined
   dumpCommand: string | undefined
   credentials: {

@@ -363,6 +363,7 @@ class Config {
           result.type = match.groups.type.toLowerCase() as DBContainerInfo['type']
           result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type as string)
           result.cliCommand = this.getDBCLICommandFromImageType(match.groups?.type as string)
+          result.adminCommand = this.getAdminCLICommandFromImageType(match.groups?.type as string)
           result.credentials = {
             db: service.environment?.DB_NAME,
             user: service.environment?.DB_USER,
@@ -384,6 +385,7 @@ class Config {
       if (image) {
         const match = image.match(dbImageRegex)
         result.type = match?.groups?.type.toLowerCase() as DBContainerInfo['type']
+        result.adminCommand = this.getAdminCLICommandFromImageType(match?.groups?.type as string)
         result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string)
         result.cliCommand = this.getDBCLICommandFromImageType(match?.groups?.type as string)
       }
@@ -573,6 +575,15 @@ class Config {
         return 'mysqldump'
       case 'mariadb':
         return 'mariadb-dump'
+    }
+  }
+
+  private getAdminCLICommandFromImageType(type: string): string | undefined {
+    switch (type) {
+      case 'mysql':
+        return 'mysqladmin'
+      case 'mariadb':
+        return 'mariadb-admin'
     }
   }
 
