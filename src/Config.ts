@@ -345,12 +345,14 @@ class Config {
     return { name: container, type, cliCommand, service: services[container] }
   }
 
-  async getDBContainerInfo(): Promise<DBContainerInfo | undefined> {
+  async getDBContainerInfo(container: string | undefined = undefined): Promise<DBContainerInfo | undefined> {
     const result: Partial<DBContainerInfo> = {}
     const composeConfig = await this.getComposeConfig()
     const services = composeConfig?.services
 
-    if (this.has('dbContainer')) {
+    if (container) {
+      result.name = container
+    } else if (this.has('dbContainer')) {
       result.name = (await this.get('dbContainer')) as string
     } else if (services) {
       for (const [serviceName, service] of Object.entries(services)) {
