@@ -2,6 +2,7 @@ import path from 'node:path'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { execa } from 'execa'
+import * as t from 'typanion'
 import { delay, execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
@@ -198,5 +199,80 @@ export class DBResetCommand extends JoltCommand {
       stdout.write(ansis.blue('🛢️ Done resetting DB!\n'))
       return 0
     }
+  }
+}
+
+export class DBAwaitCommand extends JoltCommand {
+  static paths = [['db', 'await']]
+  requiredCommands = ['docker']
+
+  quiet = Option.Boolean('--quiet, -q', false)
+
+  timeout = Option.String('--timeout, -t', '300', {
+    tolerateBoolean: false,
+    validator: t.cascade(t.isNumber(), t.isPositive(), t.isInteger()),
+  })
+
+  target = Option.String({ required: false })
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      target,
+      timeout,
+      quiet,
+      context: { stdout, stderr },
+    } = this
+
+    const endTime = Date.now() + timeout * 1000
+    const realTarget = target || (await config.getDBContainerInfo())?.name
+    const info = await config.getDBContainerInfo(realTarget)
+
+    if (!realTarget || !info) {
+      stderr.write(ansis.red(`🛢️ Unable to find info for DB ${realTarget}.\n`))
+      return 1
+    }
+
+    if (!quiet) {
+      stdout.write(ansis.blue(`🛢️ Waiting for DB container ${realTarget} to finish loading...\n`))
+    }
+
+    const [composeCommand, args] = await config.getComposeCommand()
+
+    while (Date.now() <= endTime) {
+      const result = await execC(
+        composeCommand,
+        [
+          ...args,
+          'exec',
+          info.name,
+          info.adminCommand,
+          '-h',
+          '127.0.0.1',
+          '-u',
+          info.credentials.user,
+          `-p${info.credentials.pass}`,
+          'ping',
+        ],
+        {
+          reject: false,
+          shell: false,
+          timeout: endTime - Date.now(),
+        },
+      )
+
+      if (result.exitCode === 0) {
+        if (!quiet) {
+          stdout.write(ansis.blue(`\n🛢️ DB container ${realTarget} is loaded.\n`))
+        }
+
+        return 0
+      }
+
+      await delay(1000)
+    }
+
+    stderr.write(ansis.red(`🛢️ Timed out waiting for DB container ${realTarget} for ${timeout} seconds.\n`))
+    return 2
   }
 }
