@@ -1,8 +1,11 @@
+type PrepareTimingOption = 'early' | 'normal'
+
 type PrepareCommandConfig = {
   cmd: string
   name?: string
   fail?: boolean
   dir?: string
+  timing?: PrepareTimingOption
 }
 
 type ConfigEntry = string | Array<string | PrepareCommandConfig>

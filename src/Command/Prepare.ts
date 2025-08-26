@@ -47,12 +47,43 @@ export class PrepareCommand extends JoltCommand {
     validator: t.cascade(t.isNumber(), [t.isInteger(), t.isPositive()]),
   })
 
+  async runPrepareCommands(timing: PrepareTimingOption): Promise<number> {
+    const {
+      config,
+      cli,
+      context,
+      context: { stderr, stdout },
+    } = this
+
+    const indent = '  '
+    const additionalCommands = config.getPrepareCommands(timing)
+
+    if (additionalCommands.length > 0) {
+      for (const command of additionalCommands) {
+        const name = command.name || command.cmd
+
+        stdout.write(ansis.white(`${indent}➕ Running command from config: ${ansis.blue(name)}...\n`))
+
+        const cwdArgs = command.dir ? ['--cwd', command.dir] : []
+        const args = ['cmd', ...cwdArgs, command.cmd]
+        const retval = await cli.run(args, context)
+
+        if (command.fail && retval > 0) {
+          stderr.write(ansis.red(`Error running prepare step ${name}: Returned code ${retval}\n`))
+          return retval
+        }
+      }
+    }
+
+    return 0
+  }
+
   async command(): Promise<number | undefined> {
     const {
       cli,
       config,
       context,
-      context: { stderr, stdout },
+      context: { stdout },
       dbSeeds,
       devPlugins,
       husky,
@@ -63,6 +94,12 @@ export class PrepareCommand extends JoltCommand {
     const indent = '  '
 
     stdout.write(ansis.blue.bold('📋 Preparing repo...\n'))
+
+    const earlyExitCode = await this.runPrepareCommands('early')
+
+    if (earlyExitCode > 0) {
+      return earlyExitCode
+    }
 
     if (husky && (await shouldPrepareHusky())) {
       stdout.write(ansis.white(`${indent}🐕 Preparing Husky hooks... `))
@@ -106,23 +143,10 @@ export class PrepareCommand extends JoltCommand {
       }
     }
 
-    const additionalCommands = config.getPrepareCommands()
+    const normalExitCode = await this.runPrepareCommands('normal')
 
-    if (additionalCommands.length > 0) {
-      for (const command of additionalCommands) {
-        const name = command.name || command.cmd
-
-        stdout.write(ansis.white(`${indent}➕ Running command from config: ${ansis.blue(name)}...\n`))
-
-        const cwdArgs = command.dir ? ['--cwd', command.dir] : []
-        const args = ['cmd', ...cwdArgs, command.cmd]
-        const retval = await cli.run(args, context)
-
-        if (command.fail && retval > 0) {
-          stderr.write(ansis.red(`Error running prepare step ${name}: Returned code ${retval}\n`))
-          return retval
-        }
-      }
+    if (normalExitCode > 0) {
+      return normalExitCode
     }
 
     stdout.write(ansis.blue.bold('\n📋 Repo prepared.\n'))

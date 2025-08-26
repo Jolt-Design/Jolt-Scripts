@@ -440,7 +440,7 @@ class Config {
     return result as DBContainerInfo
   }
 
-  getPrepareCommands(): PrepareCommandConfig[] {
+  getPrepareCommands(timing: PrepareTimingOption | undefined = undefined): PrepareCommandConfig[] {
     if (!this.config.prepareCommands) {
       return []
     }
@@ -455,7 +455,13 @@ class Config {
           entry.fail = true
         }
 
-        ret.push(entry)
+        if (entry.timing === undefined) {
+          entry.timing = 'normal'
+        }
+
+        if (!timing || entry.timing === timing) {
+          ret.push(entry)
+        }
       }
     }
 
