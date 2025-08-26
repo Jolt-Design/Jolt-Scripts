@@ -172,7 +172,6 @@ export class CodeBuildStartCommand extends AWSCommand {
       batch,
       cli,
       config,
-      context,
       context: { stdout, stderr },
       dev,
       project,
@@ -198,14 +197,26 @@ export class CodeBuildStartCommand extends AWSCommand {
     stdout.write(ansis.blue(`⛅ Starting the ${target} CodeBuild project...\n`))
     const regionArg = await this.getRegionArg()
 
-    await execC(
+    const result = await execC(
       await config.command('aws'),
       [regionArg, 'codebuild', batch ? 'start-build-batch' : 'start-build', `--project-name=${target}`],
       {
-        context,
         env: { AWS_PAGER: '' },
       },
     )
+
+    if (result.stdout === undefined) {
+      stderr.write(ansis.red('⛅ Missing output for codebuild start command'))
+      return 5
+    }
+
+    const output = JSON.parse(result.stdout.toString())
+    const { build } = output
+
+    stdout.write(ansis.blue.bold('⛅ Started project build:\n'))
+    stdout.write(`${ansis.white('ID:')} ${build.id}\n`)
+    stdout.write(`${ansis.white('Project:')} ${build.projectName}\n`)
+    stdout.write(`${ansis.white('Build Number:')} ${build.buildNumber}\n\n`)
 
     stdout.write(
       ansis.blue.bold(
