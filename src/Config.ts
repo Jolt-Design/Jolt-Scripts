@@ -555,7 +555,7 @@ class Config {
       return DEFAULT_DEV_PLUGIN_DELAY
     }
 
-    const delaySeconds = Number.parseInt(delayString)
+    const delaySeconds = Number.parseInt(delayString, 10)
 
     return delaySeconds || DEFAULT_DEV_PLUGIN_DELAY
   }
