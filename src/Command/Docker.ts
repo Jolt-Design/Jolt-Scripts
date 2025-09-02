@@ -4,6 +4,8 @@ import { ExecaError, execa } from 'execa'
 import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
+const notEmpty = (x: string) => x !== ''
+
 export abstract class DockerCommand extends JoltCommand {
   requiredCommands = ['docker']
   dev = Option.Boolean('--dev', false)
@@ -16,9 +18,7 @@ export class DockerCombinedCommand extends DockerCommand {
 
   async command(): Promise<number | undefined> {
     const { cli, context, deploy, dev } = this
-
     const devArg = dev ? '--dev' : ''
-    const notEmpty = (x: string) => x !== ''
 
     await cli.run(['docker', 'build', devArg].filter(notEmpty), context)
     await cli.run(['docker', 'login'], context)
@@ -257,5 +257,46 @@ export class DockerPushCommand extends DockerCommand {
     }
 
     return result.exitCode
+  }
+}
+
+export class DockerManifestCommand extends DockerCommand {
+  static paths = [['docker', 'manifest']]
+
+  build = Option.Boolean('--build', true)
+
+  async command(): Promise<number | undefined> {
+    const {
+      build,
+      cli,
+      config,
+      context: { stdout, stderr },
+      dev,
+    } = this
+
+    const devArg = dev ? '--dev' : ''
+    const remoteRepo = config.getRemoteRepo(dev)
+
+    if (build) {
+      await cli.run(['docker', 'build', devArg].filter(notEmpty), { stdout: stderr })
+    }
+
+    const result = await execC(await config.command('docker'), [
+      'buildx',
+      'imagetools',
+      'inspect',
+      await remoteRepo,
+      "--format='{{json .Manifest}}'",
+    ])
+
+    const json = JSON.parse(result.stdout?.toString() || '{}')
+
+    if (json.digest) {
+      stdout.write(`${json.digest}\n`)
+      return 0
+    }
+
+    stderr.write(ansis.red("Couldn't find digest in command output!\n"))
+    return 1
   }
 }

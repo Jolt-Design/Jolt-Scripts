@@ -18,6 +18,7 @@ import {
   DockerBuildCommand,
   DockerCombinedCommand,
   DockerLoginCommand,
+  DockerManifestCommand,
   DockerPushCommand,
   DockerTagCommand,
 } from './Command/Docker.js'
@@ -41,6 +42,7 @@ cli.register(DockerLoginCommand)
 cli.register(DockerTagCommand)
 cli.register(DockerPushCommand)
 cli.register(DockerCombinedCommand)
+cli.register(DockerManifestCommand)
 cli.register(WPCommand)
 cli.register(ECSDeployCommand)
 cli.register(ECSDeploySpecificCommand)
