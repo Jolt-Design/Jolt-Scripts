@@ -14,7 +14,13 @@ import { CacheFlushCommand } from './Command/Cache.js'
 import { CmdCommand } from './Command/Cmd.js'
 import { ConfigCommand } from './Command/Config.js'
 import { DBAwaitCommand, DBDumpCommand, DBResetCommand } from './Command/DB.js'
-import { DockerBuildCommand, DockerLoginCommand, DockerPushCommand, DockerTagCommand } from './Command/Docker.js'
+import {
+  DockerBuildCommand,
+  DockerCombinedCommand,
+  DockerLoginCommand,
+  DockerPushCommand,
+  DockerTagCommand,
+} from './Command/Docker.js'
 import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
@@ -34,6 +40,7 @@ cli.register(DockerBuildCommand)
 cli.register(DockerLoginCommand)
 cli.register(DockerTagCommand)
 cli.register(DockerPushCommand)
+cli.register(DockerCombinedCommand)
 cli.register(WPCommand)
 cli.register(ECSDeployCommand)
 cli.register(ECSDeploySpecificCommand)

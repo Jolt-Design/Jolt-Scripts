@@ -9,6 +9,30 @@ export abstract class DockerCommand extends JoltCommand {
   dev = Option.Boolean('--dev', false)
 }
 
+export class DockerCombinedCommand extends DockerCommand {
+  static paths = [['docker', 'combined']]
+
+  deploy = Option.Boolean('--deploy')
+
+  async command(): Promise<number | undefined> {
+    const { cli, context, deploy, dev } = this
+
+    const devArg = dev ? '--dev' : ''
+    const notEmpty = (x: string) => x !== ''
+
+    await cli.run(['docker', 'build', devArg].filter(notEmpty), context)
+    await cli.run(['docker', 'login'], context)
+    await cli.run(['docker', 'tag', devArg].filter(notEmpty), context)
+
+    if (deploy) {
+      await cli.run(['docker', 'push', devArg].filter(notEmpty), context)
+      await cli.run(['aws', 'ecs', 'deploy', devArg].filter(notEmpty), context)
+    }
+
+    return 0
+  }
+}
+
 export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
