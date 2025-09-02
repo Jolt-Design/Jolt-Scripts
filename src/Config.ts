@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
 import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from './utils.js'
+import resolvePath from 'object-resolve-path'
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_-]+)}/gi
+const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_\.\[\]\"-]+)}/gi
 const DEFAULT_DEV_PLUGIN_DELAY = 30
 
 function parseEnvFile(env: Record<string, string>): InternalConfig {
@@ -199,11 +200,7 @@ class Config {
       }
     }
 
-    if (this.tfCache?.[key]) {
-      return this.tfCache[key]
-    }
-
-    return undefined
+    return resolvePath(this.tfCache, key)
   }
 
   awsRegion(): string {
