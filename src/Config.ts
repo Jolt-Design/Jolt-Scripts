@@ -138,6 +138,10 @@ class Config {
 
   async get(key: string): Promise<string | undefined> {
     if (this.site) {
+      if (this.config?.sites?.[this.site]?.[key] !== undefined) {
+        return await this.parseArg(this.config?.sites?.[this.site]?.[key])
+      }
+
       const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
       const keyToTry = `${this.site}${capitalisedKey}`
 
@@ -151,6 +155,10 @@ class Config {
 
   has(key: string): boolean {
     if (this.site) {
+      if (this.config?.sites?.[this.site]?.[key] !== undefined) {
+        return true
+      }
+
       const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
       const keyToTry = `${this.site}${capitalisedKey}`
 
@@ -469,11 +477,11 @@ class Config {
   }
 
   asJson() {
-    return JSON.stringify(this.config)
+    return JSON.stringify(this.getFlatSiteConfig())
   }
 
   asEnvVars(): Record<string, string> {
-    const strings = Object.entries(this.config).filter(([_k, v]) => typeof v === 'string') as [string, string][]
+    const strings = Object.entries(this.getFlatSiteConfig()).filter(([_k, v]) => typeof v === 'string')
     return Object.fromEntries(strings.map(([k, v]) => [keyToConst(k), `"${v}"`]))
   }
 
@@ -634,6 +642,26 @@ class Config {
         }
       }
     }
+  }
+
+  private getFlatSiteConfig() {
+    if (this.site) {
+      return { ...(this.config.sites?.[this.site] || {}), ...this.config, sites: undefined }
+    }
+
+    const retVal = { ...this.config }
+    delete retVal.sites
+
+    if (this.config.sites) {
+      for (const [siteName, siteConfig] of Object.entries(this.config.sites)) {
+        for (const [k, v] of Object.entries(siteConfig)) {
+          const capitalisedKey = k.replace(/^./, (x) => x.toUpperCase())
+          retVal[`${siteName}${capitalisedKey}`] = v
+        }
+      }
+    }
+
+    return retVal
   }
 }
 

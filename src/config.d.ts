@@ -8,10 +8,12 @@ type PrepareCommandConfig = {
   timing?: PrepareTimingOption
 }
 
-type ConfigEntry = string | Array<string | PrepareCommandConfig>
+type SiteConfig = Record<string, string>
+type ConfigEntry = string | Array<string | PrepareCommandConfig> | Record<string, SiteConfig>
 
 type InternalConfig = Record<string, string> & {
   prepareCommands?: Array<string | PrepareCommandConfig>
+  sites?: Record<string, SiteConfig>
 }
 
 type CommandOverride = {
