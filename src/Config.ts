@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
-import { constToCamel, execC, fileExists, replaceAsync, which } from './utils.js'
+import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from './utils.js'
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_-]+)}/gi
@@ -470,6 +470,11 @@ class Config {
 
   asJson() {
     return JSON.stringify(this.config)
+  }
+
+  asEnvVars(): Record<string, string> {
+    const strings = Object.entries(this.config).filter(([_k, v]) => typeof v === 'string') as [string, string][]
+    return Object.fromEntries(strings.map(([k, v]) => [keyToConst(k), `"${v}"`]))
   }
 
   async parseArg(arg: string, params: Record<string, string> = {}): Promise<string> {

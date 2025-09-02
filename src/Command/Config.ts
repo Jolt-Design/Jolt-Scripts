@@ -8,6 +8,7 @@ import JoltCommand from './JoltCommand.js'
 enum ConfigCommandFormat {
   Pretty = 'pretty',
   Json = 'json',
+  Env = 'env',
 }
 
 export class ConfigCommand extends JoltCommand {
@@ -38,6 +39,15 @@ export class ConfigCommand extends JoltCommand {
 
     if (format === ConfigCommandFormat.Json) {
       stdout.write(`${config.asJson()}\n`)
+      return 0
+    }
+
+    if (format === ConfigCommandFormat.Env) {
+      const envVars = config.asEnvVars()
+      const varsString = Object.entries(envVars)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('\n')
+      stdout.write(`${varsString}\n`)
       return 0
     }
 
