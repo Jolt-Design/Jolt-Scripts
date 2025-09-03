@@ -26,13 +26,15 @@ import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexce
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { WPCommand } from './Command/WP.js'
+import { getPackageJson } from './utils.js'
 
 const [_node, _app, ...args] = process.argv
+const packageInfo = await getPackageJson()
 
 const cli = new Cli({
   binaryLabel: 'Jolt Scripts',
-  binaryName: 'jolt',
-  binaryVersion: '1.0.0',
+  binaryName: Object.keys(packageInfo.bin)[0],
+  binaryVersion: packageInfo.version,
 })
 
 cli.register(BuildCommand)
