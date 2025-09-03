@@ -277,6 +277,8 @@ export class DockerManifestCommand extends DockerCommand {
     const devArg = dev ? '--dev' : ''
     const remoteRepo = config.getRemoteRepo(dev)
 
+    await cli.run(['docker', 'login', devArg].filter(notEmpty), { stdout: stderr })
+
     if (build) {
       await cli.run(['docker', 'build', devArg].filter(notEmpty), { stdout: stderr })
     }
