@@ -21,10 +21,10 @@ export class DockerCombinedCommand extends DockerCommand {
     const devArg = dev ? '--dev' : ''
 
     await cli.run(['docker', 'build', devArg].filter(notEmpty), context)
-    await cli.run(['docker', 'login'], context)
     await cli.run(['docker', 'tag', devArg].filter(notEmpty), context)
 
     if (deploy) {
+      await cli.run(['docker', 'login'], context)
       await cli.run(['docker', 'push', devArg].filter(notEmpty), context)
       await cli.run(['aws', 'ecs', 'deploy', devArg].filter(notEmpty), context)
     }
