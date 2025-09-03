@@ -200,7 +200,11 @@ class Config {
       }
     }
 
-    return resolvePath(this.tfCache, key)
+    try {
+      return resolvePath(this.tfCache, key)
+    } catch {
+      return undefined
+    }
   }
 
   awsRegion(): string {
