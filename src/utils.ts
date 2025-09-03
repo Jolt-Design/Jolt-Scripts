@@ -1,5 +1,5 @@
 import type { PathLike } from 'node:fs'
-import { stat } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import type { BaseContext } from 'clipanion'
 import type { Options } from 'execa'
 import { execa } from 'execa'
@@ -100,4 +100,9 @@ export async function which(cmd: string): Promise<string | null> {
   }
 
   return await realWhich(cmd, { nothrow: true })
+}
+
+export async function getPackageJson(): Promise<PackageJson> {
+  const contents = await readFile('./package.json')
+  return JSON.parse(contents.toString())
 }
