@@ -1,1 +1,1 @@
-declare module 'object-resolve-path';
+declare module 'object-resolve-path'
