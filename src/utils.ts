@@ -103,6 +103,6 @@ export async function which(cmd: string): Promise<string | null> {
 }
 
 export async function getPackageJson(): Promise<PackageJson> {
-  const contents = await readFile('./package.json')
+  const contents = await readFile(`${import.meta.dirname}/../package.json`)
   return JSON.parse(contents.toString())
 }
