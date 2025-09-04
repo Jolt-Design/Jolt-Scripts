@@ -37,6 +37,7 @@ export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
   buildArgs = Option.Array('--build-arg', { required: false })
+  provenance = Option.Boolean('--provenance', true)
 
   async command(): Promise<number | undefined> {
     const {
@@ -72,7 +73,7 @@ export class DockerBuildCommand extends DockerCommand {
   }
 
   async buildCommandArgs(): Promise<string[]> {
-    const { buildArgs, config, dev } = this
+    const { buildArgs, config, dev, provenance } = this
     const imageName = await config.getDockerImageName(dev)
     const platform = await config.get('buildPlatform')
     const context = await config.get('buildContext')
@@ -87,6 +88,7 @@ export class DockerBuildCommand extends DockerCommand {
       'build',
       platform && `--platform=${platform}`,
       dockerFile && `-f ${dockerFile}`,
+      !provenance && '--provenance=false',
       `-t ${imageName}`,
       ...allBuildArgs,
       context ?? '.',
