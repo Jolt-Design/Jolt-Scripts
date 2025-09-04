@@ -282,7 +282,7 @@ export class DockerManifestCommand extends DockerCommand {
     await cli.run(['docker', 'login', devArg].filter(notEmpty), { stdout: stderr })
 
     if (build) {
-      await cli.run(['docker', 'build', devArg].filter(notEmpty), { stdout: stderr })
+      await cli.run(['docker', 'build', devArg, '--no-provenance'].filter(notEmpty), { stdout: stderr })
     }
 
     const result = await execC(await config.command('docker'), [
