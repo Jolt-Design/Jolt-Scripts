@@ -7,7 +7,7 @@
   "version": "0.19.3",
   "type": "module",
   "devDependencies": {
-    "@biomejs/biome": "^2.2.2",
+    "@biomejs/biome": "^2.2.3",
     "@types/node": "^24.3.1",
     "@types/which": "^3.0.4",
     "typescript": "^5.9.2"
