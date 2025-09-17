@@ -1,5 +1,6 @@
 import type { PathLike } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
+import { camelCase, constantCase } from 'change-case'
 import type { BaseContext } from 'clipanion'
 import type { Options } from 'execa'
 import { execa } from 'execa'
@@ -27,21 +28,11 @@ export async function directoryExists(path: PathLike): Promise<boolean> {
 }
 
 export function constToCamel(key: string): string {
-  let parts = key.split('_')
-  parts = parts.map((x) => x.toLocaleLowerCase().replace(/^./, (y) => y.toLocaleUpperCase()))
-  parts[0] = parts[0].toLocaleLowerCase()
-
-  return parts.join('')
+  return camelCase(key)
 }
 
 export function keyToConst(str: string): string {
-  return (
-    str
-      .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
-      ?.map((x) => x.toLowerCase())
-      .join('_')
-      .toUpperCase() || str
-  )
+  return constantCase(str)
 }
 
 export async function execC(
