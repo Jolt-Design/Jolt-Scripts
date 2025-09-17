@@ -70,7 +70,7 @@ export async function execC(
   return await execa(command, argsToUse as string[], allOptions)
 }
 
-export function delay(ms: number): Promise<undefined> {
+export function delay(ms: number): Promise<null> {
   return new Promise((res) => setTimeout(res, ms, null))
 }
 
