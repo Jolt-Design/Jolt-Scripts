@@ -20,7 +20,7 @@ function parseEnvFile(env: Record<string, string>): InternalConfig {
 
 export const DEFAULT_AWS_REGION = 'eu-west-1'
 
-class Config {
+export class Config {
   private composeConfig: ComposeConfig | false | undefined
   private config: InternalConfig
   private _configPath?: string
@@ -702,4 +702,4 @@ export default async function getConfig() {
   return cachedConfig
 }
 
-export type { Config }
+export type { Config as ConfigType }

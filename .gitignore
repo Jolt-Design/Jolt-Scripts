@@ -1,5 +1,6 @@
 ## Project
 /dist
+/coverage
 
 ## Yarn
 .yarn/*
@@ -8,6 +9,7 @@
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+node_modules
 
 # Swap the comments on the following lines if you wish to use zero-installs
 # In that case, don't forget to run `yarn config set enableGlobalCache false`!
