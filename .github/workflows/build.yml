@@ -1,4 +1,4 @@
-name: Lint and Build
+name: Lint, Build, Test
 
 on:
   workflow_dispatch:
@@ -29,3 +29,4 @@ jobs:
     - run: yarn install --immutable
     - run: yarn run biome ci
     - run: yarn run build
+    - run: yarn run test
