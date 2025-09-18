@@ -1,7 +1,7 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
-import { execC, which } from '../utils.js'
+import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 abstract class AWSCommand extends JoltCommand {
