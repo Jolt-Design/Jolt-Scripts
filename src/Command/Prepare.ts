@@ -3,6 +3,7 @@ import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
 import getConfig from '../Config.js'
+import { ConfigValidationError } from '../errors.js'
 import { directoryExists, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
@@ -56,7 +57,18 @@ export class PrepareCommand extends JoltCommand {
     } = this
 
     const indent = '  '
-    const additionalCommands = config.getPrepareCommands(timing)
+    let additionalCommands: PrepareCommandConfig[]
+
+    try {
+      additionalCommands = config.getPrepareCommands(timing)
+    } catch (error) {
+      if (error instanceof ConfigValidationError) {
+        stderr.write(ansis.red(`${error.message}\n`))
+        return 1
+      }
+
+      throw error
+    }
 
     if (additionalCommands.length > 0) {
       for (const command of additionalCommands) {

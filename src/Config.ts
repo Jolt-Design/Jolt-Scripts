@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
 import resolvePath from 'object-resolve-path'
+import { z } from 'zod'
+import { ConfigValidationError } from './errors.js'
+import { PrepareCommandsSchema } from './schemas.js'
 import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from './utils.js'
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
@@ -454,27 +457,32 @@ export class Config {
       return []
     }
 
-    const ret: PrepareCommandConfig[] = []
-
-    for (const entry of this.config.prepareCommands) {
-      if (typeof entry === 'string') {
-        ret.push({ cmd: entry, fail: true })
-      } else {
-        if (entry.fail === undefined) {
-          entry.fail = true
+    try {
+      const validatedCommands = PrepareCommandsSchema.parse(this.config.prepareCommands)
+      const parsed: PrepareCommandConfig[] = validatedCommands.map((cmd) => {
+        if (typeof cmd === 'string') {
+          return { cmd, fail: true, timing: 'normal' }
         }
+        return cmd
+      })
 
-        if (entry.timing === undefined) {
-          entry.timing = 'normal'
-        }
-
-        if (!timing || entry.timing === timing) {
-          ret.push(entry)
-        }
+      if (timing) {
+        return parsed.filter((cmd) => !cmd.timing || cmd.timing === timing)
       }
-    }
 
-    return ret
+      return parsed
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.issues
+          .map((err: z.core.$ZodIssue) => {
+            const path = err.path.join('.')
+            return `${path ? `${path}: ` : ''}${err.message}`
+          })
+          .join('\n')
+        throw new ConfigValidationError(`Invalid prepareCommands configuration:\n${formattedErrors}`)
+      }
+      throw error
+    }
   }
 
   asJson() {

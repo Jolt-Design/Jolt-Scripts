@@ -101,7 +101,11 @@ describe('Config', () => {
             value: 'test_value',
           },
         }),
-        stderr: undefined,
+        stderr: '',
+        exitCode: 0,
+        failed: false,
+        command: '',
+        signal: null,
       })
     })
 
@@ -139,7 +143,11 @@ describe('Config', () => {
     beforeEach(() => {
       vi.mocked(utils.execC).mockResolvedValue({
         stdout: JSON.stringify({ services: { test: { image: 'test' } } }),
-        stderr: undefined,
+        stderr: '',
+        exitCode: 0,
+        failed: false,
+        command: '',
+        signal: null,
       })
     })
 
@@ -158,6 +166,77 @@ describe('Config', () => {
       vi.mocked(utils.execC).mockRejectedValue(new Error('Command failed'))
       const result = await config.getComposeConfig()
       expect(result).toBeUndefined()
+    })
+  })
+
+  describe('getPrepareCommands', () => {
+    it('should return empty array when no commands exist', () => {
+      const config = new Config({})
+      expect(config.getPrepareCommands()).toEqual([])
+    })
+
+    it('should validate and transform string commands', () => {
+      const config = new Config({
+        prepareCommands: ['yarn build', 'npm test'],
+      })
+      const commands = config.getPrepareCommands()
+      expect(commands).toEqual([
+        { cmd: 'yarn build', fail: true, timing: 'normal' },
+        { cmd: 'npm test', fail: true, timing: 'normal' },
+      ])
+    })
+
+    it('should validate and preserve object commands', () => {
+      const config = new Config({
+        prepareCommands: [
+          { cmd: 'yarn build', fail: false, timing: 'early' },
+          { cmd: 'npm test', dir: 'packages/test' },
+        ],
+      })
+      const commands = config.getPrepareCommands()
+      expect(commands).toEqual([
+        { cmd: 'yarn build', fail: false, timing: 'early' },
+        { cmd: 'npm test', dir: 'packages/test', fail: true, timing: 'normal' },
+      ])
+    })
+
+    it('should filter by timing when specified', () => {
+      const config = new Config({
+        prepareCommands: [
+          { cmd: 'yarn build', timing: 'early' },
+          { cmd: 'npm test', timing: 'normal' },
+        ],
+      })
+      const earlyCommands = config.getPrepareCommands('early')
+      expect(earlyCommands).toHaveLength(1)
+      expect(earlyCommands[0].cmd).toBe('yarn build')
+    })
+
+    it('should throw ConfigValidationError for invalid command structure', () => {
+      const config = new Config({
+        prepareCommands: [
+          { cmd: 123 }, // Invalid: cmd should be string
+        ],
+      })
+      expect(() => config.getPrepareCommands()).toThrow('Invalid prepareCommands configuration')
+    })
+
+    it('should throw ConfigValidationError for invalid timing value', () => {
+      const config = new Config({
+        prepareCommands: [{ cmd: 'test', timing: 'invalid' }],
+      })
+      expect(() => config.getPrepareCommands()).toThrow('Invalid prepareCommands configuration')
+    })
+
+    it('should validate all commands in the array', () => {
+      const config = new Config({
+        prepareCommands: [
+          'valid-command',
+          { cmd: 'also-valid' },
+          { wrong: 'invalid-command' }, // Missing required cmd field
+        ],
+      })
+      expect(() => config.getPrepareCommands()).toThrow('Invalid prepareCommands configuration')
     })
   })
 })
