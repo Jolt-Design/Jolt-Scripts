@@ -65,11 +65,6 @@ export class ECSDeployCommand extends AWSCommand {
       return 1
     }
 
-    if (!(await which(awsCommand))) {
-      stderr.write(ansis.red(`⛅ Could not find command ${awsCommand}!\n`))
-      return 2
-    }
-
     stdout.write(ansis.blue(`⛅ Deploying service ${service} on cluster ${cluster}...\n`))
 
     const result = await execC(awsCommand, args, {
