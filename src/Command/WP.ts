@@ -50,7 +50,7 @@ export class WPCommand extends JoltCommand {
     }
 
     for (const [key, service] of Object.entries(composeConfig.services)) {
-      if (service.image?.match(/\bwp[_-]cli\b/i)) {
+      if (service.image?.match(/\bwp[_-]?cli\b/i)) {
         return key
       }
     }
