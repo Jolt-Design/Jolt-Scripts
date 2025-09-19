@@ -58,7 +58,7 @@ export async function execC(
     argsToUse = args.filter((x) => !!x)
   }
 
-  return await execa(command, argsToUse as string[], allOptions)
+  return execa(command, argsToUse as string[], allOptions)
 }
 
 export function delay(ms: number): Promise<null> {
