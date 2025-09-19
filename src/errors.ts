@@ -4,3 +4,10 @@ export class ConfigValidationError extends Error {
     this.name = 'ConfigValidationError'
   }
 }
+
+export class ContainerRuntimeError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ContainerRuntimeError'
+  }
+}

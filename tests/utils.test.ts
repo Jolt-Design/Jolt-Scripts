@@ -2,6 +2,7 @@ import { stat } from 'node:fs/promises'
 import { execa } from 'execa'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import realWhich from 'which'
+import { ContainerRuntimeError } from '../src/errors.js'
 import {
   clearWhichCache,
   constToCamel,
@@ -125,6 +126,215 @@ describe('utils', () => {
           stderr: 'stderr',
         }),
       )
+    })
+
+    describe('Container runtime error detection', () => {
+      const mockStderr = {
+        write: vi.fn(),
+      }
+
+      const context = {
+        stdin: process.stdin,
+        stdout: process.stdout,
+        stderr: mockStderr as any,
+        env: {},
+        colorDepth: 1,
+      }
+
+      beforeEach(() => {
+        mockStderr.write.mockClear()
+      })
+
+      describe('Docker error detection', () => {
+        it('should detect "Cannot connect to the Docker daemon" error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock.'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['ps'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('🐳 Docker daemon is not running!'))
+        })
+
+        it('should detect "docker: error during connect" error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr =
+            'docker: error during connect: this error may indicate that the docker daemon is not running'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['build', '.'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Docker daemon is not running!'))
+        })
+
+        it('should detect "Is the docker daemon running?" error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'Got permission denied while trying to connect. Is the docker daemon running?'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['run', 'hello-world'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Docker daemon is not running!'))
+        })
+
+        it('should detect connection refused error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'dial unix /var/run/docker.sock: connect: connection refused'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['version'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Docker daemon is not running!'))
+        })
+
+        it('should detect Docker Desktop not running error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'Docker Desktop is not running'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['info'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Docker daemon is not running!'))
+        })
+      })
+
+      describe('Podman error detection', () => {
+        it('should detect "Cannot connect to Podman" error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const podmanError = new Error('Command failed') as any
+          podmanError.stderr = 'Cannot connect to Podman. Is the podman service running?'
+
+          mockExeca.mockRejectedValueOnce(podmanError)
+
+          await expect(execC('podman', ['ps'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('🐳 Podman daemon is not running!'))
+        })
+
+        it('should detect "Error: unable to connect to Podman" error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const podmanError = new Error('Command failed') as any
+          podmanError.stderr = 'Error: unable to connect to Podman socket'
+
+          mockExeca.mockRejectedValueOnce(podmanError)
+
+          await expect(execC('podman', ['run', 'alpine'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Podman daemon is not running!'))
+        })
+
+        it('should detect Podman Desktop not running error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const podmanError = new Error('Command failed') as any
+          podmanError.stderr = 'Podman Desktop is not running'
+
+          mockExeca.mockRejectedValueOnce(podmanError)
+
+          await expect(execC('podman', ['info'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Podman daemon is not running!'))
+        })
+
+        it('should detect Podman socket connection refused error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const podmanError = new Error('Command failed') as any
+          podmanError.stderr = 'dial unix /run/user/1000/podman/podman.sock: connect: connection refused'
+
+          mockExeca.mockRejectedValueOnce(podmanError)
+
+          await expect(execC('podman', ['version'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Podman daemon is not running!'))
+        })
+      })
+
+      describe('Rancher Desktop error detection', () => {
+        it('should detect Rancher Desktop not running error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const rancherError = new Error('Command failed') as any
+          rancherError.stderr = 'Rancher Desktop is not running'
+
+          mockExeca.mockRejectedValueOnce(rancherError)
+
+          await expect(execC('docker', ['ps'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(
+            expect.stringContaining('🐳 Rancher Desktop daemon is not running!'),
+          )
+        })
+
+        it('should detect Rancher Docker socket connection refused error', async () => {
+          const mockExeca = vi.mocked(execa)
+          const rancherError = new Error('Command failed') as any
+          rancherError.stderr = 'dial unix /Users/user/.rd/docker.sock: connect: connection refused'
+
+          mockExeca.mockRejectedValueOnce(rancherError)
+
+          await expect(execC('docker', ['run', 'nginx'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(
+            expect.stringContaining('Rancher Desktop daemon is not running!'),
+          )
+        })
+
+        it('should detect connection refused with rancher in path', async () => {
+          const mockExeca = vi.mocked(execa)
+          const rancherError = new Error('Command failed') as any
+          rancherError.stderr = 'connection refused connecting to rancher docker daemon'
+
+          mockExeca.mockRejectedValueOnce(rancherError)
+
+          await expect(execC('docker', ['build', '.'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(
+            expect.stringContaining('Rancher Desktop daemon is not running!'),
+          )
+        })
+      })
+
+      describe('General error handling', () => {
+        it('should not trigger container runtime error detection for non-container commands', async () => {
+          const mockExeca = vi.mocked(execa)
+          const error = new Error('Command failed') as any
+          error.stderr = 'Cannot connect to the Docker daemon'
+
+          mockExeca.mockRejectedValueOnce(error)
+
+          await expect(execC('npm', ['install'], { context })).rejects.toThrow('Command failed')
+          expect(mockStderr.write).not.toHaveBeenCalled()
+        })
+
+        it('should not trigger container runtime error detection for unrelated docker errors', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'docker: invalid flag --invalid-flag'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['--invalid-flag'], { context })).rejects.toThrow('Command failed')
+          expect(mockStderr.write).not.toHaveBeenCalled()
+        })
+
+        it('should handle container runtime errors without stderr', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Cannot connect to the Docker daemon') as any
+          dockerError.stderr = ''
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['ps'], { context })).rejects.toThrow(ContainerRuntimeError)
+          expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Docker daemon is not running!'))
+        })
+
+        it('should work without context stderr', async () => {
+          const mockExeca = vi.mocked(execa)
+          const dockerError = new Error('Command failed') as any
+          dockerError.stderr = 'Cannot connect to the Docker daemon'
+
+          mockExeca.mockRejectedValueOnce(dockerError)
+
+          await expect(execC('docker', ['ps'])).rejects.toThrow(ContainerRuntimeError)
+          // Should not crash when context.stderr is not available
+        })
+      })
     })
   })
 
