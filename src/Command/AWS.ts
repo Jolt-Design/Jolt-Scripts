@@ -1,6 +1,7 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
+import { AWSConsoleUrlGenerator } from '../AWSConsoleUrlGenerator.js'
 import { delay, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
@@ -8,15 +9,23 @@ abstract class AWSCommand extends JoltCommand {
   requiredCommands = ['aws']
   region = Option.String('--region', { required: false })
 
-  protected async getRegionArg() {
+  /**
+   * Get the AWS region to use for operations
+   */
+  protected async getRegion(): Promise<string> {
     const { config, region } = this
 
     if (region) {
-      return `--region=${await config.parseArg(region)}`
+      return await config.parseArg(region)
     }
 
     const configRegion = await config.get('awsRegion')
-    return configRegion ? `--region=${configRegion}` : ''
+    return configRegion || 'eu-west-1'
+  }
+
+  protected async getRegionArg() {
+    const region = await this.getRegion()
+    return region ? `--region=${region}` : ''
   }
 
   /**
@@ -115,10 +124,20 @@ export class ECSDeployCommand extends AWSCommand {
     if (!result.exitCode && output) {
       const resultJson = JSON.parse(output)
       const { service } = resultJson
+      const region = await this.getRegion()
+
       stdout.write(ansis.blue.bold('⛅ Started deploy:\n'))
       stdout.write(`${ansis.white('Cluster ARN:')} ${service.clusterArn}\n`)
       stdout.write(`${ansis.white('Service Name:')} ${service.serviceName}\n`)
       stdout.write(`${ansis.white('Service ARN:')} ${service.serviceArn}\n`)
+
+      // Add console URLs
+      stdout.write(`\n${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+      stdout.write(
+        `${ansis.white('ECS Service:')} ${AWSConsoleUrlGenerator.ecsService(region, cluster, service.serviceName)}\n`,
+      )
+      stdout.write(`${ansis.white('ECS Cluster:')} ${AWSConsoleUrlGenerator.ecsCluster(region, cluster)}\n`)
+
       return 0
     }
 
@@ -156,6 +175,21 @@ export class S3SyncCommand extends AWSCommand {
     )
     stdout.write(ansis.blue('⛅ Syncing complete.\n'))
 
+    // Add console URLs for S3 buckets
+    const region = await this.getRegion()
+    const fromBucket = AWSConsoleUrlGenerator.extractS3Bucket(parsedFrom)
+    const toBucket = AWSConsoleUrlGenerator.extractS3Bucket(parsedTo)
+
+    if (fromBucket || toBucket) {
+      stdout.write(`\n${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+      if (fromBucket) {
+        stdout.write(`${ansis.white('Source Bucket:')} ${AWSConsoleUrlGenerator.s3Bucket(region, fromBucket)}\n`)
+      }
+      if (toBucket) {
+        stdout.write(`${ansis.white('Target Bucket:')} ${AWSConsoleUrlGenerator.s3Bucket(region, toBucket)}\n`)
+      }
+    }
+
     return result.exitCode
   }
 }
@@ -177,6 +211,11 @@ export class LogsTailCommand extends AWSCommand {
     const group = await config.parseArg(this.group)
 
     stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
+
+    // Add console URL for CloudWatch log group
+    const region = await this.getRegion()
+    stdout.write(`${ansis.blue.bold('🔗 AWS Console Link:')}\n`)
+    stdout.write(`${ansis.white('CloudWatch Logs:')} ${AWSConsoleUrlGenerator.cloudWatchLogGroup(region, group)}\n\n`)
 
     const result = await execC(
       await config.command('aws'),
@@ -241,11 +280,17 @@ export class CodeBuildStartCommand extends AWSCommand {
 
     const output = JSON.parse(result.stdout.toString())
     const { build } = output
+    const region = await this.getRegion()
 
     stdout.write(ansis.blue.bold('⛅ Started project build:\n'))
     stdout.write(`${ansis.white('ID:')} ${build.id}\n`)
     stdout.write(`${ansis.white('Project:')} ${build.projectName}\n`)
-    stdout.write(`${ansis.white('Build Number:')} ${build.buildNumber}\n\n`)
+    stdout.write(`${ansis.white('Build Number:')} ${build.buildNumber}\n`)
+
+    // Add console URLs
+    stdout.write(`\n${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+    stdout.write(`${ansis.white('CodeBuild Project:')} ${AWSConsoleUrlGenerator.codeBuildProject(region, target)}\n`)
+    stdout.write(`${ansis.white('This Build:')} ${AWSConsoleUrlGenerator.codeBuildBuild(region, target, build.id)}\n\n`)
 
     stdout.write(
       ansis.blue.bold(
@@ -378,8 +423,17 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
     if (!result.exitCode && output) {
       const resultJson = JSON.parse(output)
       const { Invalidation: invalidation } = resultJson
+      const region = await this.getRegion()
+
       stdout.write(ansis.blue.bold('⛅ Started cache invalidation:\n'))
       stdout.write(`${ansis.white('Invalidation ID:')} ${invalidation.Id}\n`)
+
+      // Add console URL
+      stdout.write(`\n${ansis.blue.bold('🔗 AWS Console Link:')}\n`)
+      stdout.write(
+        `${ansis.white('CloudFront Distribution:')} ${AWSConsoleUrlGenerator.cloudFrontDistribution(region, target)}\n`,
+      )
+
       return 0
     }
 
@@ -424,6 +478,19 @@ export class ECSStatusCommand extends AWSCommand {
 
     stdout.write(ansis.blue.bold('⛅ AWS ECS Status\n'))
     stdout.write(ansis.blue(`${'─'.repeat(50)}\n`))
+
+    // Add console URLs if we have configuration
+    const region = await this.getRegion()
+    if (cluster || service) {
+      stdout.write(`${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+      if (cluster) {
+        stdout.write(`${ansis.white('ECS Cluster:')} ${AWSConsoleUrlGenerator.ecsCluster(region, cluster)}\n`)
+      }
+      if (cluster && service) {
+        stdout.write(`${ansis.white('ECS Service:')} ${AWSConsoleUrlGenerator.ecsService(region, cluster, service)}\n`)
+      }
+      stdout.write('\n')
+    }
 
     if (cluster) {
       stdout.write(`${ansis.white('Cluster:')} ${cluster}\n`)
@@ -666,6 +733,12 @@ export class ECSDeploySpecificCommand extends AWSCommand {
       ],
       { shell: false },
     )
+
+    // Add console URLs before deploying
+    const region = await this.getRegion()
+    stdout.write(`\n${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+    stdout.write(`${ansis.white('ECS Cluster:')} ${AWSConsoleUrlGenerator.ecsCluster(region, cluster)}\n`)
+    stdout.write(`${ansis.white('ECS Service:')} ${AWSConsoleUrlGenerator.ecsService(region, cluster, service)}\n\n`)
 
     return await cli.run(['aws', 'ecs', 'deploy'])
   }
