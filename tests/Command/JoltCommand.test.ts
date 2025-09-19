@@ -15,6 +15,34 @@ class TestCommand extends JoltCommand {
   }
 }
 
+// Test implementation with required config
+class TestCommandWithConfig extends JoltCommand {
+  requiredCommands = ['test-command']
+  requiredConfig = ['testConfigKey']
+
+  getRequiredConfig(): string[] {
+    return this.requiredConfig
+  }
+
+  async command(): Promise<number | undefined> {
+    return 0
+  }
+}
+
+// Test implementation with conditional config
+class TestCommandWithConditionalConfig extends JoltCommand {
+  requiredCommands = ['test-command']
+  dev = false // Mock the dev option
+
+  getRequiredConfig(): string[] {
+    return this.dev ? ['devConfigKey'] : ['prodConfigKey']
+  }
+
+  async command(): Promise<number | undefined> {
+    return 0
+  }
+}
+
 describe('JoltCommand', () => {
   let command: TestCommand
   let mockStderr: { write: Mock }
@@ -91,6 +119,151 @@ describe('JoltCommand', () => {
       await command.execute()
 
       expect(setSite).toHaveBeenCalledWith('test-site')
+    })
+  })
+
+  describe('requiredConfig validation', () => {
+    let commandWithConfig: TestCommandWithConfig
+
+    beforeEach(() => {
+      commandWithConfig = new TestCommandWithConfig()
+      commandWithConfig.context = {
+        stderr: mockStderr,
+      } as any
+      commandWithConfig.cli = { binaryLabel: 'test-binary' } as any
+    })
+
+    it('should check for required config entries', async () => {
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue('test-config-value'),
+      } as any)
+
+      const result = await commandWithConfig.execute()
+
+      expect(result).toBe(0)
+      expect(mockStderr.write).not.toHaveBeenCalled()
+    })
+
+    it('should return error code 5 when required config entries are missing', async () => {
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
+      } as any)
+
+      const result = await commandWithConfig.execute()
+
+      expect(result).toBe(5)
+      expect(mockStderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Missing the following required config entries'),
+      )
+      expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('testConfigKey'))
+    })
+
+    describe('when JOLT_IGNORE_REQUIRED_CONFIG is set', () => {
+      beforeEach(() => {
+        process.env.JOLT_IGNORE_REQUIRED_CONFIG = 'true'
+      })
+
+      afterEach(() => {
+        delete process.env.JOLT_IGNORE_REQUIRED_CONFIG
+      })
+
+      it('should skip config checks', async () => {
+        vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+        vi.mocked(getConfig).mockResolvedValueOnce({
+          setSite: vi.fn(),
+          command: vi.fn().mockResolvedValue('test-command'),
+          get: vi.fn().mockResolvedValue(undefined),
+        } as any)
+
+        const result = await commandWithConfig.execute()
+
+        expect(result).toBe(0)
+        expect(mockStderr.write).not.toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('conditional requiredConfig validation', () => {
+    let conditionalCommand: TestCommandWithConditionalConfig
+
+    beforeEach(() => {
+      conditionalCommand = new TestCommandWithConditionalConfig()
+      conditionalCommand.context = {
+        stderr: mockStderr,
+      } as any
+      conditionalCommand.cli = { binaryLabel: 'test-binary' } as any
+    })
+
+    it('should validate prod config when dev=false', async () => {
+      conditionalCommand.dev = false
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockImplementation((key) => (key === 'prodConfigKey' ? 'prod-value' : undefined)),
+      } as any)
+
+      const result = await conditionalCommand.execute()
+
+      expect(result).toBe(0)
+      expect(mockStderr.write).not.toHaveBeenCalled()
+    })
+
+    it('should validate dev config when dev=true', async () => {
+      conditionalCommand.dev = true
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockImplementation((key) => (key === 'devConfigKey' ? 'dev-value' : undefined)),
+      } as any)
+
+      const result = await conditionalCommand.execute()
+
+      expect(result).toBe(0)
+      expect(mockStderr.write).not.toHaveBeenCalled()
+    })
+
+    it('should fail when prod config is missing in prod mode', async () => {
+      conditionalCommand.dev = false
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
+      } as any)
+
+      const result = await conditionalCommand.execute()
+
+      expect(result).toBe(5)
+      expect(mockStderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Missing the following required config entries'),
+      )
+      expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('prodConfigKey'))
+    })
+
+    it('should fail when dev config is missing in dev mode', async () => {
+      conditionalCommand.dev = true
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
+      } as any)
+
+      const result = await conditionalCommand.execute()
+
+      expect(result).toBe(5)
+      expect(mockStderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Missing the following required config entries'),
+      )
+      expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('devConfigKey'))
     })
   })
 

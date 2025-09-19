@@ -10,6 +10,12 @@ export class NexcessDeployCommand extends JoltCommand {
   dev = Option.Boolean('--dev', false)
   requiredCommands = ['ssh']
 
+  getRequiredConfig(): string[] {
+    const baseConfigs = ['repo', 'codeSubfolder']
+    const additionalConfigs = this.dev ? ['devFolder', 'devBranch'] : ['liveFolder', 'branch']
+    return [...baseConfigs, ...additionalConfigs]
+  }
+
   async command(): Promise<number | undefined> {
     const {
       cli,
@@ -76,6 +82,7 @@ export class NexcessDeployLocalCommand extends JoltCommand {
   dev = Option.Boolean('--dev', false)
   dryRun = Option.Boolean('--dry-run', false)
   requiredCommands = ['rsync', 'ssh']
+  requiredConfig = ['codeSubfolder']
 
   async command(): Promise<number | undefined> {
     const { cli, config, dev, dryRun } = this

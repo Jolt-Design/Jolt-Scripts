@@ -10,25 +10,19 @@ export class SSHCommand extends JoltCommand {
   dev = Option.Boolean('--dev', false)
   args = Option.Proxy()
 
+  getRequiredConfig(): string[] {
+    return this.dev ? ['devSshAccount'] : ['sshAccount']
+  }
+
   async command(): Promise<number | undefined> {
-    const {
-      args,
-      config,
-      context,
-      context: { stderr },
-      dev,
-    } = this
+    const { args, config, context, dev } = this
 
     const sshCommand = await config.command('ssh')
     const sshAccount = dev ? await config.get('devSshAccount') : await config.get('sshAccount')
 
-    if (!sshAccount) {
-      stderr.write(ansis.red('Missing sshAccount config variable.\n'))
-      return 1
-    }
-
+    // sshAccount is guaranteed to exist due to getRequiredConfig() validation
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
-    const result = await execC(sshCommand, [sshAccount, ...parsedArgs], { context })
+    const result = await execC(sshCommand, [sshAccount as string, ...parsedArgs], { context })
     return result.exitCode
   }
 }
@@ -41,12 +35,16 @@ export class RsyncCommand extends JoltCommand {
   dryRun = Option.Boolean('--dry-run', false)
   args = Option.Proxy()
 
+  getRequiredConfig(): string[] {
+    return this.dev ? ['devSshAccount'] : ['sshAccount']
+  }
+
   async command(): Promise<number | undefined> {
     const {
       args,
       config,
       context,
-      context: { stdout, stderr },
+      context: { stdout },
       dev,
       dryRun,
     } = this
@@ -57,13 +55,9 @@ export class RsyncCommand extends JoltCommand {
     const dryRunArg = dryRun ? '--dry-run' : ''
     const sshAccount = dev ? await config.get('devSshAccount') : await config.get('sshAccount')
 
-    if (!sshAccount) {
-      stderr.write(ansis.red('Missing sshAccount config variable.\n'))
-      return 1
-    }
-
+    // sshAccount is guaranteed to exist due to getRequiredConfig() validation
     const params = {
-      acc: sshAccount,
+      acc: sshAccount as string,
       contentFolder: (dev ? await config.get('devFolder') : await config.get('liveFolder')) ?? '',
     }
 

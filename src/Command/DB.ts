@@ -11,6 +11,10 @@ export class DBDumpCommand extends JoltCommand {
   requiredCommands = ['docker', 'compose']
   backup = Option.Boolean('--backup', false)
 
+  getRequiredConfig(): string[] {
+    return this.backup ? ['dbBackupPath'] : ['dbSeed']
+  }
+
   async command(): Promise<number | undefined> {
     const {
       backup,
@@ -18,17 +22,10 @@ export class DBDumpCommand extends JoltCommand {
       context: { stdout, stderr },
     } = this
 
-    const backupPath = await config.get('dbBackupPath')
-
     let filename: string
     let shouldGzip = backup
 
     if (backup) {
-      if (!backupPath) {
-        stderr.write(ansis.red('🛢️ The DB backup location must be configured as dbBackupPath.\n'))
-        return 1
-      }
-
       const now = new Date()
       const date = now
         .toISOString()
@@ -39,13 +36,7 @@ export class DBDumpCommand extends JoltCommand {
       filename = `backup-${date}.sql`
     } else {
       const configSeed = await config.get('dbSeed')
-
-      if (!configSeed) {
-        stderr.write(ansis.red('🛢️ The DB seed location must be configured.\n'))
-        return 1
-      }
-
-      filename = configSeed
+      filename = configSeed as string
     }
 
     const [composeCommand, args] = await config.getComposeCommand()
@@ -57,6 +48,7 @@ export class DBDumpCommand extends JoltCommand {
     }
 
     const { name: container, dumpCommand, credentials } = containerInfo
+    const backupPath = backup ? await config.get('dbBackupPath') : undefined
     let filePath = backup ? path.resolve(backupPath as string, filename) : path.resolve(filename)
 
     if (filePath.endsWith('.gz')) {
