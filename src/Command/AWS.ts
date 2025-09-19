@@ -1,7 +1,7 @@
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
-import { execC } from '../utils.js'
+import { delay, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 abstract class AWSCommand extends JoltCommand {
@@ -17,6 +17,41 @@ abstract class AWSCommand extends JoltCommand {
 
     const configRegion = await config.get('awsRegion')
     return configRegion ? `--region=${configRegion}` : ''
+  }
+
+  /**
+   * Monitor a CodeBuild build until it completes
+   * @param buildId The build ID to monitor
+   * @returns The final build status
+   */
+  protected async waitForBuildCompletion(buildId: string): Promise<string> {
+    const { config } = this
+    const regionArg = await this.getRegionArg()
+
+    // Terminal states that indicate build completion
+    const terminalStates = ['SUCCEEDED', 'FAILED', 'FAULT', 'STOPPED', 'TIMED_OUT']
+
+    while (true) {
+      const result = await execC(
+        await config.command('aws'),
+        [regionArg, 'codebuild', 'batch-get-builds', `--ids=${buildId}`],
+        {
+          env: { AWS_PAGER: '' },
+        },
+      )
+
+      if (result.stdout) {
+        const output = JSON.parse(result.stdout.toString())
+        const build = output.builds?.[0]
+
+        if (build?.buildStatus && terminalStates.includes(build.buildStatus)) {
+          return build.buildStatus
+        }
+      }
+
+      // Wait 5 seconds before checking again
+      await delay(5000)
+    }
   }
 }
 
@@ -165,7 +200,6 @@ export class CodeBuildStartCommand extends AWSCommand {
   async command(): Promise<number | undefined> {
     const {
       batch,
-      cli,
       config,
       context: { stdout, stderr },
       dev,
@@ -215,13 +249,66 @@ export class CodeBuildStartCommand extends AWSCommand {
 
     stdout.write(
       ansis.blue.bold(
-        '⛅ Tailing build logs, nothing will show until source download completes and the logs will not stop automatically - press Ctrl-C to close when ready...\n',
+        '⛅ Tailing build logs (automatically stops when build completes). Nothing will show until source download completes...\n',
       ),
     )
 
-    return await cli.run(
-      ['aws', 'logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--since=0s'].filter((x) => !!x),
-    )
+    const abortController = new AbortController()
+    let logTailPromise: ReturnType<typeof execC> | null = null
+
+    // Set up signal handlers to abort the controller when user presses Ctrl-C
+    const signalHandler = () => {
+      abortController.abort()
+    }
+
+    process.on('SIGINT', signalHandler)
+    process.on('SIGTERM', signalHandler)
+
+    try {
+      const buildStatusPromise = this.waitForBuildCompletion(build.id)
+
+      try {
+        logTailPromise = execC(
+          await config.command('aws'),
+          ['logs', 'tail', regionArg, `/aws/codebuild/${target}`, '--follow', '--since=0s'].filter((x) => !!x),
+          {
+            context: this.context,
+            env: { ...process.env, AWS_PAGER: '' },
+            cancelSignal: abortController.signal,
+          },
+        )
+      } catch (_logError) {
+        stdout.write(ansis.yellow('⛅ Log tailing unavailable (logs may not be ready yet)\n'))
+      }
+
+      const finalStatus = await buildStatusPromise
+
+      abortController.abort()
+
+      stdout.write(`\n${ansis.blue.bold('⛅ Build completed with status:')} ${ansis.white(finalStatus)}\n`)
+
+      return finalStatus === 'SUCCEEDED' ? 0 : 1
+    } catch (error) {
+      stderr.write(ansis.red(`⛅ Error during build monitoring: ${(error as Error).message}\n`))
+      return 1
+    } finally {
+      // Clean up signal handlers
+      process.off('SIGINT', signalHandler)
+      process.off('SIGTERM', signalHandler)
+
+      abortController.abort()
+
+      if (logTailPromise) {
+        try {
+          await Promise.race([
+            logTailPromise,
+            delay(1000), // 1 second timeout
+          ])
+        } catch {
+          // Ignore errors from cancelled log tailing process
+        }
+      }
+    }
   }
 }
 
