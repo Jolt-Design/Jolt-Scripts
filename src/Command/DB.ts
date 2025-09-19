@@ -1,4 +1,8 @@
+import { createReadStream, createWriteStream } from 'node:fs'
+import { unlink } from 'node:fs/promises'
 import path from 'node:path'
+import { pipeline } from 'node:stream/promises'
+import { createGzip } from 'node:zlib'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import { execa } from 'execa'
@@ -81,17 +85,39 @@ export class DBDumpCommand extends JoltCommand {
         await execa('gzip', ['--force', filePath], { stdout, stderr })
         filePath = `${filePath}.gz`
       } else {
-        if (backup) {
-          stderr.write(
-            ansis.yellow(
-              `🛢️ Wrote backup to ${filePath} but couldn't find gzip. Install gzip to automatically compress backups.\n`,
-            ),
-          )
-        } else {
-          stderr.write(
-            ansis.red(`🛢️ Wrote seed to ${filePath} but gzip is missing. Install gzip to compress the DB seed.\n`),
-          )
-          return 2
+        stderr.write(ansis.blue('🛢️ Gzipping file using Node zlib...\n'))
+        stderr.write(
+          ansis.yellow('⚠️  Note: Using Node.js compression may be slower than external gzip for large files.\n'),
+        )
+        stderr.write(ansis.yellow('⚠️  Install the gzip command for improved performance.\n'))
+
+        try {
+          const gzipPath = `${filePath}.gz`
+          const readStream = createReadStream(filePath)
+          const writeStream = createWriteStream(gzipPath)
+          const gzipStream = createGzip()
+
+          await pipeline(readStream, gzipStream, writeStream)
+
+          // Remove the original uncompressed file after successful compression
+          await unlink(filePath)
+
+          filePath = gzipPath
+        } catch (error) {
+          if (backup) {
+            stderr.write(
+              ansis.yellow(
+                `🛢️ Wrote backup to ${filePath} but failed to compress: ${error instanceof Error ? error.message : String(error)}\n`,
+              ),
+            )
+          } else {
+            stderr.write(
+              ansis.red(
+                `🛢️ Wrote seed to ${filePath} but failed to compress: ${error instanceof Error ? error.message : String(error)}\n`,
+              ),
+            )
+            return 2
+          }
         }
       }
     }
