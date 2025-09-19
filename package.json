@@ -27,6 +27,7 @@
     "prepare": "jolt prepare",
     "test": "vitest",
     "test:coverage": "vitest --coverage.enabled=true",
+    "test:run": "vitest run",
     "watch": "tsc -w"
   },
   "dependencies": {
