@@ -83,7 +83,24 @@ export async function replaceAsync(
   return str.replace(replace, () => data.shift() || '')
 }
 
+// Cache for memoizing which() results since command availability doesn't change during execution
+const whichCache = new Map<string, string | null>()
+
+/**
+ * Clear the which() cache - primarily for testing purposes
+ */
+export function clearWhichCache(): void {
+  whichCache.clear()
+}
+
 export async function which(cmd: string): Promise<string | null> {
+  // Check cache first
+  if (whichCache.has(cmd)) {
+    return whichCache.get(cmd) ?? null
+  }
+
+  let result: string | null = null
+
   const parts = cmd.split(' ')
 
   if (parts[1] === 'compose') {
@@ -91,24 +108,29 @@ export async function which(cmd: string): Promise<string | null> {
     const dockerPath = await which(parts[0])
 
     if (!dockerPath) {
-      return null
-    }
+      result = null
+    } else {
+      // Then verify docker compose plugin is available
+      try {
+        await execa(parts[0], ['compose', 'version'], {
+          stdio: 'ignore',
+          timeout: 5000,
+        })
 
-    // Then verify docker compose plugin is available
-    try {
-      await execa(parts[0], ['compose', 'version'], {
-        stdio: 'ignore',
-        timeout: 5000,
-      })
-
-      return dockerPath
-    } catch {
-      // docker compose plugin not available
-      return null
+        result = dockerPath
+      } catch {
+        // docker compose plugin not available
+        result = null
+      }
     }
+  } else {
+    result = await realWhich(cmd, { nothrow: true })
   }
 
-  return await realWhich(cmd, { nothrow: true })
+  // Cache the result
+  whichCache.set(cmd, result)
+
+  return result
 }
 
 export async function getPackageJson(): Promise<PackageJson> {

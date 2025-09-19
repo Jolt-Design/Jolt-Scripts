@@ -3,6 +3,7 @@ import { execa } from 'execa'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import realWhich from 'which'
 import {
+  clearWhichCache,
   constToCamel,
   delay,
   directoryExists,
@@ -164,6 +165,7 @@ describe('utils', () => {
     beforeEach(() => {
       vi.mocked(execa).mockClear()
       vi.mocked(realWhich).mockClear()
+      clearWhichCache()
     })
 
     it('should handle docker compose commands when plugin is available', async () => {
@@ -208,6 +210,51 @@ describe('utils', () => {
 
       const result = await which('nonexistent')
       expect(result).toBeNull()
+    })
+
+    it('should cache results and not call external commands repeatedly', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce('/usr/bin/ls')
+
+      // First call should invoke realWhich
+      const result1 = await which('ls')
+      expect(result1).toBe('/usr/bin/ls')
+      expect(realWhich).toHaveBeenCalledTimes(1)
+
+      // Second call should use cache and not invoke realWhich again
+      const result2 = await which('ls')
+      expect(result2).toBe('/usr/bin/ls')
+      expect(realWhich).toHaveBeenCalledTimes(1)
+    })
+
+    it('should cache docker compose results and not re-execute docker commands', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce('/usr/bin/docker')
+      vi.mocked(execa).mockResolvedValueOnce({ stdout: 'Docker Compose version v2.39.2' } as any)
+
+      // First call should invoke both realWhich and execa
+      const result1 = await which('docker compose')
+      expect(result1).toBe('/usr/bin/docker')
+      expect(realWhich).toHaveBeenCalledTimes(1)
+      expect(execa).toHaveBeenCalledTimes(1)
+
+      // Second call should use cache and not invoke external commands again
+      const result2 = await which('docker compose')
+      expect(result2).toBe('/usr/bin/docker')
+      expect(realWhich).toHaveBeenCalledTimes(1)
+      expect(execa).toHaveBeenCalledTimes(1)
+    })
+
+    it('should cache null results for non-existent commands', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce(null as unknown as string)
+
+      // First call should invoke realWhich
+      const result1 = await which('nonexistent')
+      expect(result1).toBeNull()
+      expect(realWhich).toHaveBeenCalledTimes(1)
+
+      // Second call should use cache and not invoke realWhich again
+      const result2 = await which('nonexistent')
+      expect(result2).toBeNull()
+      expect(realWhich).toHaveBeenCalledTimes(1)
     })
   })
 })
