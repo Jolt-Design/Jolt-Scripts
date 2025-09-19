@@ -161,11 +161,46 @@ describe('utils', () => {
   })
 
   describe('which', () => {
-    it('should handle docker compose commands', async () => {
+    beforeEach(() => {
+      vi.mocked(execa).mockClear()
+      vi.mocked(realWhich).mockClear()
+    })
+
+    it('should handle docker compose commands when plugin is available', async () => {
       vi.mocked(realWhich).mockResolvedValueOnce('/usr/bin/docker')
+      vi.mocked(execa).mockResolvedValueOnce({ stdout: 'Docker Compose version v2.39.2' } as any)
 
       const result = await which('docker compose')
       expect(result).toBe('/usr/bin/docker')
+      expect(execa).toHaveBeenCalledWith('docker', ['compose', 'version'], {
+        stdio: 'ignore',
+        timeout: 5000,
+      })
+    })
+
+    it('should return null when docker compose plugin is not available', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce('/usr/bin/docker')
+      vi.mocked(execa).mockRejectedValueOnce(new Error("docker: 'compose' is not a docker command"))
+
+      const result = await which('docker compose')
+      expect(result).toBeNull()
+    })
+
+    it('should return null when docker itself is not available', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce(null as unknown as string)
+
+      const result = await which('docker compose')
+      expect(result).toBeNull()
+      // Should not try to run docker compose version if docker is not available
+      expect(execa).not.toHaveBeenCalled()
+    })
+
+    it('should handle regular commands normally', async () => {
+      vi.mocked(realWhich).mockResolvedValueOnce('/usr/bin/ls')
+
+      const result = await which('ls')
+      expect(result).toBe('/usr/bin/ls')
+      expect(realWhich).toHaveBeenCalledWith('ls', { nothrow: true })
     })
 
     it('should return null for non-existent commands', async () => {

@@ -85,9 +85,27 @@ export async function replaceAsync(
 
 export async function which(cmd: string): Promise<string | null> {
   const parts = cmd.split(' ')
+
   if (parts[1] === 'compose') {
-    // TODO: Check for compose extension?
-    return await which(parts[0])
+    // First check if docker exists
+    const dockerPath = await which(parts[0])
+
+    if (!dockerPath) {
+      return null
+    }
+
+    // Then verify docker compose plugin is available
+    try {
+      await execa(parts[0], ['compose', 'version'], {
+        stdio: 'ignore',
+        timeout: 5000,
+      })
+
+      return dockerPath
+    } catch {
+      // docker compose plugin not available
+      return null
+    }
   }
 
   return await realWhich(cmd, { nothrow: true })
