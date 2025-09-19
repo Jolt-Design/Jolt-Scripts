@@ -77,7 +77,7 @@ export class DockerBuildCommand extends DockerCommand {
     const imageName = await config.getDockerImageName(dev)
     const platform = await config.get('buildPlatform')
     const context = await config.get('buildContext')
-    const dockerFile = await config.get('dockerFile')
+    const dockerFile = await config.getDockerfilePath()
     const parsedBuildArgs = await Promise.all((buildArgs || []).map((x) => config.parseArg(x)))
     const additionalBuildArgs = parsedBuildArgs?.map((x) => `--build-arg=${x}`) || []
     const devBuildArg = dev ? '--build-arg=DEVBUILD=1' : ''

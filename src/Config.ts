@@ -276,6 +276,32 @@ export class Config {
     }
   }
 
+  async getDockerfilePath(): Promise<string | undefined> {
+    // First check if dockerFile is explicitly configured
+    const configuredDockerFile = await this.get('dockerFile')
+
+    if (configuredDockerFile) {
+      return configuredDockerFile
+    }
+
+    // Auto-detect Dockerfile or Containerfile
+    // Dockerfile takes precedence over Containerfile
+    const dockerfilePath = path.resolve('Dockerfile')
+
+    if (await fileExists(dockerfilePath)) {
+      return 'Dockerfile'
+    }
+
+    const containerfilePath = path.resolve('Containerfile')
+
+    if (await fileExists(containerfilePath)) {
+      return 'Containerfile'
+    }
+
+    // Neither found
+    return undefined
+  }
+
   async getComposeConfig(throwOnFail = false): Promise<ComposeConfig | undefined> {
     if (this.composeConfig !== undefined) {
       return this.composeConfig || undefined

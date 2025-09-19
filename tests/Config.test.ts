@@ -239,4 +239,62 @@ describe('Config', () => {
       expect(() => config.getPrepareCommands()).toThrow('Invalid prepareCommands configuration')
     })
   })
+
+  describe('getDockerfilePath', () => {
+    it('should return configured dockerFile when explicitly set', async () => {
+      const config = new Config({ dockerFile: 'custom.Dockerfile' })
+      const result = await config.getDockerfilePath()
+      expect(result).toBe('custom.Dockerfile')
+    })
+
+    it('should return Dockerfile when it exists and no config is set', async () => {
+      vi.mocked(utils.fileExists).mockImplementation((path) => {
+        return Promise.resolve(path.toString().endsWith('Dockerfile'))
+      })
+
+      const result = await config.getDockerfilePath()
+      expect(result).toBe('Dockerfile')
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Dockerfile'))
+    })
+
+    it('should return Containerfile when only Containerfile exists', async () => {
+      vi.mocked(utils.fileExists).mockImplementation((path) => {
+        return Promise.resolve(path.toString().endsWith('Containerfile'))
+      })
+
+      const result = await config.getDockerfilePath()
+      expect(result).toBe('Containerfile')
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Dockerfile'))
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Containerfile'))
+    })
+
+    it('should prefer Dockerfile over Containerfile when both exist', async () => {
+      vi.mocked(utils.fileExists).mockResolvedValue(true)
+
+      const result = await config.getDockerfilePath()
+      expect(result).toBe('Dockerfile')
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Dockerfile'))
+      // Should not call for Containerfile since Dockerfile was found first
+      expect(utils.fileExists).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return undefined when neither file exists', async () => {
+      vi.mocked(utils.fileExists).mockResolvedValue(false)
+
+      const result = await config.getDockerfilePath()
+      expect(result).toBeUndefined()
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Dockerfile'))
+      expect(utils.fileExists).toHaveBeenCalledWith(expect.stringContaining('Containerfile'))
+    })
+
+    it('should prioritize explicit config over auto-detection', async () => {
+      const config = new Config({ dockerFile: 'my-custom.dockerfile' })
+      vi.mocked(utils.fileExists).mockResolvedValue(true)
+
+      const result = await config.getDockerfilePath()
+      expect(result).toBe('my-custom.dockerfile')
+      // Should not check for existence of default files when config is set
+      expect(utils.fileExists).not.toHaveBeenCalled()
+    })
+  })
 })
