@@ -8,7 +8,7 @@ import JoltCommand from './JoltCommand.js'
 
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
-  requiredCommands = ['docker']
+  requiredCommands = ['docker', 'compose']
   backup = Option.Boolean('--backup', false)
 
   async command(): Promise<number | undefined> {
@@ -112,7 +112,7 @@ export class DBDumpCommand extends JoltCommand {
 
 export class DBResetCommand extends JoltCommand {
   static paths = [['db', 'reset']]
-  requiredCommands = ['docker']
+  requiredCommands = ['docker', 'compose']
 
   async command(): Promise<number | undefined> {
     const {
@@ -204,7 +204,7 @@ export class DBResetCommand extends JoltCommand {
 
 export class DBAwaitCommand extends JoltCommand {
   static paths = [['db', 'await']]
-  requiredCommands = ['docker']
+  requiredCommands = ['docker', 'compose']
 
   quiet = Option.Boolean('--quiet, -q', false)
 

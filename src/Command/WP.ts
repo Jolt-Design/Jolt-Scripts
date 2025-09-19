@@ -6,6 +6,7 @@ import JoltCommand from './JoltCommand.js'
 
 export class WPCommand extends JoltCommand {
   static paths = [['wp'], ['wp-cli']]
+  requiredCommands = ['docker', 'compose']
 
   wpArgs = Option.Proxy()
 

@@ -9,7 +9,7 @@ export class CacheFlushCommand extends JoltCommand {
     ['cache', 'clear'],
   ]
 
-  requiredCommands = ['docker']
+  requiredCommands = ['docker', 'compose']
 
   async command(): Promise<number | undefined> {
     const {
