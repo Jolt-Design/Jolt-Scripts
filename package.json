@@ -12,6 +12,7 @@
     "@types/which": "^3.0.4",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
+    "rimraf": "^6.0.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
@@ -19,15 +20,16 @@
     "/dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
+    "clean": "rimraf dist",
     "debug": "node --inspect-brk ./dist/cli.js",
     "lint": "biome check",
     "fmt": "biome format",
     "prepack": "run build",
     "prepare": "jolt prepare",
-    "release": "yarn test:run && yarn lint && yarn build && git stash push -u -m 'temp stash for release' && npm version patch --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
-    "release:minor": "yarn test:run && yarn lint && yarn build && git stash push -u -m 'temp stash for release' && npm version minor --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
-    "release:major": "yarn test:run && yarn lint && yarn build && git stash push -u -m 'temp stash for release' && npm version major --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
+    "release": "yarn test:run && yarn lint && && yarn clean && yarn build && git stash push -u -m 'temp stash for release' && npm version patch --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
+    "release:minor": "yarn test:run && yarn lint && && yarn clean && yarn build && git stash push -u -m 'temp stash for release' && npm version minor --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
+    "release:major": "yarn test:run && yarn lint && && yarn clean && yarn build && git stash push -u -m 'temp stash for release' && npm version major --tag-version-prefix='' --message='Version %s' && git push && git push --tags && yarn npm publish --access=public && git stash pop || true",
     "test": "vitest",
     "test:coverage": "vitest --coverage.enabled=true",
     "test:run": "vitest run",
