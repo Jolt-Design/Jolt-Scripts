@@ -368,7 +368,7 @@ __metadata:
     "@types/node": "npm:^24.5.2"
     "@types/which": "npm:^3.0.4"
     "@vitest/coverage-v8": "npm:^3.2.4"
-    "@vitest/ui": "npm:3.2.4"
+    "@vitest/ui": "npm:^3.2.4"
     ansis: "npm:^4.1.0"
     change-case: "npm:^5.4.4"
     clipanion: "npm:^4.0.0-rc.4"
@@ -754,7 +754,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/ui@npm:3.2.4":
+"@vitest/ui@npm:^3.2.4":
   version: 3.2.4
   resolution: "@vitest/ui@npm:3.2.4"
   dependencies:
