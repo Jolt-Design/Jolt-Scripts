@@ -76,6 +76,84 @@ export class NexcessDeployCommand extends JoltCommand {
   }
 }
 
+export class NexcessDeploySpecificCommand extends JoltCommand {
+  static paths = [['nexcess', 'deploy-specific']]
+
+  dev = Option.Boolean('--dev', false)
+  commit = Option.String({ required: true })
+  requiredCommands = ['ssh']
+
+  getRequiredConfig(): string[] {
+    const baseConfigs = ['repo', 'codeSubfolder']
+    const additionalConfigs = this.dev ? ['devFolder'] : ['liveFolder']
+    return [...baseConfigs, ...additionalConfigs]
+  }
+
+  async command(): Promise<number | undefined> {
+    const {
+      cli,
+      config,
+      context: { stdout, stderr },
+      dev,
+      commit,
+    } = this
+
+    if (!commit) {
+      stderr.write(ansis.red('⚡ Commit parameter must be specified\n'))
+      return 2
+    }
+
+    const deployFolder = dev ? await config.get('devFolder') : await config.get('liveFolder')
+    const deployScript = (await config.get('nexcessDeployScript')) ?? 'bin/nexcess-deploy-script.sh'
+    const cleanupScript = (await config.get('nexcessCleanupScript')) ?? 'bin/nexcess-cleanup.sh'
+    const repo = await config.get('repo')
+    const codeSubfolder = await config.get('codeSubfolder')
+    const now = new Date()
+    const date = now
+      .toISOString()
+      .replace('T', '_')
+      .replace(/:/g, '-')
+      .replace(/\.\d+Z.*$/, '')
+
+    const folder = `deploy-${date}-${commit.slice(0, 8)}`
+    const deployScriptExists = await fileExists(path.join(process.cwd(), deployScript))
+    const cleanupScriptExists = await fileExists(path.join(process.cwd(), cleanupScript))
+    const commands = [`git clone --depth=1 ${repo} ${folder}`, `cd ~/${folder}`, `git checkout ${commit}`]
+
+    if (deployScriptExists) {
+      commands.push('cd', `echo Running deploy script ${deployScript}...`, `sh ~/${folder}/${deployScript} ${folder}`)
+    } else {
+      commands.push(`cd ~/${folder}/${codeSubfolder}`)
+
+      if (cleanupScriptExists) {
+        commands.push('echo Removing Nexcess code from repo...', `sh ../${cleanupScript}`)
+      } else {
+        commands.push('echo No cleanup script found, skipping...')
+      }
+
+      commands.push(
+        'cd',
+        'echo Copying...',
+        `cp -ura ${folder}/${codeSubfolder}/. ${deployFolder}`,
+        'echo Removing temp files...',
+        `rm -rf ${folder}`,
+        'echo Clearing site cache...',
+        `cd ${deployFolder}`,
+        '(wp cache-enabler clear || true)',
+        'echo Done',
+      )
+    }
+
+    const command = commands.join(' && ')
+    const args = ['ssh', '-T', '-C', `<<EOF\n${command}\nEOF`]
+
+    stdout.write(ansis.blue(`⚡ Cloning commit ${commit} into ${folder} and deploying to ${deployFolder}...\n`))
+
+    const result = await cli.run(args)
+    return result
+  }
+}
+
 export class NexcessDeployLocalCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy-local']]
 

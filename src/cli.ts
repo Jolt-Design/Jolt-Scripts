@@ -23,7 +23,7 @@ import {
   DockerPushCommand,
   DockerTagCommand,
 } from './Command/Docker.js'
-import { NexcessDeployCommand, NexcessDeployLocalCommand } from './Command/Nexcess.js'
+import { NexcessDeployCommand, NexcessDeployLocalCommand, NexcessDeploySpecificCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { WPCommand } from './Command/WP.js'
@@ -58,6 +58,7 @@ cli.register(S3SyncCommand)
 cli.register(LogsTailCommand)
 cli.register(CodeBuildStartCommand)
 cli.register(NexcessDeployCommand)
+cli.register(NexcessDeploySpecificCommand)
 cli.register(NexcessDeployLocalCommand)
 cli.register(SSHCommand)
 cli.register(RsyncCommand)
