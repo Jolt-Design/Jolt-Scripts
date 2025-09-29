@@ -36,7 +36,7 @@
     "watch": "tsc -w"
   },
   "dependencies": {
-    "ansis": "^4.1.0",
+    "ansis": "^4.2.0",
     "change-case": "^5.4.4",
     "clipanion": "^4.0.0-rc.4",
     "dotenv": "^17.2.2",
