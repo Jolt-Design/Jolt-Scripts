@@ -4,8 +4,40 @@ import { Option } from 'clipanion'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
+// Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
+const possibleCliArgs = [
+  'alias',
+  'cache',
+  'check-update',
+  'cmd-dump',
+  'completions',
+  'has-command',
+  'info',
+  'param-dump',
+  'update',
+  'version',
+]
+
+let maybeAddCliArg = true
+
 export class WPCommand extends JoltCommand {
-  static paths = [['wp'], ['wp-cli']]
+  static paths = [['wp']]
+  wpArgs = Option.Proxy()
+
+  async command(): Promise<number | undefined> {
+    const { cli, wpArgs } = this
+
+    // Proxy to wp-cli for backwards compatibility
+    maybeAddCliArg = false
+    const result = await cli.run(['wp-cli', ...wpArgs])
+    maybeAddCliArg = true
+
+    return result
+  }
+}
+
+export class WPCLICommand extends JoltCommand {
+  static paths = [['wp', 'cli'], ['wp-cli']]
   requiredCommands = ['docker', 'compose']
 
   wpArgs = Option.Proxy()
@@ -15,9 +47,15 @@ export class WPCommand extends JoltCommand {
       config,
       context,
       context: { stderr },
+      wpArgs,
     } = this
 
     const containerName = await this.getContainerName()
+    let realArgs = wpArgs
+
+    if (maybeAddCliArg && possibleCliArgs.includes(realArgs[0])) {
+      realArgs = ['cli', ...realArgs]
+    }
 
     if (!containerName) {
       stderr.write(ansis.red(`Couldn't find a WP CLI container. Set it with the 'wpCliContainer' config key.\n`))
@@ -30,7 +68,7 @@ export class WPCommand extends JoltCommand {
     const profile = await this.getContainerProfile(containerName)
     const [composeCommand, args] = await config.getComposeCommand()
 
-    args.push(profile ? `--profile=${profile}` : '', 'run', '--rm', userArg || '', containerName, 'wp', ...this.wpArgs)
+    args.push(profile ? `--profile=${profile}` : '', 'run', '--rm', userArg || '', containerName, 'wp', ...realArgs)
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
 
     const result = await execC(composeCommand, parsedArgs, { context, reject: false })

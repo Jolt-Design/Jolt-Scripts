@@ -26,7 +26,7 @@ import {
 import { NexcessDeployCommand, NexcessDeployLocalCommand, NexcessDeploySpecificCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
-import { WPCommand } from './Command/WP.js'
+import { WPCLICommand, WPCommand } from './Command/WP.js'
 import { getPackageJson } from './utils.js'
 
 const [_node, _app, ...args] = process.argv
@@ -47,6 +47,7 @@ cli.register(DockerPushCommand)
 cli.register(DockerCombinedCommand)
 cli.register(DockerManifestCommand)
 cli.register(WPCommand)
+cli.register(WPCLICommand)
 cli.register(ECSDeployCommand)
 cli.register(ECSDeploySpecificCommand)
 cli.register(ECSStatusCommand)
