@@ -1,0 +1,39 @@
+{
+  "$schema": "./jolt-config.schema.json",
+  "imageName": "my-wordpress-app",
+  "awsRegion": "eu-west-1",
+  "ecsCluster": "production-cluster",
+  "ecsService": "my-app-service",
+  "devEcsCluster": "dev-cluster",
+  "devEcsService": "my-app-dev-service",
+  "buildPlatform": "linux/amd64",
+  "sshAccount": "deploy@production.example.com",
+  "devSshAccount": "deploy@dev.example.com",
+  "liveFolder": "/var/www/production",
+  "devFolder": "/var/www/development",
+  "branch": "main",
+  "devBranch": "develop",
+  "repo": "git@github.com:example/my-app.git",
+  "prepareCommands": [
+    "yarn install",
+    {
+      "cmd": "yarn build:production"
+    },
+    {
+      "cmd": "composer install --no-dev --optimize-autoloader",
+      "name": "Install PHP dependencies",
+      "timing": "early"
+    }
+  ],
+  "sites": {
+    "staging": {
+      "ecsCluster": "staging-cluster",
+      "ecsService": "my-app-staging",
+      "sshAccount": "deploy@staging.example.com"
+    },
+    "client-preview": {
+      "ecsCluster": "preview-cluster",
+      "ecsService": "my-app-preview"
+    }
+  }
+}

@@ -17,10 +17,11 @@
     "vitest": "^3.2.4"
   },
   "files": [
-    "/dist"
+    "/dist",
+    "jolt-config.schema.json"
   ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && yarn node scripts/generate-schema.js",
     "clean": "rimraf dist",
     "debug": "node --inspect-brk ./dist/cli.js",
     "lint": "biome check",

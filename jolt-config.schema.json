@@ -1,0 +1,278 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "awsRegion": {
+      "default": "eu-west-1",
+      "description": "AWS region for operations",
+      "type": "string"
+    },
+    "imageName": {
+      "description": "Docker image name for production builds",
+      "type": "string"
+    },
+    "devImageName": {
+      "description": "Docker image name for development builds (overrides imageName + dev suffix)",
+      "type": "string"
+    },
+    "devSuffix": {
+      "default": "-dev",
+      "description": "Suffix to append to image name for development builds",
+      "type": "string"
+    },
+    "buildPlatform": {
+      "description": "Docker build platform (e.g., linux/amd64, linux/arm64)",
+      "type": "string"
+    },
+    "buildContext": {
+      "default": ".",
+      "description": "Docker build context path",
+      "type": "string"
+    },
+    "ecrBaseUrl": {
+      "description": "ECR repository base URL",
+      "type": "string"
+    },
+    "ecsCluster": {
+      "description": "Production ECS cluster name",
+      "type": "string"
+    },
+    "devEcsCluster": {
+      "description": "Development ECS cluster name",
+      "type": "string"
+    },
+    "ecsService": {
+      "description": "Production ECS service name",
+      "type": "string"
+    },
+    "devEcsService": {
+      "description": "Development ECS service name",
+      "type": "string"
+    },
+    "codebuildProject": {
+      "description": "Production CodeBuild project name",
+      "type": "string"
+    },
+    "devCodebuildProject": {
+      "description": "Development CodeBuild project name",
+      "type": "string"
+    },
+    "cloudfrontDistribution": {
+      "description": "CloudFront distribution ID for cache invalidation",
+      "type": "string"
+    },
+    "sshAccount": {
+      "description": "SSH account for production deployments (user@host format)",
+      "type": "string"
+    },
+    "devSshAccount": {
+      "description": "SSH account for development deployments (user@host format)",
+      "type": "string"
+    },
+    "sshPort": {
+      "default": "22",
+      "description": "SSH port number",
+      "type": "string"
+    },
+    "liveFolder": {
+      "description": "Remote folder path for production deployments",
+      "type": "string"
+    },
+    "devFolder": {
+      "description": "Remote folder path for development deployments",
+      "type": "string"
+    },
+    "branch": {
+      "description": "Git branch for production deployments",
+      "type": "string"
+    },
+    "devBranch": {
+      "description": "Git branch for development deployments",
+      "type": "string"
+    },
+    "repo": {
+      "description": "Git repository URL",
+      "type": "string"
+    },
+    "codeSubfolder": {
+      "description": "Subfolder within repository containing the code",
+      "type": "string"
+    },
+    "nexcessDeployScript": {
+      "default": "bin/nexcess-deploy-script.sh",
+      "description": "Path to Nexcess deployment script",
+      "type": "string"
+    },
+    "nexcessCleanupScript": {
+      "default": "bin/nexcess-cleanup.sh",
+      "description": "Path to Nexcess cleanup script",
+      "type": "string"
+    },
+    "dbSeed": {
+      "description": "Database seed file path",
+      "type": "string"
+    },
+    "dbBackupPath": {
+      "description": "Path for database backups",
+      "type": "string"
+    },
+    "devPlugins": {
+      "description": "WordPress plugins to activate in development",
+      "type": "string"
+    },
+    "devPluginDelay": {
+      "default": "30",
+      "description": "Delay in seconds before activating dev plugins",
+      "type": "string"
+    },
+    "wpCliContainer": {
+      "description": "Docker container name for WP-CLI operations",
+      "type": "string"
+    },
+    "wpCliContainerProfile": {
+      "description": "Docker Compose profile for WP-CLI container",
+      "type": "string"
+    },
+    "dockerCommand": {
+      "default": "docker",
+      "description": "Override for docker command",
+      "type": "string"
+    },
+    "composeCommand": {
+      "default": "docker compose",
+      "description": "Override for docker compose command",
+      "type": "string"
+    },
+    "terraformCommand": {
+      "description": "Override for terraform/tofu command (auto-detects tofu vs terraform)",
+      "type": "string"
+    },
+    "nodeCommand": {
+      "default": "node",
+      "description": "Override for node command",
+      "type": "string"
+    },
+    "yarnCommand": {
+      "default": "yarn",
+      "description": "Override for yarn command",
+      "type": "string"
+    },
+    "awsCommand": {
+      "default": "aws",
+      "description": "Override for aws command",
+      "type": "string"
+    },
+    "sshCommand": {
+      "default": "ssh",
+      "description": "Override for ssh command",
+      "type": "string"
+    },
+    "rsyncCommand": {
+      "default": "rsync",
+      "description": "Override for rsync command",
+      "type": "string"
+    },
+    "gitCommand": {
+      "default": "git",
+      "description": "Override for git command",
+      "type": "string"
+    },
+    "gzipCommand": {
+      "default": "gzip",
+      "description": "Override for gzip command",
+      "type": "string"
+    },
+    "prepareCommands": {
+      "description": "Commands to run during preparation phase",
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "description": "Simple command string",
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "cmd": {
+                "description": "Command to execute",
+                "type": "string"
+              },
+              "name": {
+                "description": "Display name for the command",
+                "type": "string"
+              },
+              "fail": {
+                "description": "Whether to fail if command returns non-zero exit code",
+                "default": true,
+                "type": "boolean"
+              },
+              "dir": {
+                "description": "Working directory for the command",
+                "type": "string"
+              },
+              "timing": {
+                "description": "When to run the command during preparation",
+                "default": "normal",
+                "type": "string",
+                "enum": ["early", "normal"]
+              }
+            },
+            "required": ["cmd"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "sites": {
+      "description": "Site-specific configuration overrides",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IDE support"
+    }
+  },
+  "additionalProperties": {
+    "type": "string"
+  },
+  "$id": "https://github.com/Jolt-Design/jolt-scripts/schema/jolt-config.json",
+  "title": "Jolt Scripts Configuration",
+  "description": "Configuration schema for Jolt Scripts DevOps automation tool",
+  "examples": [
+    {
+      "imageName": "my-app",
+      "awsRegion": "us-east-1",
+      "ecsCluster": "production-cluster",
+      "ecsService": "my-app-service",
+      "devEcsCluster": "dev-cluster",
+      "devEcsService": "my-app-dev-service",
+      "prepareCommands": [
+        "yarn install",
+        {
+          "cmd": "yarn build",
+          "name": "Build application",
+          "timing": "normal"
+        }
+      ],
+      "sites": {
+        "staging": {
+          "ecsCluster": "staging-cluster",
+          "ecsService": "my-app-staging"
+        }
+      }
+    }
+  ]
+}
