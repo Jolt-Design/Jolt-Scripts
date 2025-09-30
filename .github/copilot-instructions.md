@@ -40,10 +40,11 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Build: `yarn build` (TypeScript compilation to `dist/`)
 - Test: `yarn test:run` (Vitest), `yarn test:coverage` for coverage reports
 - **Do NOT EVER** use `yarn test` without the :run suffix to run tests as that blocks waiting for user input
-- Lint/Format: `yarn lint` calls Biome (NOT ESLint/Prettier)
+- Lint/Format: `yarn lint --write` calls Biome (NOT ESLint/Prettier)
 - Package manager: **Yarn v4 with PnP** (note `.yarn/` in workspace) - NOT npm
-- **Ensure all changes pass Biome linting** with `yarn lint` before completion
+- **Ensure all changes pass Biome linting** with `yarn lint --write` before completion
 - Prefer using `yarn lint --write` or `yarn lint --write --unsafe` to fix lint issues rather than doing it yourself
+- Use `yarn lint --write` first instead of `yarn lint` to save time
 
 ### TypeScript Conventions
 - ES modules (`"type": "module"`) with `.js` imports for TS files
