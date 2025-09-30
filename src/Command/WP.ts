@@ -1,7 +1,7 @@
 import { userInfo } from 'node:os'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
-import { execC } from '../utils.js'
+import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 // Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
@@ -50,6 +50,25 @@ export class WPCLICommand extends JoltCommand {
       wpArgs,
     } = this
 
+    // Check if wp executable exists and no wp script in package.json
+    const wpExecutable = await which('wp')
+    const packageJson = await config.getPackageJson()
+    const hasWpScript = packageJson?.scripts?.wp
+
+    if (wpExecutable && !hasWpScript) {
+      // Use wp executable directly
+      let realArgs = wpArgs
+
+      if (maybeAddCliArg && possibleCliArgs.includes(realArgs[0])) {
+        realArgs = ['cli', ...realArgs]
+      }
+
+      const parsedArgs = await Promise.all(realArgs.map((x) => config.parseArg(x)))
+      const result = await execC('wp', parsedArgs, { context, reject: false })
+      return result.exitCode
+    }
+
+    // Fall back to container-based approach
     const containerName = await this.getContainerName()
     let realArgs = wpArgs
 
