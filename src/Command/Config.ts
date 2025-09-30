@@ -1,4 +1,3 @@
-import { stderr } from 'node:process'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
@@ -25,7 +24,7 @@ export class ConfigCommand extends JoltCommand {
     const {
       config,
       format,
-      context: { stdout },
+      context: { stderr, stdout },
     } = this
 
     if (format === undefined || format === ConfigCommandFormat.Pretty) {
