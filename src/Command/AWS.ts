@@ -1,5 +1,6 @@
+import { spawn } from 'node:child_process'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { type BaseContext, Option } from 'clipanion'
 import * as t from 'typanion'
 import { AWSConsoleUrlGenerator } from '../AWSConsoleUrlGenerator.js'
 import { delay, execC } from '../utils.js'
@@ -198,33 +199,120 @@ export class LogsTailCommand extends AWSCommand {
   static paths = [['aws', 'logs', 'tail']]
 
   group = Option.String()
+  clean = Option.Boolean('--clean', false, { description: 'Filter out repetitive log entries' })
   args = Option.Proxy()
 
   async command(): Promise<number | undefined> {
-    const {
-      args,
-      config,
-      context,
-      context: { stdout },
-    } = this
-
+    const { config, context, clean } = this
     const group = await config.parseArg(this.group)
 
-    stdout.write(ansis.blue(`⛅ Tailing logs from ${group}...\n`))
+    await this.displayHeader(group, clean)
 
-    // Add console URL for CloudWatch log group
+    const command = await config.command('aws')
+    const awsArgs = await this.buildAwsArgs(group)
+
+    if (clean) {
+      return this.runWithFiltering(command, awsArgs, context)
+    }
+
+    return this.runWithoutFiltering(command, awsArgs, context)
+  }
+
+  private async displayHeader(group: string, clean: boolean): Promise<void> {
+    const { stdout } = this.context
     const region = await this.getRegion()
+
+    stdout.write(ansis.blue(`⛅ Tailing logs from ${group}${clean ? ' (filtered)' : ''}...\n`))
     stdout.write(`${ansis.blue.bold('🔗 AWS Console Link:')}\n`)
     stdout.write(`${ansis.white('CloudWatch Logs:')} ${AWSConsoleUrlGenerator.cloudWatchLogGroup(region, group)}\n\n`)
+  }
 
-    const result = await execC(
-      await config.command('aws'),
-      [await this.getRegionArg(), 'logs', 'tail', group, '--follow', ...args],
-      {
-        context,
-      },
-    )
+  private async buildAwsArgs(group: string): Promise<string[]> {
+    return [await this.getRegionArg(), 'logs', 'tail', group, '--follow', ...this.args]
+  }
 
+  private getSpamPatterns(): RegExp[] {
+    return [
+      /GET \/health(\?|$)/,
+      /GET \/status(\?|$)/,
+      /GET \/ping(\?|$)/,
+      /GET \/favicon\.ico/,
+      /GET \/robots\.txt/,
+      /wp-json\/wp\/v2\/types/,
+      /admin-ajax\.php.*heartbeat/,
+      /health check/i,
+      /keepalive/i,
+      /ELB-HealthChecker/,
+      /Amazon-Route53-Health-Check-Service/,
+    ]
+  }
+
+  private createAnsiRegex(): RegExp {
+    return new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g')
+  }
+
+  private shouldFilterLine(line: string, patterns: RegExp[]): boolean {
+    const cleanLine = line.replace(this.createAnsiRegex(), '')
+    return patterns.some((pattern) => pattern.test(cleanLine))
+  }
+
+  private runWithFiltering(command: string, awsArgs: string[], context: BaseContext): Promise<number> {
+    const patterns = this.getSpamPatterns()
+    const colorizedArgs = ['--color', 'on', ...awsArgs.filter((arg) => arg !== null)]
+
+    return new Promise<number>((resolve) => {
+      const proc = spawn(command, colorizedArgs, {
+        stdio: ['inherit', 'pipe', 'inherit'],
+        env: {
+          ...process.env,
+          AWS_PAGER: '',
+          FORCE_COLOR: '1',
+          CLICOLOR_FORCE: '1',
+          AWS_CLI_AUTO_PROMPT: 'on-partial',
+          TERM: process.env.TERM || 'xterm-256color',
+          COLORTERM: 'truecolor',
+        },
+      })
+
+      let buffer = ''
+
+      proc.stdout?.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString()
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.trim()) {
+            context.stdout.write('\n')
+            continue
+          }
+
+          if (!this.shouldFilterLine(line, patterns)) {
+            context.stdout.write(`${line}\n`)
+          }
+        }
+      })
+
+      proc.on('close', (code: number | null) => {
+        if (buffer.trim() && !this.shouldFilterLine(buffer, patterns)) {
+          context.stdout.write(buffer)
+        }
+        resolve(code || 0)
+      })
+
+      proc.on('error', (error: Error) => {
+        context.stderr?.write(`Error: ${error.message}\n`)
+        resolve(1)
+      })
+    })
+  }
+
+  private async runWithoutFiltering(
+    command: string,
+    awsArgs: string[],
+    context: BaseContext,
+  ): Promise<number | undefined> {
+    const result = await execC(command, awsArgs, { context })
     return result.exitCode
   }
 }
