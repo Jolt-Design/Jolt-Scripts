@@ -13,7 +13,7 @@ import {
 import { BuildCommand } from './Command/Build.js'
 import { CacheFlushCommand } from './Command/Cache.js'
 import { CmdCommand } from './Command/Cmd.js'
-import { ConfigCommand } from './Command/Config.js'
+import { ConfigCommand, ConfigInitCommand } from './Command/Config.js'
 import { DBAwaitCommand, DBDumpCommand, DBResetCommand } from './Command/DB.js'
 import {
   DockerBuildCommand,
@@ -40,6 +40,7 @@ const cli = new Cli({
 
 cli.register(BuildCommand)
 cli.register(ConfigCommand)
+cli.register(ConfigInitCommand)
 cli.register(DockerBuildCommand)
 cli.register(DockerLoginCommand)
 cli.register(DockerTagCommand)

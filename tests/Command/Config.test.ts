@@ -1,10 +1,19 @@
+import type { PathLike } from 'node:fs'
+import { access, readFile, writeFile } from 'node:fs/promises'
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
-import { ConfigCommand } from '../../src/Command/Config.js'
+import { ConfigCommand, ConfigInitCommand } from '../../src/Command/Config.js'
 import type { Config } from '../../src/Config.js'
-import { which } from '../../src/utils.js'
+import { execC, which } from '../../src/utils.js'
 
 vi.mock('../../src/utils.js', () => ({
   which: vi.fn(),
+  execC: vi.fn(),
+}))
+
+vi.mock('node:fs/promises', () => ({
+  access: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
 }))
 
 describe('ConfigCommand', () => {
@@ -404,6 +413,344 @@ describe('ConfigCommand', () => {
 
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Config:'))
       expect(mockStdout.write).not.toHaveBeenCalledWith(expect.stringContaining('[Source file:'))
+    })
+  })
+})
+
+describe('ConfigInitCommand', () => {
+  let command: ConfigInitCommand
+  let mockConfig: {
+    command: ReturnType<typeof vi.fn>
+    getDBContainerInfo: ReturnType<typeof vi.fn>
+    getComposeConfig: ReturnType<typeof vi.fn>
+  }
+  let mockStdout: { write: Mock }
+  let mockStderr: { write: Mock }
+  let mockContext: { stdin: any; stdout: any; stderr: any }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Create mock streams
+    mockStdout = { write: vi.fn() }
+    mockStderr = { write: vi.fn() }
+    mockContext = {
+      stdin: process.stdin,
+      stdout: mockStdout,
+      stderr: mockStderr,
+    }
+
+    // Create mock config
+    mockConfig = {
+      command: vi.fn(),
+      getDBContainerInfo: vi.fn(),
+      getComposeConfig: vi.fn(),
+    }
+
+    // Create command instance
+    command = new ConfigInitCommand()
+    command.config = mockConfig as unknown as Config
+    command.context = mockContext as any
+
+    // Mock file system operations by default
+    vi.mocked(access).mockRejectedValue(new Error('File not found'))
+    vi.mocked(readFile).mockRejectedValue(new Error('File not found'))
+    vi.mocked(writeFile).mockResolvedValue(undefined)
+    vi.mocked(execC).mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+      failed: true,
+    } as any)
+  })
+
+  describe('command paths', () => {
+    it('should register correct command path', () => {
+      expect(ConfigInitCommand.paths).toEqual([['config', 'init']])
+    })
+  })
+
+  describe('new file creation', () => {
+    it('should create new config file with minimal auto-detected values', async () => {
+      // Mock git command to return SSH repo URL
+      mockConfig.command.mockImplementation((cmd: string) => {
+        if (cmd === 'git') return Promise.resolve('git')
+        return Promise.resolve(cmd)
+      })
+
+      vi.mocked(execC).mockImplementation((_cmd: string, args?: (string | null | undefined | false)[]) => {
+        if (args?.includes('remote') && args?.includes('get-url')) {
+          return Promise.resolve({
+            stdout: 'git@github.com:user/repo.git',
+            failed: false,
+          } as any)
+        }
+        if (args?.includes('symbolic-ref')) {
+          return Promise.resolve({
+            stdout: 'refs/remotes/origin/main',
+            failed: false,
+          } as any)
+        }
+        return Promise.resolve({ failed: true } as any)
+      })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('📄 Creating new .jolt.json file'))
+      expect(mockStdout.write).toHaveBeenCalledWith(
+        expect.stringContaining('✅ Created .jolt.json with example configuration'),
+      )
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"repo": "git@github.com:user/repo.git"'),
+      )
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"branch": "main"'))
+    })
+
+    it('should convert HTTPS repo URLs to SSH format', async () => {
+      mockConfig.command.mockResolvedValue('git')
+
+      vi.mocked(execC).mockImplementation((_cmd: string, args?: (string | null | undefined | false)[]) => {
+        if (args?.includes('remote') && args?.includes('get-url')) {
+          return Promise.resolve({
+            stdout: 'https://github.com/user/repo.git',
+            failed: false,
+          } as any)
+        }
+        return Promise.resolve({ failed: true } as any)
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"repo": "git@github.com:user/repo.git"'),
+      )
+    })
+
+    it('should auto-populate database container info', async () => {
+      mockConfig.getDBContainerInfo.mockResolvedValue({
+        name: 'mysql-db',
+        credentials: {
+          db: 'myapp',
+          user: 'appuser',
+          pass: 'secret123',
+        },
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"dbContainer": "mysql-db"'),
+      )
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"dbName": "myapp"'))
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"dbUser": "appuser"'))
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"dbPass": "secret123"'))
+    })
+
+    it('should auto-populate compose project name', async () => {
+      mockConfig.getComposeConfig.mockResolvedValue({
+        name: 'my-awesome-project',
+        services: {},
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"composeProject": "my-awesome-project"'),
+      )
+    })
+
+    it('should use current branch as fallback when default branch detection fails', async () => {
+      mockConfig.command.mockResolvedValue('git')
+
+      vi.mocked(execC).mockImplementation((_cmd: string, args?: (string | null | undefined | false)[]) => {
+        if (args?.includes('symbolic-ref')) {
+          return Promise.resolve({ failed: true } as any)
+        }
+        if (args?.includes('--show-current')) {
+          return Promise.resolve({
+            stdout: 'feature-branch',
+            failed: false,
+          } as any)
+        }
+        return Promise.resolve({ failed: true } as any)
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"branch": "feature-branch"'),
+      )
+    })
+
+    it('should handle errors gracefully and skip auto-population', async () => {
+      // All auto-population methods fail
+      mockConfig.command.mockRejectedValue(new Error('Git not available'))
+      mockConfig.getDBContainerInfo.mockRejectedValue(new Error('No DB'))
+      mockConfig.getComposeConfig.mockRejectedValue(new Error('No compose file'))
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('$schema'))
+      // Should still create file but with minimal content
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.not.stringContaining('"repo"'))
+    })
+  })
+
+  describe('existing file updates', () => {
+    beforeEach(() => {
+      vi.mocked(readFile).mockResolvedValue('{"imageName": "existing-app", "awsRegion": "us-east-1"}')
+    })
+
+    it('should update existing file and preserve existing values', async () => {
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('⚠️  .jolt.json already exists'))
+      expect(mockStdout.write).toHaveBeenCalledWith(
+        expect.stringContaining('✅ Updated .jolt.json with schema reference'),
+      )
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"imageName": "existing-app"'),
+      )
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"awsRegion": "us-east-1"'),
+      )
+    })
+
+    it('should add $schema to top of existing file', async () => {
+      await command.command()
+
+      const writeCall = vi.mocked(writeFile).mock.calls[0]
+      const writtenContent = writeCall[1] as string
+      const parsedContent = JSON.parse(writtenContent)
+      const keys = Object.keys(parsedContent)
+
+      expect(keys[0]).toBe('$schema')
+    })
+
+    it('should preserve existing indentation style (tabs)', async () => {
+      const tabbedContent = '{\n\t"imageName": "test",\n\t"awsRegion": "us-east-1"\n}'
+      vi.mocked(readFile).mockResolvedValue(tabbedContent)
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringMatching(/\t/))
+    })
+
+    it('should preserve existing indentation style (4 spaces)', async () => {
+      const spacedContent = '{\n    "imageName": "test",\n    "awsRegion": "us-east-1"\n}'
+      vi.mocked(readFile).mockResolvedValue(spacedContent)
+
+      await command.command()
+
+      const writeCall = vi.mocked(writeFile).mock.calls[0]
+      const writtenContent = writeCall[1] as string
+
+      // Should have 4-space indentation
+      expect(writtenContent).toMatch(/\n {4}"/)
+    })
+  })
+
+  describe('schema reference selection', () => {
+    it('should use local schema when available', async () => {
+      vi.mocked(access).mockImplementation((path: PathLike) => {
+        if (path === './jolt-config.schema.json') {
+          return Promise.resolve()
+        }
+        return Promise.reject(new Error('Not found'))
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"$schema": "./jolt-config.schema.json"'),
+      )
+      expect(mockStdout.write).toHaveBeenCalledWith(
+        expect.stringContaining('Schema reference: ./jolt-config.schema.json (local development)'),
+      )
+    })
+
+    it('should use online schema when local not available', async () => {
+      // All access calls fail (no local schema)
+      vi.mocked(access).mockRejectedValue(new Error('Not found'))
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining(
+          '"$schema": "https://raw.githubusercontent.com/Jolt-Design/jolt-scripts/master/jolt-config.schema.json"',
+        ),
+      )
+      expect(mockStdout.write).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Schema reference: https://raw.githubusercontent.com/Jolt-Design/jolt-scripts/master/jolt-config.schema.json (online)',
+        ),
+      )
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should handle malformed existing JSON gracefully', async () => {
+      vi.mocked(readFile).mockResolvedValue('{ invalid json')
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('📄 Creating new .jolt.json file'))
+    })
+
+    it('should skip database info when credentials are incomplete', async () => {
+      mockConfig.getDBContainerInfo.mockResolvedValue({
+        name: 'db',
+        credentials: {
+          db: 'myapp',
+          user: undefined, // Missing user
+          pass: undefined, // Missing password
+        },
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"dbContainer": "db"'))
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.stringContaining('"dbName": "myapp"'))
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.not.stringContaining('"dbUser"'))
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith('.jolt.json', expect.not.stringContaining('"dbPass"'))
+    })
+
+    it('should handle non-GitHub repositories', async () => {
+      mockConfig.command.mockResolvedValue('git')
+
+      vi.mocked(execC).mockImplementation((_cmd: string, args?: (string | null | undefined | false)[]) => {
+        if (args?.includes('remote') && args?.includes('get-url')) {
+          return Promise.resolve({
+            stdout: 'git@gitlab.com:user/repo.git',
+            failed: false,
+          } as any)
+        }
+        return Promise.resolve({ failed: true } as any)
+      })
+
+      await command.command()
+
+      expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+        '.jolt.json',
+        expect.stringContaining('"repo": "git@gitlab.com:user/repo.git"'),
+      )
     })
   })
 })
