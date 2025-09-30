@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { DockerBuildCommand } from '../../src/Command/Docker.js'
 import { Config } from '../../src/Config.js'
+import * as utils from '../../src/utils.js'
 
-vi.mock('../../src/utils', () => ({
+vi.mock('../../src/utils.js', () => ({
   execC: vi.fn(),
   fileExists: vi.fn(),
   which: vi.fn(),
@@ -123,5 +124,120 @@ describe('DockerBuildCommand', () => {
 
       expect(args).toContain('./custom-context')
     })
+  })
+
+  describe('command execution', () => {
+    let execCMock: Mock
+    let whichMock: Mock
+
+    beforeEach(() => {
+      const mockedUtils = vi.mocked(utils)
+      execCMock = mockedUtils.execC as Mock
+      whichMock = mockedUtils.which as Mock
+
+      execCMock.mockResolvedValue({ exitCode: 0 })
+      whichMock.mockResolvedValue(true)
+
+      vi.spyOn(mockConfig, 'getDockerImageName').mockResolvedValue('test-image')
+      vi.spyOn(mockConfig, 'command').mockResolvedValue('docker')
+      vi.spyOn(mockConfig, 'getDockerfilePath').mockResolvedValue('Dockerfile')
+
+      command.context = {
+        stdout: { write: vi.fn() },
+        stderr: { write: vi.fn() },
+      } as any
+    })
+
+    it('should execute docker build command successfully', async () => {
+      const result = await command.command()
+
+      expect(execCMock).toHaveBeenCalledWith('docker', expect.arrayContaining(['buildx', 'build', '-t test-image']), {
+        context: command.context,
+      })
+      expect(result).toBe(0)
+    })
+
+    it('should return error when image name is not configured', async () => {
+      vi.spyOn(mockConfig, 'getDockerImageName').mockResolvedValue(undefined)
+
+      const result = await command.command()
+
+      expect(result).toBe(1)
+      expect(command.context.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Image name must be configured!'),
+      )
+    })
+
+    it('should return error when docker command is not found', async () => {
+      whichMock.mockResolvedValue(false)
+
+      const result = await command.command()
+
+      expect(result).toBe(2)
+      expect(command.context.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Could not find command docker!'),
+      )
+    })
+
+    it('should return execC exit code on failure', async () => {
+      execCMock.mockResolvedValue({ exitCode: 1 })
+
+      const result = await command.command()
+
+      expect(result).toBe(1)
+    })
+  })
+})
+
+describe('DockerCombinedCommand', () => {
+  let command: any
+  let mockCli: { run: Mock }
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+
+    mockCli = {
+      run: vi.fn().mockResolvedValue(0),
+    }
+
+    const { DockerCombinedCommand } = await import('../../src/Command/Docker.js')
+    command = new DockerCombinedCommand()
+    command.cli = mockCli
+    command.context = {}
+    command.dev = false
+    command.deploy = false
+  })
+
+  it('should run build and tag commands', async () => {
+    const result = await command.command()
+
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'build'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'tag'], {})
+    expect(result).toBe(0)
+  })
+
+  it('should run build, tag, login, push and deploy when deploy flag is set', async () => {
+    command.deploy = true
+
+    const result = await command.command()
+
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'build'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'tag'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'login'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'push'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['aws', 'ecs', 'deploy'], {})
+    expect(result).toBe(0)
+  })
+
+  it('should pass dev flag to all commands', async () => {
+    command.dev = true
+    command.deploy = true
+
+    await command.command()
+
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'build', '--dev'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'tag', '--dev'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'push', '--dev'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['aws', 'ecs', 'deploy', '--dev'], {})
   })
 })
