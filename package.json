@@ -21,9 +21,10 @@
     "jolt-config.schema.json"
   ],
   "scripts": {
-    "build": "tsc -b && yarn node scripts/generate-schema.js",
+    "build": "tsc -b && yarn run generate-schema",
     "clean": "rimraf dist",
     "debug": "node --inspect-brk ./dist/cli.js",
+    "generate-schema": "yarn node ./scripts/generate-schema.js && yarn lint --write jolt-config.schema.json",
     "lint": "biome check",
     "fmt": "biome format",
     "prepack": "run build",
