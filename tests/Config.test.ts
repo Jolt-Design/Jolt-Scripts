@@ -105,8 +105,22 @@ describe('Config', () => {
         exitCode: 0,
         failed: false,
         command: '',
-        signal: null,
-      })
+        signal: undefined,
+        all: undefined,
+        stdio: undefined,
+        ipcOutput: undefined,
+        pipedFrom: undefined,
+        timedOut: false,
+        timeout: undefined,
+        killed: false,
+        isCanceled: false,
+        canceled: false,
+        shortMessage: '',
+        originalMessage: '',
+        name: '',
+        message: '',
+        stack: '',
+      } as any)
     })
 
     it('should retrieve terraform output variables', async () => {
@@ -147,8 +161,22 @@ describe('Config', () => {
         exitCode: 0,
         failed: false,
         command: '',
-        signal: null,
-      })
+        signal: undefined,
+        all: undefined,
+        stdio: undefined,
+        ipcOutput: undefined,
+        pipedFrom: undefined,
+        timedOut: false,
+        timeout: undefined,
+        killed: false,
+        isCanceled: false,
+        canceled: false,
+        shortMessage: '',
+        originalMessage: '',
+        name: '',
+        message: '',
+        stack: '',
+      } as any)
     })
 
     it('should retrieve and parse docker compose config', async () => {
