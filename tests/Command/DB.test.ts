@@ -92,7 +92,10 @@ describe('DBDumpCommand', () => {
     vi.mocked(which).mockResolvedValue('/usr/bin/gzip')
 
     vi.mocked(mockConfig.get).mockImplementation((key: string) => {
-      if (key === 'dbSeed') return Promise.resolve('test.sql.gz')
+      if (key === 'dbSeed') {
+        return Promise.resolve('test.sql.gz')
+      }
+
       return Promise.resolve('mock-value')
     })
 
@@ -126,7 +129,10 @@ describe('DBDumpCommand', () => {
     vi.mocked(which).mockResolvedValue(null)
 
     vi.mocked(mockConfig.get).mockImplementation((key: string) => {
-      if (key === 'dbSeed') return Promise.resolve('test.sql.gz')
+      if (key === 'dbSeed') {
+        return Promise.resolve('test.sql.gz')
+      }
+
       return Promise.resolve('mock-value')
     })
 
@@ -164,7 +170,10 @@ describe('DBDumpCommand', () => {
     vi.mocked(which).mockResolvedValue(null)
 
     vi.mocked(mockConfig.get).mockImplementation((key: string) => {
-      if (key === 'dbBackupPath') return Promise.resolve('/backup')
+      if (key === 'dbBackupPath') {
+        return Promise.resolve('/backup')
+      }
+
       return Promise.resolve('mock-value')
     })
 
@@ -200,7 +209,10 @@ describe('DBDumpCommand', () => {
     vi.mocked(which).mockResolvedValue(null)
 
     vi.mocked(mockConfig.get).mockImplementation((key: string) => {
-      if (key === 'dbSeed') return Promise.resolve('test.sql.gz')
+      if (key === 'dbSeed') {
+        return Promise.resolve('test.sql.gz')
+      }
+
       return Promise.resolve('mock-value')
     })
 
@@ -233,7 +245,10 @@ describe('DBDumpCommand', () => {
     command.backup = false
 
     vi.mocked(mockConfig.get).mockImplementation((key: string) => {
-      if (key === 'dbSeed') return Promise.resolve('test.sql')
+      if (key === 'dbSeed') {
+        return Promise.resolve('test.sql')
+      }
+
       return Promise.resolve('mock-value')
     })
 

@@ -478,7 +478,10 @@ describe('ConfigInitCommand', () => {
     it('should create new config file with minimal auto-detected values', async () => {
       // Mock git command to return SSH repo URL
       mockConfig.command.mockImplementation((cmd: string) => {
-        if (cmd === 'git') return Promise.resolve('git')
+        if (cmd === 'git') {
+          return Promise.resolve('git')
+        }
+
         return Promise.resolve(cmd)
       })
 

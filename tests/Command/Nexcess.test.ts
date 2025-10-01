@@ -406,7 +406,10 @@ describe('Nexcess Commands', () => {
       it('should use custom code subfolder from config', async () => {
         const customMockConfig = new Config({})
         vi.spyOn(customMockConfig, 'get').mockImplementation((key: string) => {
-          if (key === 'codeSubfolder') return Promise.resolve('public')
+          if (key === 'codeSubfolder') {
+            return Promise.resolve('public')
+          }
+
           return Promise.resolve(undefined)
         })
         command.config = customMockConfig

@@ -94,7 +94,10 @@ describe('DockerBuildCommand', () => {
 
     it('should include platform when configured', async () => {
       vi.spyOn(mockConfig, 'get').mockImplementation((key: string) => {
-        if (key === 'buildPlatform') return Promise.resolve('linux/amd64,linux/arm64')
+        if (key === 'buildPlatform') {
+          return Promise.resolve('linux/amd64,linux/arm64')
+        }
+
         return Promise.resolve(undefined)
       })
       vi.spyOn(mockConfig, 'getDockerfilePath').mockResolvedValue('Dockerfile')
@@ -115,7 +118,10 @@ describe('DockerBuildCommand', () => {
 
     it('should use custom build context when configured', async () => {
       vi.spyOn(mockConfig, 'get').mockImplementation((key: string) => {
-        if (key === 'buildContext') return Promise.resolve('./custom-context')
+        if (key === 'buildContext') {
+          return Promise.resolve('./custom-context')
+        }
+
         return Promise.resolve(undefined)
       })
       vi.spyOn(mockConfig, 'getDockerfilePath').mockResolvedValue('Dockerfile')

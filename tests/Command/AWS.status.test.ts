@@ -60,8 +60,14 @@ describe('ECSStatusCommand', () => {
       command.dev = false
 
       mockConfig.get.mockImplementation((key: string) => {
-        if (key === 'ecsCluster') return Promise.resolve('test-cluster')
-        if (key === 'ecsService') return Promise.resolve('test-service')
+        if (key === 'ecsCluster') {
+          return Promise.resolve('test-cluster')
+        }
+
+        if (key === 'ecsService') {
+          return Promise.resolve('test-service')
+        }
+
         return Promise.resolve(undefined)
       })
 
@@ -247,8 +253,14 @@ describe('ECSStatusCommand', () => {
     beforeEach(() => {
       command.dev = true
       mockConfig.get.mockImplementation((key: string) => {
-        if (key === 'devEcsCluster') return Promise.resolve('dev-cluster')
-        if (key === 'devEcsService') return Promise.resolve('dev-service')
+        if (key === 'devEcsCluster') {
+          return Promise.resolve('dev-cluster')
+        }
+
+        if (key === 'devEcsService') {
+          return Promise.resolve('dev-service')
+        }
+
         return Promise.resolve(undefined)
       })
     })
@@ -268,8 +280,14 @@ describe('ECSStatusCommand', () => {
 
       mockConfig.get.mockResolvedValue(undefined)
       mockConfig.tfVar.mockImplementation((key: string) => {
-        if (key === 'ecs_cluster') return Promise.resolve('tf-cluster')
-        if (key === 'ecs_service') return Promise.resolve('tf-service')
+        if (key === 'ecs_cluster') {
+          return Promise.resolve('tf-cluster')
+        }
+
+        if (key === 'ecs_service') {
+          return Promise.resolve('tf-service')
+        }
+
         return Promise.resolve(undefined)
       })
     })
@@ -288,7 +306,10 @@ describe('ECSStatusCommand', () => {
       command.dev = false
 
       mockConfig.get.mockImplementation((key: string) => {
-        if (key === 'ecsCluster') return Promise.resolve('test-cluster')
+        if (key === 'ecsCluster') {
+          return Promise.resolve('test-cluster')
+        }
+
         return Promise.resolve(undefined)
       })
 
@@ -315,7 +336,10 @@ describe('ECSStatusCommand', () => {
       command.dev = false
 
       mockConfig.get.mockImplementation((key: string) => {
-        if (key === 'ecsService') return Promise.resolve('test-service')
+        if (key === 'ecsService') {
+          return Promise.resolve('test-service')
+        }
+
         return Promise.resolve(undefined)
       })
       mockConfig.tfVar.mockResolvedValue(undefined)
