@@ -38,14 +38,15 @@ async function shouldPrepareDevPlugins(): Promise<boolean> {
 export class PrepareCommand extends JoltCommand {
   static paths = [['prepare']]
 
-  devPlugins = Option.Boolean('--dev-plugins', true)
-  husky = Option.Boolean('--husky', true)
-  tofu = Option.Boolean('--tofu', true)
-  dbSeeds = Option.Boolean('--download-db-seeds', true)
+  devPlugins = Option.Boolean('--dev-plugins', true, { description: 'Install development plugins' })
+  husky = Option.Boolean('--husky', true, { description: 'Install Husky Git hooks' })
+  tofu = Option.Boolean('--tofu', true, { description: 'Install OpenTofu/Terraform' })
+  dbSeeds = Option.Boolean('--download-db-seeds', true, { description: 'Download database seeds' })
 
   pluginDelay = Option.String('--plugin-delay', {
     required: false,
     validator: t.cascade(t.isNumber(), [t.isInteger(), t.isPositive()]),
+    description: 'Delay in seconds between plugin installations',
   })
 
   async runPrepareCommands(timing: PrepareTimingOption): Promise<number> {

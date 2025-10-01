@@ -9,7 +9,7 @@ export default abstract class JoltCommand extends Command {
   config!: Config
   requiredCommands: string[] = []
   requiredConfig: string[] = []
-  site = Option.String('-s,--site', { required: false })
+  site = Option.String('-s,--site', { required: false, description: 'Target site configuration to use' })
 
   abstract command(): Promise<number | undefined>
 

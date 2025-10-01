@@ -13,7 +13,7 @@ import JoltCommand from './JoltCommand.js'
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
   requiredCommands = ['docker', 'compose']
-  backup = Option.Boolean('--backup', false)
+  backup = Option.Boolean('--backup', false, { description: 'Create a timestamped backup file' })
 
   getRequiredConfig(): string[] {
     return this.backup ? ['dbBackupPath'] : ['dbSeed']
@@ -224,11 +224,12 @@ export class DBAwaitCommand extends JoltCommand {
   static paths = [['db', 'await']]
   requiredCommands = ['docker', 'compose']
 
-  quiet = Option.Boolean('--quiet, -q', false)
+  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
 
   timeout = Option.String('--timeout, -t', '300', {
     tolerateBoolean: false,
     validator: t.cascade(t.isNumber(), t.isPositive(), t.isInteger()),
+    description: 'Timeout in seconds to wait for database availability',
   })
 
   target = Option.String({ required: false })

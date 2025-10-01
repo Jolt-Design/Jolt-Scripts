@@ -7,7 +7,7 @@ import JoltCommand from './JoltCommand.js'
 export class NexcessDeployCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy']]
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   requiredCommands = ['ssh']
 
   getRequiredConfig(): string[] {
@@ -79,7 +79,7 @@ export class NexcessDeployCommand extends JoltCommand {
 export class NexcessDeploySpecificCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy-specific']]
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   commit = Option.String({ required: true })
   requiredCommands = ['ssh']
 
@@ -157,8 +157,8 @@ export class NexcessDeploySpecificCommand extends JoltCommand {
 export class NexcessDeployLocalCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy-local']]
 
-  dev = Option.Boolean('--dev', false)
-  dryRun = Option.Boolean('--dry-run', false)
+  dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
+  dryRun = Option.Boolean('--dry-run', false, { description: 'Show what would be synced without actually syncing' })
   requiredCommands = ['rsync', 'ssh']
   requiredConfig = ['codeSubfolder']
 

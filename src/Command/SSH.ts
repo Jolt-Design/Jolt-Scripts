@@ -7,7 +7,7 @@ export class SSHCommand extends JoltCommand {
   static paths = [['ssh']]
   requiredCommands = ['ssh']
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Connect to development environment' })
   args = Option.Proxy()
 
   getRequiredConfig(): string[] {
@@ -31,8 +31,8 @@ export class RsyncCommand extends JoltCommand {
   static paths = [['rsync']]
   requiredCommands = ['rsync', 'ssh']
 
-  dev = Option.Boolean('--dev', false)
-  dryRun = Option.Boolean('--dry-run', false)
+  dev = Option.Boolean('--dev', false, { description: 'Sync to development environment' })
+  dryRun = Option.Boolean('--dry-run', false, { description: 'Show what would be synced without actually syncing' })
   args = Option.Proxy()
 
   getRequiredConfig(): string[] {

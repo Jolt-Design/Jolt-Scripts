@@ -8,7 +8,7 @@ import JoltCommand from './JoltCommand.js'
 
 abstract class AWSCommand extends JoltCommand {
   requiredCommands = ['aws']
-  region = Option.String('--region', { required: false })
+  region = Option.String('--region', { required: false, description: 'AWS region to use for operations' })
 
   /**
    * Get the AWS region to use for operations
@@ -68,8 +68,10 @@ abstract class AWSCommand extends JoltCommand {
 export class ECSDeployCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy']]
 
-  dev = Option.Boolean('--dev', false)
-  forceNew = Option.Boolean('--force-new-deployment', true)
+  dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
+  forceNew = Option.Boolean('--force-new-deployment', true, {
+    description: 'Force a new deployment even if no changes are detected',
+  })
 
   async command(): Promise<number | undefined> {
     const {
@@ -151,7 +153,7 @@ export class ECSDeployCommand extends AWSCommand {
 export class S3SyncCommand extends AWSCommand {
   static paths = [['aws', 's3', 'sync']]
 
-  deleteOpt = Option.Boolean('--delete')
+  deleteOpt = Option.Boolean('--delete', { description: 'Delete files in destination that do not exist in source' })
   from = Option.String()
   to = Option.String()
 
@@ -320,8 +322,8 @@ export class LogsTailCommand extends AWSCommand {
 export class CodeBuildStartCommand extends AWSCommand {
   static paths = [['aws', 'codebuild', 'start']]
 
-  dev = Option.Boolean('--dev', false)
-  batch = Option.Boolean('--batch', false)
+  dev = Option.Boolean('--dev', false, { description: 'Use development CodeBuild project' })
+  batch = Option.Boolean('--batch', false, { description: 'Start a batch build instead of a regular build' })
   project = Option.String({ required: false })
 
   async command(): Promise<number | undefined> {
@@ -449,8 +451,11 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
   static paths = [['aws', 'cf', 'invalidate']]
 
   distribution = Option.String({ required: true })
-  invalidationPaths = Option.Array('--path', { required: false })
-  invalidationBatch = Option.String('--invalidation-batch', { required: false })
+  invalidationPaths = Option.Array('--path', { required: false, description: 'Specific paths to invalidate' })
+  invalidationBatch = Option.String('--invalidation-batch', {
+    required: false,
+    description: 'Invalidation batch ID to check status',
+  })
 
   static schema = [t.hasMutuallyExclusiveKeys(['invalidationPaths', 'invalidationBatch'], { missingIf: 'falsy' })]
 
@@ -534,7 +539,7 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
 export class ECSStatusCommand extends AWSCommand {
   static paths = [['aws', 'status']]
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Check development environment status' })
 
   async command(): Promise<number | undefined> {
     const {
@@ -724,7 +729,7 @@ export class ECSStatusCommand extends AWSCommand {
 export class ECSDeploySpecificCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy-specific']]
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   tag = Option.String({ required: true })
 
   async command(): Promise<number | undefined> {

@@ -8,13 +8,13 @@ const notEmpty = (x: string) => x !== ''
 
 export abstract class DockerCommand extends JoltCommand {
   requiredCommands = ['docker']
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Use development configuration' })
 }
 
 export class DockerCombinedCommand extends DockerCommand {
   static paths = [['docker', 'combined']]
 
-  deploy = Option.Boolean('--deploy')
+  deploy = Option.Boolean('--deploy', { description: 'Also deploy to AWS ECS after building and pushing' })
 
   async command(): Promise<number | undefined> {
     const { cli, context, deploy, dev } = this
@@ -36,8 +36,8 @@ export class DockerCombinedCommand extends DockerCommand {
 export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
-  buildArgs = Option.Array('--build-arg', { required: false })
-  provenance = Option.Boolean('--provenance', true)
+  buildArgs = Option.Array('--build-arg', { required: false, description: 'Build arguments to pass to Docker build' })
+  provenance = Option.Boolean('--provenance', true, { description: 'Generate provenance attestation for the build' })
 
   async command(): Promise<number | undefined> {
     const {
@@ -137,7 +137,7 @@ export class DockerLoginCommand extends DockerCommand {
 export class DockerTagCommand extends DockerCommand {
   static paths = [['docker', 'tag']]
 
-  gitTag = Option.Boolean('--git-tag', true)
+  gitTag = Option.Boolean('--git-tag', true, { description: 'Also tag the image with the current Git commit SHA' })
   tag = Option.String({ required: false })
 
   async command(): Promise<number | undefined> {
@@ -202,7 +202,9 @@ export class DockerTagCommand extends DockerCommand {
 export class DockerPushCommand extends DockerCommand {
   static paths = [['docker', 'push']]
 
-  gitTag = Option.Boolean('--git-tag', true)
+  gitTag = Option.Boolean('--git-tag', true, {
+    description: 'Also push the image tagged with the current Git commit SHA',
+  })
   tag = Option.String({ required: false })
 
   async command(): Promise<number | undefined> {
@@ -265,7 +267,7 @@ export class DockerPushCommand extends DockerCommand {
 export class DockerManifestCommand extends DockerCommand {
   static paths = [['docker', 'manifest']]
 
-  build = Option.Boolean('--build', true)
+  build = Option.Boolean('--build', true, { description: 'Build the image before creating the manifest' })
 
   async command(): Promise<number | undefined> {
     const {

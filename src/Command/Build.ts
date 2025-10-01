@@ -6,7 +6,7 @@ import JoltCommand from './JoltCommand.js'
 export class BuildCommand extends JoltCommand {
   static paths = [['build']]
 
-  dev = Option.Boolean('--dev', false)
+  dev = Option.Boolean('--dev', false, { description: 'Use development configuration for building' })
 
   async command(): Promise<number | undefined> {
     const {

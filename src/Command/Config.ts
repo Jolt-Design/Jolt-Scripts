@@ -17,6 +17,7 @@ export class ConfigCommand extends JoltCommand {
   format: ConfigCommandFormat | undefined = Option.String('--format', {
     required: false,
     validator: t.isEnum(ConfigCommandFormat),
+    description: 'Output format for configuration values',
   })
 
   commands = ['aws', 'compose', 'docker', 'git', 'gzip', 'node', 'rsync', 'ssh', 'tofu', 'yarn']

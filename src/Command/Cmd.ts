@@ -6,8 +6,8 @@ import JoltCommand from './JoltCommand.js'
 export class CmdCommand extends JoltCommand {
   static paths = [['cmd']]
 
-  cwd = Option.String('-c,--cwd', { required: false })
-  quiet = Option.Boolean('-q,--quiet', false)
+  cwd = Option.String('-c,--cwd', { required: false, description: 'Working directory to run the command in' })
+  quiet = Option.Boolean('-q,--quiet', false, { description: 'Suppress command execution output' })
   args = Option.Proxy()
 
   async command(): Promise<number | undefined> {
