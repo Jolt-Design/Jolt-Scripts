@@ -950,7 +950,7 @@ export class WPUpdateModifyCommand extends JoltCommand {
     try {
       const gitCommand = await config.command('git')
       // Get current branch
-      const currentBranchResult = await execC(gitCommand, ['branch', '--show-current'], { context })
+      const currentBranchResult = await execC(gitCommand, ['branch', '--show-current'])
       const currentBranch = String(currentBranchResult.stdout || '').trim()
 
       if (!currentBranch.startsWith('joltWpUpdate/')) {
@@ -961,7 +961,6 @@ export class WPUpdateModifyCommand extends JoltCommand {
       // Count commits since branching from main
       const branchName = (await config.get('branch')) || 'master'
       const commitCountResult = await execC(gitCommand, ['rev-list', '--count', `${branchName}..HEAD`], {
-        context,
         reject: false,
       })
 

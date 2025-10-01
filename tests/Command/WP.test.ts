@@ -777,7 +777,7 @@ describe('WPUpdateModifyCommand', () => {
 
     expect(result).toBe(0)
     expect(execC).toHaveBeenCalledTimes(3)
-    expect(execC).toHaveBeenCalledWith('git', ['branch', '--show-current'], expect.any(Object))
+    expect(execC).toHaveBeenCalledWith('git', ['branch', '--show-current'])
     expect(execC).toHaveBeenCalledWith('git', ['rev-list', '--count', 'master..HEAD'], expect.any(Object))
     expect(execC).toHaveBeenCalledWith('git', ['rebase', '-i', 'HEAD~3'], expect.any(Object))
     expect(mockContext.stdout.write).toHaveBeenCalledWith(
