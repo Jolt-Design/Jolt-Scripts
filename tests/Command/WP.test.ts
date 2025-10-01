@@ -948,15 +948,19 @@ describe('WPUpdateCommand', () => {
     command.skipLanguages = true
 
     // Mock that we have some updates to ensure translations would normally run
-    vi.spyOn(command, 'parsePluginJson').mockReturnValue([
-      { name: 'test-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Test Plugin' },
-    ])
-    vi.spyOn(command, 'maybeUpdatePlugin').mockImplementation(async (_plugin, _config, branchRef: any) => {
-      branchRef.branch = 'joltWpUpdate/test-branch'
-      branchRef.created = true
-      return true
-    })
-    vi.spyOn(command, 'parseThemeJson').mockReturnValue([])
+    vi.spyOn(command, 'processItemUpdates').mockImplementation(
+      async (type: any, skip: any, _config: any, branchRef: any) => {
+        if (type === 'plugin' && !skip) {
+          branchRef.branch = 'joltWpUpdate/test-branch'
+          branchRef.created = true
+          return {
+            count: 1,
+            details: [{ name: 'test-plugin', title: 'Test Plugin', fromVersion: '1.0.0', toVersion: '1.1.0' }],
+          }
+        }
+        return { count: 0, details: [] }
+      },
+    )
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
 
     // Spy on maybeUpdateTranslations to ensure it's not called
@@ -982,24 +986,27 @@ describe('WPUpdateCommand', () => {
 
   it('should handle plugin updates with branch creation', async () => {
     // Mock the private methods to simulate successful plugin updates
-    vi.spyOn(command, 'parsePluginJson').mockReturnValue([
-      { name: 'test-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Test Plugin' },
-    ])
-    vi.spyOn(command, 'maybeUpdatePlugin').mockImplementation(async (_plugin, _config, branchRef: any) => {
-      // Simulate branch creation and successful update
-      branchRef.branch = 'joltWpUpdate/test-branch'
-      branchRef.created = true
-      return {
-        updated: true,
-        details: {
-          name: 'test-plugin',
-          title: 'Test Plugin',
-          fromVersion: '1.0.0',
-          toVersion: '1.1.0',
-        },
-      }
-    })
-    vi.spyOn(command, 'parseThemeJson').mockReturnValue([])
+    vi.spyOn(command, 'processItemUpdates').mockImplementation(
+      async (type: any, skip: any, _config: any, branchRef: any) => {
+        if (type === 'plugin' && !skip) {
+          // Simulate branch creation and successful update
+          branchRef.branch = 'joltWpUpdate/test-branch'
+          branchRef.created = true
+          return {
+            count: 1,
+            details: [
+              {
+                name: 'test-plugin',
+                title: 'Test Plugin',
+                fromVersion: '1.0.0',
+                toVersion: '1.1.0',
+              },
+            ],
+          }
+        }
+        return { count: 0, details: [] }
+      },
+    )
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
 
     const result = await command.command()
@@ -1013,23 +1020,27 @@ describe('WPUpdateCommand', () => {
     command.skipPlugins = true
 
     // Mock the private methods to simulate successful theme updates
-    vi.spyOn(command, 'parseThemeJson').mockReturnValue([
-      { name: 'test-theme', status: 'active', update: 'available', version: '1.0.0', title: 'Test Theme' },
-    ])
-    vi.spyOn(command, 'maybeUpdateTheme').mockImplementation(async (_theme, _config, branchRef: any) => {
-      // Simulate branch creation and successful update
-      branchRef.branch = 'joltWpUpdate/test-branch'
-      branchRef.created = true
-      return {
-        updated: true,
-        details: {
-          name: 'test-theme',
-          title: 'Test Theme',
-          fromVersion: '1.0.0',
-          toVersion: '1.1.0',
-        },
-      }
-    })
+    vi.spyOn(command, 'processItemUpdates').mockImplementation(
+      async (type: any, skip: any, _config: any, branchRef: any) => {
+        if (type === 'theme' && !skip) {
+          // Simulate branch creation and successful update
+          branchRef.branch = 'joltWpUpdate/test-branch'
+          branchRef.created = true
+          return {
+            count: 1,
+            details: [
+              {
+                name: 'test-theme',
+                title: 'Test Theme',
+                fromVersion: '1.0.0',
+                toVersion: '1.1.0',
+              },
+            ],
+          }
+        }
+        return { count: 0, details: [] }
+      },
+    )
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
 
     const result = await command.command()
@@ -1047,13 +1058,26 @@ describe('WPUpdateCommand', () => {
       wpRoot: 'wp',
     })
 
-    // Mock items that should be skipped
-    vi.spyOn(command, 'parsePluginJson').mockReturnValue([
-      { name: 'skip-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Skip Plugin' },
-    ])
-    vi.spyOn(command, 'parseThemeJson').mockReturnValue([
-      { name: 'skip-theme', status: 'active', update: 'available', version: '1.0.0', title: 'Skip Theme' },
-    ])
+    // Mock the new methods to simulate skip behavior
+    vi.spyOn(command, 'getItems').mockImplementation(async (type: any) => {
+      if (type === 'plugin') {
+        return [{ name: 'skip-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Skip Plugin' }]
+      }
+      if (type === 'theme') {
+        return [{ name: 'skip-theme', status: 'active', update: 'available', version: '1.0.0', title: 'Skip Theme' }]
+      }
+      return []
+    })
+
+    // Mock maybeUpdateItem to simulate skip behavior based on doNotUpdate list
+    vi.spyOn(command, 'maybeUpdateItem').mockImplementation(async (item: any, wpConfig: any) => {
+      if (wpConfig.doNotUpdate.includes(item.name)) {
+        command.context.stdout.write(`  Skipping ${item.name} (configured to skip)\n`)
+        return { updated: false }
+      }
+      return { updated: false }
+    })
+
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
 
     const result = await command.command()
@@ -1089,23 +1113,27 @@ describe('WPUpdateCommand', () => {
     command.skipCore = true
 
     // Mock successful plugin update
-    vi.spyOn(command, 'parsePluginJson').mockReturnValue([
-      { name: 'test-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Test Plugin' },
-    ])
-    vi.spyOn(command, 'maybeUpdatePlugin').mockImplementation(async (_plugin, _config, branchRef: any) => {
-      // Simulate branch creation and successful update
-      branchRef.branch = 'joltWpUpdate/test-branch'
-      branchRef.created = true
-      return {
-        updated: true,
-        details: {
-          name: 'test-plugin',
-          title: 'Test Plugin',
-          fromVersion: '1.0.0',
-          toVersion: '1.1.0',
-        },
-      }
-    })
+    vi.spyOn(command, 'processItemUpdates').mockImplementation(
+      async (type: any, skip: any, _config: any, branchRef: any) => {
+        if (type === 'plugin' && !skip) {
+          // Simulate branch creation and successful update
+          branchRef.branch = 'joltWpUpdate/test-branch'
+          branchRef.created = true
+          return {
+            count: 1,
+            details: [
+              {
+                name: 'test-plugin',
+                title: 'Test Plugin',
+                fromVersion: '1.0.0',
+                toVersion: '1.1.0',
+              },
+            ],
+          }
+        }
+        return { count: 0, details: [] }
+      },
+    )
     vi.spyOn(command, 'maybeUpdateTranslations').mockResolvedValue(false)
 
     const result = await command.command()

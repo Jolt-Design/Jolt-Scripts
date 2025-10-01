@@ -21,11 +21,36 @@ type ThemeDetails = {
   title: string
 }
 
+type UpdateDetails = {
+  name: string
+  title: string
+  fromVersion: string
+  toVersion: string
+}
+
+type UpdateResult = {
+  updated: boolean
+  details?: UpdateDetails
+}
+
 type UpdateSummary = {
-  plugins: Array<{ name: string; title: string; fromVersion: string; toVersion: string }>
-  themes: Array<{ name: string; title: string; fromVersion: string; toVersion: string }>
+  plugins: Array<UpdateDetails>
+  themes: Array<UpdateDetails>
   core: { fromVersion: string; toVersion: string } | null
   translations: boolean
+}
+
+type ItemType = 'plugin' | 'theme'
+
+type ItemDetails = PluginDetails | ThemeDetails
+
+type ItemConfig = {
+  type: ItemType
+  icon: string
+  listCommand: string[]
+  updateCommand: (name: string) => string[]
+  getFolder: (wpConfig: WordPressConfig) => string
+  commitPrefix: string
 }
 
 // Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
@@ -200,30 +225,11 @@ export class WPUpdateCommand extends JoltCommand {
 
     // Get current status
     if (!skipPlugins) {
-      stdout.write(ansis.cyan('🔌 Checking plugins...\n'))
-      const yarnCommand = await config.command('yarn')
-      const pluginsResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'plugin', 'list', '--json'], {
-        reject: false,
-      })
-      const pluginsJson = pluginsResult.exitCode === 0 ? String(pluginsResult.stdout || '') : null
-
-      if (pluginsJson) {
-        const plugins = this.parsePluginJson(pluginsJson)
-        stdout.write(`Found ${plugins.length} plugins\n`)
-      }
+      await this.getItems<PluginDetails>('plugin')
     }
 
     if (!skipThemes) {
-      stdout.write(ansis.cyan('🎨 Checking themes...\n'))
-      const yarnCommand = await config.command('yarn')
-      const themesResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'theme', 'list', '--json'], {
-        reject: false,
-      })
-      const themesJson = themesResult.exitCode === 0 ? String(themesResult.stdout || '') : null
-      if (themesJson) {
-        const themes = this.parseThemeJson(themesJson)
-        stdout.write(`Found ${themes.length} themes\n`)
-      }
+      await this.getItems<ThemeDetails>('theme')
     }
 
     // We'll create the update branch only when we need to make our first commit
@@ -234,55 +240,14 @@ export class WPUpdateCommand extends JoltCommand {
 
     try {
       // Update plugins
-      if (!skipPlugins) {
-        stdout.write(ansis.cyan('🔌 Updating plugins...\n'))
-
-        const yarnCommand = await config.command('yarn')
-        const pluginsResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'plugin', 'list', '--json'], {
-          reject: false,
-        })
-
-        const pluginsJson = pluginsResult.exitCode === 0 ? String(pluginsResult.stdout || '') : null
-
-        if (pluginsJson) {
-          const plugins = this.parsePluginJson(pluginsJson)
-
-          for (const plugin of plugins) {
-            const result = await this.maybeUpdatePlugin(plugin, wpConfig, branchRef)
-            if (result.updated) {
-              updatedPluginCount++
-              if (result.details) {
-                updateSummary.plugins.push(result.details)
-              }
-            }
-          }
-        }
-      }
+      const pluginUpdates = await this.processItemUpdates<PluginDetails>('plugin', skipPlugins, wpConfig, branchRef)
+      updatedPluginCount = pluginUpdates.count
+      updateSummary.plugins = pluginUpdates.details
 
       // Update themes
-      if (!skipThemes) {
-        stdout.write(ansis.cyan('🎨 Updating themes...\n'))
-
-        const yarnCommand = await config.command('yarn')
-        const themesResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'theme', 'list', '--json'], {
-          reject: false,
-        })
-        const themesJson = themesResult.exitCode === 0 ? String(themesResult.stdout || '') : null
-
-        if (themesJson) {
-          const themes = this.parseThemeJson(themesJson)
-
-          for (const theme of themes) {
-            const result = await this.maybeUpdateTheme(theme, wpConfig, branchRef)
-            if (result.updated) {
-              updatedThemeCount++
-              if (result.details) {
-                updateSummary.themes.push(result.details)
-              }
-            }
-          }
-        }
-      }
+      const themeUpdates = await this.processItemUpdates<ThemeDetails>('theme', skipThemes, wpConfig, branchRef)
+      updatedThemeCount = themeUpdates.count
+      updateSummary.themes = themeUpdates.details
 
       // Update core
       if (!skipCore) {
@@ -307,7 +272,6 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     const totalUpdates = updatedPluginCount + updatedThemeCount + (updatedCore ? 1 : 0)
-    const yarnCommand = await config.command('yarn')
 
     // Update translations if possible
     let updatedTranslations = false
@@ -349,6 +313,7 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     if (totalUpdates > 0 && branchRef.created) {
+      const yarnCommand = await config.command('yarn')
       stdout.write(ansis.yellow('\nNext steps:\n'))
       stdout.write(`• Review updates: ${ansis.dim(`${yarnCommand} jolt wp update modify`)}\n`)
       // Use root config value directly
@@ -360,30 +325,220 @@ export class WPUpdateCommand extends JoltCommand {
     return 0
   }
 
-  // Note: WP CLI invocations run via `yarn jolt wp cli ...` using execC directly.
+  // Helper method to execute WP CLI commands
+  private async executeWpCli(
+    args: string[],
+    options?: { reject?: boolean; silent?: boolean },
+  ): Promise<{ exitCode: number; stdout: string | null }> {
+    const { config, context } = this
+    const yarnCommand = await config.command('yarn')
 
-  private parsePluginJson(pluginsJson: string): PluginDetails[] {
-    // Trim off any preceding warnings, try to look for the start of the actual JSON.
-    const trimmed = pluginsJson.substring(pluginsJson.indexOf('[{'))
-    const allPlugins = JSON.parse(trimmed)
-    return allPlugins.filter((plugin: PluginDetails) => !['dropin', 'must-use'].includes(plugin.status))
+    // For silent operations, don't pass context to suppress output
+    const execOptions = {
+      reject: false,
+      ...options,
+      ...(!options?.silent ? { context } : {}),
+    }
+
+    const result = await execC(yarnCommand, ['jolt', 'wp', 'cli', ...args], execOptions)
+
+    return {
+      exitCode: result.exitCode || 0,
+      stdout: result.exitCode === 0 ? String(result.stdout || '') : null,
+    }
   }
 
-  private parseThemeJson(themeJson: string): ThemeDetails[] {
-    // Trim off any preceding warnings, try to look for the start of the actual JSON.
-    const trimmed = themeJson.substring(themeJson.indexOf('[{'))
-    return JSON.parse(trimmed)
+  // Configuration for different item types
+  private getItemConfig(type: ItemType): ItemConfig {
+    const configs: Record<ItemType, ItemConfig> = {
+      plugin: {
+        type: 'plugin',
+        icon: '🔌',
+        listCommand: ['plugin', 'list', '--json'],
+        updateCommand: (name: string) => ['plugin', 'update', name],
+        getFolder: (wpConfig: WordPressConfig) => wpConfig.pluginFolder,
+        commitPrefix: 'Update',
+      },
+      theme: {
+        type: 'theme',
+        icon: '🎨',
+        listCommand: ['theme', 'list', '--json'],
+        updateCommand: (name: string) => ['theme', 'update', name],
+        getFolder: (wpConfig: WordPressConfig) => wpConfig.themeFolder,
+        commitPrefix: 'Update theme',
+      },
+    }
+    return configs[type]
   }
 
-  // (No helper) obtain the package runner directly via config.command('yarn') where needed
+  // Generic method to get and parse item lists
+  private async getItems<T extends ItemDetails>(type: ItemType): Promise<T[]> {
+    const {
+      context: { stdout },
+    } = this
+    const itemConfig = this.getItemConfig(type)
+
+    stdout.write(ansis.cyan(`${itemConfig.icon} Checking ${type}s...\n`))
+    const result = await this.executeWpCli(itemConfig.listCommand, { silent: true })
+
+    if (!result.stdout) {
+      return []
+    }
+
+    const items = this.parseItemJson<T>(result.stdout)
+    stdout.write(`Found ${items.length} ${type}s\n`)
+    return items
+  }
+
+  // Generic method to parse item JSON (plugins/themes have same structure)
+  private parseItemJson<T extends ItemDetails>(itemJson: string): T[] {
+    // Trim off any preceding warnings, try to look for the start of the actual JSON.
+    const trimmed = itemJson.substring(itemJson.indexOf('[{'))
+    const allItems = JSON.parse(trimmed)
+
+    // For plugins, filter out dropin and must-use plugins
+    return allItems.filter((item: ItemDetails) => !['dropin', 'must-use'].includes(item.status))
+  }
+
+  // Generic method to handle updating items
+  private async processItemUpdates<T extends ItemDetails>(
+    type: ItemType,
+    skip: boolean,
+    wpConfig: WordPressConfig,
+    branchRef: { branch?: string; created: boolean },
+  ): Promise<{ count: number; details: UpdateDetails[] }> {
+    if (skip) {
+      return { count: 0, details: [] }
+    }
+
+    const itemConfig = this.getItemConfig(type)
+    const items = await this.getItems<T>(type)
+    const updateDetails: UpdateDetails[] = []
+    let count = 0
+
+    if (items.length > 0) {
+      this.context.stdout.write(ansis.cyan(`${itemConfig.icon} Updating ${type}s...\n`))
+
+      for (const item of items) {
+        const result = await this.maybeUpdateItem(item, wpConfig, branchRef, itemConfig)
+        if (result.updated) {
+          count++
+          if (result.details) {
+            updateDetails.push(result.details)
+          }
+        }
+      }
+    }
+
+    return { count, details: updateDetails }
+  }
+
+  // Generic method to check and maybe update an item (plugin/theme)
+  private async maybeUpdateItem<T extends ItemDetails>(
+    item: T,
+    wpConfig: WordPressConfig,
+    branchRef: { branch?: string; created: boolean },
+    itemConfig: ItemConfig,
+  ): Promise<UpdateResult> {
+    const {
+      context: { stdout },
+    } = this
+
+    if (wpConfig.doNotUpdate.includes(item.name)) {
+      stdout.write(ansis.dim(`  Skipping ${item.name} (configured to skip)\n`))
+      return { updated: false }
+    }
+
+    stdout.write(`  Checking ${item.name}...`)
+
+    if (item.update === 'available') {
+      stdout.write(ansis.green(' updating\n'))
+      return await this.updateItem(item, wpConfig, branchRef, itemConfig)
+    }
+
+    if (item.update === 'none') {
+      stdout.write(ansis.dim(' up to date\n'))
+    } else if (item.update === 'version higher than expected') {
+      stdout.write(ansis.yellow(` local version ${item.version} is higher than remote\n`))
+    } else {
+      stdout.write(ansis.red(` unknown status: ${item.update}\n`))
+    }
+
+    return { updated: false }
+  }
+
+  // Generic method to update an item (plugin/theme)
+  private async updateItem<T extends ItemDetails>(
+    item: T,
+    wpConfig: WordPressConfig,
+    branchRef: { branch?: string; created: boolean },
+    itemConfig: ItemConfig,
+  ): Promise<UpdateResult> {
+    const {
+      config,
+      context: { stdout, stderr },
+    } = this
+
+    try {
+      const gitCommand = await config.command('git')
+      const details = await this.getDetails(item.name, itemConfig.type)
+      if (!details) {
+        return { updated: false }
+      }
+
+      const fromVersion = details.version
+      const prettyTitle = this.cleanTitle(details.title)
+      const location = `${itemConfig.getFolder(wpConfig)}/${item.name}`
+
+      const updateResult = await this.executeWpCli(itemConfig.updateCommand(item.name), { silent: true })
+
+      if (updateResult.exitCode !== 0) {
+        stderr.write(ansis.red(`    Error updating ${item.name}\n`))
+        return { updated: false }
+      }
+
+      const newDetails = await this.getDetails(item.name, itemConfig.type)
+      if (!newDetails || newDetails.version === details.version) {
+        stderr.write(ansis.red('    Update failed!\n'))
+        return { updated: false }
+      }
+
+      // Ensure branch is created before making our first commit
+      await this.ensureBranchCreated(wpConfig, branchRef)
+
+      const commitMessage = this.sanitizeCommitMessage(
+        `${itemConfig.commitPrefix} ${prettyTitle} to ${newDetails.version}`,
+      )
+
+      await execC(gitCommand, ['add', location])
+      await execC(gitCommand, ['commit', '-m', commitMessage], {
+        shell: false,
+        env: { SKIP: 'prepare-commit-msg' },
+      })
+
+      stdout.write(ansis.green(`    Updated ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
+      return {
+        updated: true,
+        details: {
+          name: item.name,
+          title: prettyTitle,
+          fromVersion,
+          toVersion: newDetails.version,
+        },
+      }
+    } catch (error) {
+      stderr.write(ansis.red(`    Error updating ${item.name}: ${error}\n`))
+      return { updated: false }
+    }
+  }
 
   private async createBranch(): Promise<string> {
-    const { config, context } = this
+    const { config } = this
     const isoDate = new Date().toISOString().replace(/[:.]/g, '-').replace(/T/, '_').slice(0, -5)
     const branchName = `joltWpUpdate/${isoDate}`
 
     const gitCommand = await config.command('git')
-    await execC(gitCommand, ['checkout', '-b', branchName], { context })
+    await execC(gitCommand, ['checkout', '-b', branchName])
     return branchName
   }
 
@@ -426,228 +581,15 @@ export class WPUpdateCommand extends JoltCommand {
     }
   }
 
-  private async maybeUpdatePlugin(
-    plugin: PluginDetails,
-    wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
-    const {
-      context: { stdout },
-    } = this
-
-    if (wpConfig.doNotUpdate.includes(plugin.name)) {
-      stdout.write(ansis.dim(`  Skipping ${plugin.name} (configured to skip)\n`))
-      return { updated: false }
-    }
-
-    stdout.write(`  Checking ${plugin.name}...`)
-
-    if (plugin.update === 'available') {
-      stdout.write(ansis.green(' updating\n'))
-      return await this.updatePlugin(plugin, wpConfig, branchRef)
-    }
-
-    if (plugin.update === 'none') {
-      stdout.write(ansis.dim(' up to date\n'))
-    } else if (plugin.update === 'version higher than expected') {
-      stdout.write(ansis.yellow(` local version ${plugin.version} is higher than remote\n`))
-    } else {
-      stdout.write(ansis.red(` unknown status: ${plugin.update}\n`))
-    }
-
-    return { updated: false }
-  }
-
-  private async maybeUpdateTheme(
-    theme: ThemeDetails,
-    wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
-    const {
-      context: { stdout },
-    } = this
-
-    if (wpConfig.doNotUpdate.includes(theme.name)) {
-      stdout.write(ansis.dim(`  Skipping ${theme.name} (configured to skip)\n`))
-      return { updated: false }
-    }
-
-    stdout.write(`  Checking ${theme.name}...`)
-
-    if (theme.update === 'available') {
-      stdout.write(ansis.green(' updating\n'))
-      return await this.updateTheme(theme, wpConfig, branchRef)
-    }
-
-    if (theme.update === 'none') {
-      stdout.write(ansis.dim(' up to date\n'))
-    } else if (theme.update === 'version higher than expected') {
-      stdout.write(ansis.yellow(` local version ${theme.version} is higher than remote\n`))
-    } else {
-      stdout.write(ansis.red(` unknown status: ${theme.update}\n`))
-    }
-
-    return { updated: false }
-  }
-
-  private async updatePlugin(
-    plugin: PluginDetails,
-    wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
-    const {
-      config,
-      context,
-      context: { stdout, stderr },
-    } = this
-
-    try {
-      const gitCommand = await config.command('git')
-      const details = await this.getPluginDetails(plugin.name)
-      if (!details) {
-        return { updated: false }
-      }
-
-      const fromVersion = details.version
-      const prettyTitle = this.cleanTitle(details.title)
-      const location = `${wpConfig.pluginFolder}/${plugin.name}`
-
-      const yarnCommand = await config.command('yarn')
-      const updateResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'plugin', 'update', plugin.name], {
-        reject: false,
-      })
-      const updateResultStr = updateResult.exitCode === 0 ? String(updateResult.stdout || '') : null
-
-      if (!updateResultStr) {
-        stderr.write(ansis.red(`    Error updating ${plugin.name}\n`))
-        return { updated: false }
-      }
-
-      const newDetails = await this.getPluginDetails(plugin.name)
-      if (!newDetails || newDetails.version === details.version) {
-        stderr.write(ansis.red('    Update failed!\n'))
-        return { updated: false }
-      }
-
-      // Ensure branch is created before making our first commit
-      await this.ensureBranchCreated(wpConfig, branchRef)
-
-      const commitMessage = this.sanitizeCommitMessage(`Update ${prettyTitle} to ${newDetails.version}`)
-
-      await execC(gitCommand, ['add', location], { context })
-      await execC(gitCommand, ['commit', '-m', commitMessage], {
-        context,
-        shell: false,
-        env: { SKIP: 'prepare-commit-msg' },
-      })
-
-      stdout.write(ansis.green(`    Updated ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
-      return {
-        updated: true,
-        details: {
-          name: plugin.name,
-          title: prettyTitle,
-          fromVersion,
-          toVersion: newDetails.version,
-        },
-      }
-    } catch (error) {
-      stderr.write(ansis.red(`    Error updating ${plugin.name}: ${error}\n`))
-      return { updated: false }
-    }
-  }
-
-  private async updateTheme(
-    theme: ThemeDetails,
-    wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
-    const {
-      config,
-      context,
-      context: { stdout, stderr },
-    } = this
-
-    try {
-      const gitCommand = await config.command('git')
-      const details = await this.getThemeDetails(theme.name)
-      if (!details) {
-        return { updated: false }
-      }
-
-      const fromVersion = details.version
-      const prettyTitle = this.cleanTitle(details.title)
-      const location = `${wpConfig.themeFolder}/${theme.name}`
-
-      const yarnCommand = await config.command('yarn')
-      const updateResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'theme', 'update', theme.name], {
-        reject: false,
-      })
-      const updateResultStr = updateResult.exitCode === 0 ? String(updateResult.stdout || '') : null
-
-      if (!updateResultStr) {
-        stderr.write(ansis.red(`    Error updating ${theme.name}\n`))
-        return { updated: false }
-      }
-
-      const newDetails = await this.getThemeDetails(theme.name)
-      if (!newDetails || newDetails.version === details.version) {
-        stderr.write(ansis.red('    Update failed!\n'))
-        return { updated: false }
-      }
-
-      // Ensure branch is created before making our first commit
-      await this.ensureBranchCreated(wpConfig, branchRef)
-
-      const commitMessage = this.sanitizeCommitMessage(`Update theme ${prettyTitle} to ${newDetails.version}`)
-
-      await execC(gitCommand, ['add', location], { context })
-      await execC(gitCommand, ['commit', '-m', commitMessage], {
-        context,
-        shell: false,
-        env: { SKIP: 'prepare-commit-msg' },
-      })
-
-      stdout.write(ansis.green(`    Updated theme ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
-      return {
-        updated: true,
-        details: {
-          name: theme.name,
-          title: prettyTitle,
-          fromVersion,
-          toVersion: newDetails.version,
-        },
-      }
-    } catch (error) {
-      stderr.write(ansis.red(`    Error updating ${theme.name}: ${error}\n`))
-      return { updated: false }
-    }
-  }
-
-  private async getPluginDetails(pluginName: string): Promise<PluginDetails | null> {
-    return await this.getDetails(pluginName, 'plugin')
-  }
-
-  private async getThemeDetails(themeName: string): Promise<ThemeDetails | null> {
-    return await this.getDetails(themeName, 'theme')
-  }
-
   private async getDetails(name: string, type: 'plugin' | 'theme'): Promise<PluginDetails | ThemeDetails | null> {
-    const { config } = this
-    const cmdType = type === 'plugin' ? 'plugin' : 'theme'
-
     try {
-      const yarnCommand = await config.command('yarn')
-      const detailsResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', cmdType, 'get', '--json', name], {
-        reject: false,
-      })
-      const out = detailsResult.exitCode === 0 ? String(detailsResult.stdout || '') : null
+      const result = await this.executeWpCli([type, 'get', '--json', name], { silent: true })
 
-      if (!out) {
+      if (!result.stdout) {
         return null
       }
 
-      let output = String(out || '')
+      let output = result.stdout
 
       if (output.startsWith('$')) {
         // Older Yarn versions include the script name in stdout so we need to trim the first line off
@@ -721,39 +663,23 @@ export class WPUpdateCommand extends JoltCommand {
   }
 
   private async getCurrentCoreVersion(): Promise<string | null> {
-    const { config } = this
     try {
-      const yarnCommand = await config.command('yarn')
-      const versionResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'core', 'version'], {
-        reject: false,
-      })
-      if (versionResult.exitCode === 0) {
-        return String(versionResult.stdout || '').trim()
-      }
-      return null
+      const result = await this.executeWpCli(['core', 'version'], { silent: true })
+      return result.stdout ? result.stdout.trim() : null
     } catch {
       return null
     }
   }
 
   private async hasCoreUpdate(): Promise<string | false> {
-    const { config } = this
     try {
-      const yarnCommand = await config.command('yarn')
-      const coreResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'core', 'check-update', '--json'], {
-        reject: false,
-      })
-      if (!coreResult || coreResult.exitCode !== 0) {
+      const result = await this.executeWpCli(['core', 'check-update', '--json'], { silent: true })
+
+      if (!result.stdout || !result.stdout.trim() || result.stdout.trim() === '[]') {
         return false
       }
 
-      const stdoutStr = String(coreResult.stdout || '')
-
-      if (!stdoutStr.trim() || stdoutStr.trim() === '[]') {
-        return false
-      }
-
-      const trimmed = stdoutStr.substring(stdoutStr.indexOf('[{'))
+      const trimmed = result.stdout.substring(result.stdout.indexOf('[{'))
       const parsed = JSON.parse(trimmed)
 
       return parsed[0]?.version || false
@@ -763,12 +689,11 @@ export class WPUpdateCommand extends JoltCommand {
   }
 
   private async hasGitChanges(path: string): Promise<boolean> {
-    const { config, context } = this
+    const { config } = this
 
     try {
       const gitCommand = await config.command('git')
       const result = await execC(gitCommand, ['status', '--porcelain=v1', '--', path], {
-        context,
         reject: false,
       })
       return String(result.stdout || '').trim() !== ''
@@ -778,23 +703,22 @@ export class WPUpdateCommand extends JoltCommand {
   }
 
   private async stashChanges(): Promise<void> {
-    const { config, context } = this
+    const { config } = this
     const date = new Date().toISOString()
 
     const gitCommand = await config.command('git')
-    await execC(gitCommand, ['add', '.'], { context })
+    await execC(gitCommand, ['add', '.'])
     await execC(gitCommand, ['stash', 'save', '--', `Automated stash by Jolt WP Updater at ${date}`], {
-      context,
       shell: false,
     })
   }
 
   private async unstashChanges(): Promise<void> {
-    const { config, context } = this
+    const { config } = this
 
     const gitCommand = await config.command('git')
-    await execC(gitCommand, ['stash', 'pop'], { context })
-    await execC(gitCommand, ['reset', 'HEAD', '--'], { context })
+    await execC(gitCommand, ['stash', 'pop'])
+    await execC(gitCommand, ['reset', 'HEAD', '--'])
   }
 
   private async doCoreUpdate(
@@ -803,19 +727,17 @@ export class WPUpdateCommand extends JoltCommand {
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
   ): Promise<void> {
-    const { config, context } = this
+    const { config } = this
 
     // Ensure branch is created before making our first commit
     await this.ensureBranchCreated(wpConfig, branchRef)
 
     const gitCommand = await config.command('git')
-    const yarnCommand = await config.command('yarn')
-    await execC(yarnCommand, ['jolt', 'wp', 'cli', 'core', 'update'], { context, reject: false })
-    await execC(gitCommand, ['add', path], { context })
+    await this.executeWpCli(['core', 'update'], { silent: true })
+    await execC(gitCommand, ['add', path])
 
     const commitMessage = this.sanitizeCommitMessage(`Update WordPress to ${version}`)
     await execC(gitCommand, ['commit', '-m', commitMessage], {
-      context,
       shell: false,
       env: { SKIP: 'prepare-commit-msg' },
     })
@@ -824,69 +746,33 @@ export class WPUpdateCommand extends JoltCommand {
   private async maybeUpdateTranslations(branchRef: { branch?: string; created: boolean }): Promise<boolean> {
     const {
       config,
-      context,
       context: { stdout, stderr },
     } = this
 
     try {
-      const yarnCommand = await config.command('yarn')
       let hasUpdates = false
 
-      // Update core translations
-      stdout.write('  Checking core translations...')
-      const coreResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'core', 'update'], {
-        reject: false,
-      })
+      // Helper to check and update translations for a specific type
+      const updateTranslationType = async (type: string, command: string[]) => {
+        stdout.write(`  Checking ${type} translations...`)
+        const result = await this.executeWpCli(command, { silent: true })
 
-      if (coreResult.exitCode === 0) {
-        const output = String(coreResult.stdout || '')
-
-        if (output.includes('Updated') || output.includes('updated')) {
-          hasUpdates = true
-          stdout.write(ansis.green(' updated\n'))
+        if (result.exitCode === 0 && result.stdout) {
+          if (result.stdout.includes('Updated') || result.stdout.includes('updated')) {
+            hasUpdates = true
+            stdout.write(ansis.green(' updated\n'))
+          } else {
+            stdout.write(ansis.dim(' up to date\n'))
+          }
         } else {
-          stdout.write(ansis.dim(' up to date\n'))
+          stdout.write(ansis.dim(' skipped (not available)\n'))
         }
-      } else {
-        stdout.write(ansis.dim(' skipped (not available)\n'))
       }
 
-      // Update plugin translations
-      stdout.write('  Checking plugin translations...')
-      const pluginResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'plugin', 'update', '--all'], {
-        reject: false,
-      })
-
-      if (pluginResult.exitCode === 0) {
-        const output = String(pluginResult.stdout || '')
-
-        if (output.includes('Updated') || output.includes('updated')) {
-          hasUpdates = true
-          stdout.write(ansis.green(' updated\n'))
-        } else {
-          stdout.write(ansis.dim(' up to date\n'))
-        }
-      } else {
-        stdout.write(ansis.dim(' skipped (not available)\n'))
-      }
-
-      // Update theme translations
-      stdout.write('  Checking theme translations...')
-      const themeResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'theme', 'update', '--all'], {
-        reject: false,
-      })
-
-      if (themeResult.exitCode === 0) {
-        const output = String(themeResult.stdout || '')
-        if (output.includes('Updated') || output.includes('updated')) {
-          hasUpdates = true
-          stdout.write(ansis.green(' updated\n'))
-        } else {
-          stdout.write(ansis.dim(' up to date\n'))
-        }
-      } else {
-        stdout.write(ansis.dim(' skipped (not available)\n'))
-      }
+      // Update different translation types
+      await updateTranslationType('core', ['language', 'core', 'update'])
+      await updateTranslationType('plugin', ['language', 'plugin', 'update', '--all'])
+      await updateTranslationType('theme', ['language', 'theme', 'update', '--all'])
 
       // If we have translation updates, commit them
       if (hasUpdates) {
@@ -903,18 +789,16 @@ export class WPUpdateCommand extends JoltCommand {
         const gitCommand = await config.command('git')
 
         // Add all language files that might have been updated
-        await execC(gitCommand, ['add', wpConfig.wpRoot], { context })
+        await execC(gitCommand, ['add', wpConfig.wpRoot])
 
         // Check if there are any changes to commit
         const statusResult = await execC(gitCommand, ['diff', '--cached', '--exit-code'], {
-          context,
           reject: false,
         })
 
         if (statusResult.exitCode !== 0) {
           // There are changes to commit
           await execC(gitCommand, ['commit', '-m', 'Update translations'], {
-            context,
             shell: false,
             env: { SKIP: 'prepare-commit-msg' },
           })
