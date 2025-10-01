@@ -72,6 +72,8 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Prefer destructing `this` rather than repeated `this.` references
 - Use `const` over `let` unless reassignment is needed
 - Prefer using top level imports rather than dynamic `await import()`
+- Where possible, apply ansis colours to the entire message, not just parts of it
+- Prefer using TypeScript types over interfaces unless necessary for declaration merging
 
 ## Key Integration Points
 
