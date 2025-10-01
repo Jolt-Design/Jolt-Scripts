@@ -2,6 +2,17 @@
 
 This is a TypeScript CLI tool that provides DevOps automation commands for WordPress/Docker development and AWS deployment workflows.
 
+## Communication Style
+- Skip affirmations and compliments. No "great question!" or "you're absolutely right!" - just respond directly
+- Challenge flawed ideas openly when you spot issues
+- Ask clarifying questions whenever my request is ambiguous or unclear
+
+### Example behaviors
+
+- Instead of: "That's a fascinating point!" → Just dive into the response
+- Instead of: Agreeing when something's wrong → "Actually, that's not quite right because…"
+- Instead of: Guessing what I mean → "Are you asking about X or Y specifically?"
+
 ## Core Architecture
 
 ### Command Pattern Implementation
@@ -57,6 +68,8 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Package manager: **Yarn v4 with PnP** (note `.yarn/` in workspace) - NOT npm
 - **Always run `yarn lint --write`** before completing changes - fixes most issues automatically
 - When running a node file, use `yarn node <file>` to ensure PnP context
+- Never update `jolt-config.schema.json` manually - always regenerate via build
+- Use British English throughout the project
 
 ### TypeScript Conventions
 - ES modules (`"type": "module"`) with `.js` imports for TS files in Node.js context
@@ -74,6 +87,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Prefer using top level imports rather than dynamic `await import()`
 - Where possible, apply ansis colours to the entire message, not just parts of it
 - Prefer using TypeScript types over interfaces unless necessary for declaration merging
+- **Never** use inline if statements - always use block form with `{}`. Same for loops.
 
 ## Key Integration Points
 
