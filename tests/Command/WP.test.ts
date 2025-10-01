@@ -767,6 +767,7 @@ describe('WPUpdateModifyCommand', () => {
   })
 
   it('should perform interactive rebase when on update branch with commits', async () => {
+    command.autostash = false // Explicitly set to false to test default behavior
     vi.mocked(execC).mockClear()
     vi.mocked(execC)
       .mockResolvedValueOnce({ stdout: 'joltWpUpdate/2023-10-01', stderr: '', exitCode: 0 } as any) // current branch
@@ -844,6 +845,34 @@ describe('WPUpdateModifyCommand', () => {
 
     expect(result).toBe(0)
     expect(execC).toHaveBeenCalledWith('git', ['rev-list', '--count', 'main..HEAD'], expect.any(Object))
+  })
+
+  it('should add --autostash flag when autostash option is enabled', async () => {
+    command.autostash = true
+    vi.mocked(execC).mockClear()
+    vi.mocked(execC)
+      .mockResolvedValueOnce({ stdout: 'joltWpUpdate/2023-10-01', stderr: '', exitCode: 0 } as any) // current branch
+      .mockResolvedValueOnce({ stdout: '3', stderr: '', exitCode: 0 } as any) // commit count
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // interactive rebase
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(execC).toHaveBeenCalledWith('git', ['rebase', '-i', 'HEAD~3', '--autostash'], expect.any(Object))
+  })
+
+  it('should not add --autostash flag when autostash option is disabled', async () => {
+    command.autostash = false
+    vi.mocked(execC).mockClear()
+    vi.mocked(execC)
+      .mockResolvedValueOnce({ stdout: 'joltWpUpdate/2023-10-01', stderr: '', exitCode: 0 } as any) // current branch
+      .mockResolvedValueOnce({ stdout: '3', stderr: '', exitCode: 0 } as any) // commit count
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // interactive rebase
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(execC).toHaveBeenCalledWith('git', ['rebase', '-i', 'HEAD~3'], expect.any(Object))
   })
 })
 

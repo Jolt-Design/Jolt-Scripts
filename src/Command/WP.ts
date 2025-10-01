@@ -931,6 +931,10 @@ export class WPUpdateModifyCommand extends JoltCommand {
   static paths = [['wp', 'update', 'modify']]
   requiredCommands = ['git']
 
+  autostash = Option.Boolean('--autostash', false, {
+    description: 'Automatically stash and unstash changes before and after the rebase',
+  })
+
   async command(): Promise<number | undefined> {
     const {
       config,
@@ -979,7 +983,13 @@ export class WPUpdateModifyCommand extends JoltCommand {
       stdout.write(ansis.cyan(`📋 Starting interactive rebase for ${commitCount} commits...\n`))
 
       // Run interactive rebase
-      const rebaseResult = await execC(gitCommand, ['rebase', '-i', `HEAD~${commitCount}`], {
+      const rebaseArgs = ['rebase', '-i', `HEAD~${commitCount}`]
+
+      if (this.autostash) {
+        rebaseArgs.push('--autostash')
+      }
+
+      const rebaseResult = await execC(gitCommand, rebaseArgs, {
         context,
         reject: false,
       })
