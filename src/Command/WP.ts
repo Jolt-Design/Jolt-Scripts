@@ -154,6 +154,7 @@ export class WPUpdateCommand extends JoltCommand {
   skipCore = Option.Boolean('--skip-core', false, { description: 'Skip WordPress core updates' })
   skipPlugins = Option.Boolean('--skip-plugins', false, { description: 'Skip plugin updates' })
   skipThemes = Option.Boolean('--skip-themes', false, { description: 'Skip theme updates' })
+  skipLanguages = Option.Boolean('--skip-languages', false, { description: 'Skip language/translation updates' })
 
   async command(): Promise<number | undefined> {
     const {
@@ -162,6 +163,7 @@ export class WPUpdateCommand extends JoltCommand {
       skipCore,
       skipPlugins,
       skipThemes,
+      skipLanguages,
       logo,
     } = this
 
@@ -282,12 +284,20 @@ export class WPUpdateCommand extends JoltCommand {
     const totalUpdates = updatedPluginCount + updatedThemeCount + (updatedCore ? 1 : 0)
     const yarnCommand = await config.command('yarn')
 
+    // Update translations if possible
+    let updatedTranslations = false
+
+    if (!skipLanguages && (totalUpdates > 0 || !branchRef.created)) {
+      stdout.write(ansis.cyan('🌐 Updating translations...\n'))
+      updatedTranslations = await this.maybeUpdateTranslations(branchRef)
+    }
+
     if (totalUpdates > 0 && branchRef.created) {
       stdout.write(ansis.yellow('\nNext steps:\n'))
       stdout.write(`• Review updates: ${ansis.dim(`${yarnCommand} jolt wp update modify`)}\n`)
       // Use root config value directly
       stdout.write(`• Merge to ${await config.get('branch')}: ${ansis.dim(`${yarnCommand} jolt wp update merge`)}\n`)
-    } else if (totalUpdates === 0) {
+    } else if (totalUpdates === 0 && !updatedTranslations) {
       stdout.write(ansis.green('\n✅ No updates available - staying on current branch\n'))
     }
 
@@ -712,6 +722,118 @@ export class WPUpdateCommand extends JoltCommand {
       shell: false,
       env: { SKIP: 'prepare-commit-msg' },
     })
+  }
+
+  private async maybeUpdateTranslations(branchRef: { branch?: string; created: boolean }): Promise<boolean> {
+    const {
+      config,
+      context,
+      context: { stdout, stderr },
+    } = this
+
+    try {
+      const yarnCommand = await config.command('yarn')
+      let hasUpdates = false
+
+      // Update core translations
+      stdout.write('  Checking core translations...')
+      const coreResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'core', 'update'], {
+        reject: false,
+      })
+
+      if (coreResult.exitCode === 0) {
+        const output = String(coreResult.stdout || '')
+
+        if (output.includes('Updated') || output.includes('updated')) {
+          hasUpdates = true
+          stdout.write(ansis.green(' updated\n'))
+        } else {
+          stdout.write(ansis.dim(' up to date\n'))
+        }
+      } else {
+        stdout.write(ansis.dim(' skipped (not available)\n'))
+      }
+
+      // Update plugin translations
+      stdout.write('  Checking plugin translations...')
+      const pluginResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'plugin', 'update', '--all'], {
+        reject: false,
+      })
+
+      if (pluginResult.exitCode === 0) {
+        const output = String(pluginResult.stdout || '')
+
+        if (output.includes('Updated') || output.includes('updated')) {
+          hasUpdates = true
+          stdout.write(ansis.green(' updated\n'))
+        } else {
+          stdout.write(ansis.dim(' up to date\n'))
+        }
+      } else {
+        stdout.write(ansis.dim(' skipped (not available)\n'))
+      }
+
+      // Update theme translations
+      stdout.write('  Checking theme translations...')
+      const themeResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'language', 'theme', 'update', '--all'], {
+        reject: false,
+      })
+
+      if (themeResult.exitCode === 0) {
+        const output = String(themeResult.stdout || '')
+        if (output.includes('Updated') || output.includes('updated')) {
+          hasUpdates = true
+          stdout.write(ansis.green(' updated\n'))
+        } else {
+          stdout.write(ansis.dim(' up to date\n'))
+        }
+      } else {
+        stdout.write(ansis.dim(' skipped (not available)\n'))
+      }
+
+      // If we have translation updates, commit them
+      if (hasUpdates) {
+        const wpConfig = await config.loadWordPressConfig()
+
+        if (!wpConfig) {
+          stderr.write(ansis.red('Failed to load WordPress configuration\n'))
+          return false
+        }
+
+        // Create or ensure we're on the update branch
+        await this.ensureBranchCreated(wpConfig, branchRef)
+
+        const gitCommand = await config.command('git')
+
+        // Add all language files that might have been updated
+        await execC(gitCommand, ['add', wpConfig.wpRoot], { context })
+
+        // Check if there are any changes to commit
+        const statusResult = await execC(gitCommand, ['diff', '--cached', '--exit-code'], {
+          context,
+          reject: false,
+        })
+
+        if (statusResult.exitCode !== 0) {
+          // There are changes to commit
+          await execC(gitCommand, ['commit', '-m', 'Update translations'], {
+            context,
+            shell: false,
+            env: { SKIP: 'prepare-commit-msg' },
+          })
+
+          stdout.write(ansis.green('    Committed translation updates\n'))
+          return true
+        }
+
+        stdout.write(ansis.dim('    No translation files changed\n'))
+      }
+
+      return false
+    } catch (error) {
+      stderr.write(ansis.red(`Error updating translations: ${error}\n`))
+      return false
+    }
   }
 }
 

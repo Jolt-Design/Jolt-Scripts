@@ -918,6 +918,7 @@ describe('WPUpdateCommand', () => {
     command.skipCore = false
     command.skipPlugins = false
     command.skipThemes = false
+    command.skipLanguages = false
 
     // Reset execC mock to return success by default
     vi.mocked(execC).mockResolvedValue({ stdout: '[]', stderr: '', exitCode: 0 } as any)
@@ -941,6 +942,31 @@ describe('WPUpdateCommand', () => {
     expect(result).toBe(0)
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('WordPress Updates'))
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('No updates available'))
+  })
+
+  it('should skip language updates when --skip-languages flag is set', async () => {
+    command.skipLanguages = true
+
+    // Mock that we have some updates to ensure translations would normally run
+    vi.spyOn(command, 'parsePluginJson').mockReturnValue([
+      { name: 'test-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Test Plugin' },
+    ])
+    vi.spyOn(command, 'maybeUpdatePlugin').mockImplementation(async (_plugin, _config, branchRef: any) => {
+      branchRef.branch = 'joltWpUpdate/test-branch'
+      branchRef.created = true
+      return true
+    })
+    vi.spyOn(command, 'parseThemeJson').mockReturnValue([])
+    vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
+
+    // Spy on maybeUpdateTranslations to ensure it's not called
+    const translationsSpy = vi.spyOn(command, 'maybeUpdateTranslations')
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(translationsSpy).not.toHaveBeenCalled()
+    expect(mockContext.stdout.write).not.toHaveBeenCalledWith(expect.stringContaining('Updating translations'))
   })
 
   it('should return error when WordPress config fails to load', async () => {
@@ -1050,6 +1076,7 @@ describe('WPUpdateCommand', () => {
       branchRef.created = true
       return true
     })
+    vi.spyOn(command, 'maybeUpdateTranslations').mockResolvedValue(false)
 
     const result = await command.command()
 
@@ -1057,5 +1084,64 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Next steps:'))
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('jolt wp update modify'))
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('jolt wp update merge'))
+  })
+
+  it('should update translations after component updates', async () => {
+    command.skipPlugins = true
+    command.skipThemes = true
+    command.skipCore = true
+
+    // Mock successful translation update
+    vi.spyOn(command, 'maybeUpdateTranslations').mockResolvedValue(true)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(command.maybeUpdateTranslations).toHaveBeenCalled()
+    expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Updating translations'))
+  })
+
+  it('should commit translation updates with correct message', async () => {
+    command.skipPlugins = true
+    command.skipThemes = true
+    command.skipCore = true
+
+    // Mock the translation update flow
+    const mockTranslationResult = {
+      exitCode: 0,
+      stdout: 'Updated 2 translations',
+      stderr: '',
+    }
+
+    vi.mocked(execC)
+      .mockResolvedValueOnce({ stdout: '[]', stderr: '', exitCode: 0 } as any) // plugins list
+      .mockResolvedValueOnce({ stdout: '[]', stderr: '', exitCode: 0 } as any) // themes list
+      .mockResolvedValueOnce(mockTranslationResult as any) // core language update
+      .mockResolvedValueOnce(mockTranslationResult as any) // plugin language update
+      .mockResolvedValueOnce(mockTranslationResult as any) // theme language update
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git add
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 } as any) // git diff --cached (has changes)
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git commit
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+
+    // Verify git commit was called with correct message
+    expect(vi.mocked(execC)).toHaveBeenCalledWith(
+      'yarn',
+      ['jolt', 'wp', 'cli', 'language', 'core', 'update'],
+      expect.any(Object),
+    )
+    expect(vi.mocked(execC)).toHaveBeenCalledWith(
+      'yarn',
+      ['jolt', 'wp', 'cli', 'language', 'plugin', 'update', '--all'],
+      expect.any(Object),
+    )
+    expect(vi.mocked(execC)).toHaveBeenCalledWith(
+      'yarn',
+      ['jolt', 'wp', 'cli', 'language', 'theme', 'update', '--all'],
+      expect.any(Object),
+    )
   })
 })
