@@ -9,11 +9,26 @@ type PrepareCommandConfig = {
 }
 
 type SiteConfig = Record<string, string>
-type ConfigEntry = string | Array<string | PrepareCommandConfig> | Record<string, SiteConfig>
+type ConfigEntry = string | Array<string | PrepareCommandConfig> | Record<string, SiteConfig> | WordPressUpdatesConfig
+
+type WordPressUpdatesConfig = {
+  doNotUpdate?: string[]
+  pluginFolder?: string
+  themeFolder?: string
+  wpRoot?: string
+}
+
+type WordPressConfig = {
+  doNotUpdate: string[]
+  pluginFolder: string
+  themeFolder: string
+  wpRoot: string
+}
 
 type InternalConfig = Record<string, string> & {
   prepareCommands?: Array<string | PrepareCommandConfig>
   sites?: Record<string, SiteConfig>
+  wpUpdates?: WordPressUpdatesConfig
 }
 
 type CommandOverride = {

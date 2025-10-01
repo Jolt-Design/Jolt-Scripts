@@ -81,6 +81,27 @@ export const JoltConfigSchema = z
     devPluginDelay: z.string().optional().describe('Delay in seconds before activating dev plugins').default('30'),
     wpCliContainer: z.string().optional().describe('Docker container name for WP-CLI operations'),
     wpCliContainerProfile: z.string().optional().describe('Docker Compose profile for WP-CLI container'),
+    wpUpdates: z
+      .object({
+        doNotUpdate: z
+          .array(z.string())
+          .optional()
+          .default([])
+          .describe('List of plugins/themes to skip during updates'),
+        pluginFolder: z
+          .string()
+          .optional()
+          .default('code/wp-content/plugins')
+          .describe('Path to WordPress plugins folder'),
+        themeFolder: z
+          .string()
+          .optional()
+          .default('code/wp-content/themes')
+          .describe('Path to WordPress themes folder'),
+        wpRoot: z.string().optional().default('code/').describe('Path to WordPress root directory'),
+      })
+      .optional()
+      .describe('WordPress automatic update configuration'),
 
     // Command Overrides
     dockerCommand: z.string().optional().describe('Override for docker command').default('docker'),

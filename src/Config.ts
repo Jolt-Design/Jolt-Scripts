@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import dotenv from 'dotenv'
 import resolvePath from 'object-resolve-path'
@@ -508,6 +508,54 @@ export class Config {
         throw new ConfigValidationError(`Invalid prepareCommands configuration:\n${formattedErrors}`)
       }
       throw error
+    }
+  }
+
+  getWordPressUpdatesConfig(): WordPressUpdatesConfig | undefined {
+    return this.config.wpUpdates
+  }
+
+  async loadWordPressConfig(): Promise<WordPressConfig | null> {
+    const wpUpdatesConfig = this.getWordPressUpdatesConfig()
+    if (wpUpdatesConfig) {
+      return {
+        doNotUpdate: wpUpdatesConfig.doNotUpdate || [],
+        pluginFolder: wpUpdatesConfig.pluginFolder || 'code/wp-content/plugins',
+        themeFolder: wpUpdatesConfig.themeFolder || 'code/wp-content/themes',
+        wpRoot: wpUpdatesConfig.wpRoot || 'code/',
+      }
+    }
+
+    // Fall back to legacy config file
+    const legacyConfigPath = '.jolt-wp-updater.json'
+    try {
+      await access(legacyConfigPath)
+      console.warn(`⚠️ Using legacy config file: ${legacyConfigPath}`)
+      console.warn(`⚠️ Consider migrating to 'wpUpdates' in .jolt.json`)
+
+      try {
+        const contents = await readFile(legacyConfigPath, 'utf-8')
+        const json = JSON.parse(contents)
+        return {
+          doNotUpdate: json.doNotUpdate || [],
+          pluginFolder: json.pluginFolder || 'code/wp-content/plugins',
+          themeFolder: json.themeFolder || 'code/wp-content/themes',
+          wpRoot: json.wpRoot || 'code/',
+        }
+      } catch (error) {
+        console.error(`Error reading legacy config: ${error}`)
+        return null
+      }
+    } catch {
+      // File doesn't exist, continue to defaults
+    }
+
+    // Default config
+    return {
+      doNotUpdate: [],
+      pluginFolder: 'code/wp-content/plugins',
+      themeFolder: 'code/wp-content/themes',
+      wpRoot: 'code/',
     }
   }
 

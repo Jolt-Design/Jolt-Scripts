@@ -133,6 +133,36 @@
       "description": "Docker Compose profile for WP-CLI container",
       "type": "string"
     },
+    "wpUpdates": {
+      "description": "WordPress automatic update configuration",
+      "type": "object",
+      "properties": {
+        "doNotUpdate": {
+          "description": "List of plugins/themes to skip during updates",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pluginFolder": {
+          "description": "Path to WordPress plugins folder",
+          "default": "code/wp-content/plugins",
+          "type": "string"
+        },
+        "themeFolder": {
+          "description": "Path to WordPress themes folder",
+          "default": "code/wp-content/themes",
+          "type": "string"
+        },
+        "wpRoot": {
+          "description": "Path to WordPress root directory",
+          "default": "code/",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "dockerCommand": {
       "default": "docker",
       "description": "Override for docker command",

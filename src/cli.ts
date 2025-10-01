@@ -26,7 +26,14 @@ import {
 import { NexcessDeployCommand, NexcessDeployLocalCommand, NexcessDeploySpecificCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
-import { WPCLICommand, WPCommand } from './Command/WP.js'
+import {
+  WPCLICommand,
+  WPCommand,
+  WPUpdateCleanCommand,
+  WPUpdateCommand,
+  WPUpdateMergeCommand,
+  WPUpdateModifyCommand,
+} from './Command/WP.js'
 import { getPackageJson } from './utils.js'
 
 const [_node, _app, ...args] = process.argv
@@ -49,6 +56,10 @@ cli.register(DockerCombinedCommand)
 cli.register(DockerManifestCommand)
 cli.register(WPCommand)
 cli.register(WPCLICommand)
+cli.register(WPUpdateCommand)
+cli.register(WPUpdateMergeCommand)
+cli.register(WPUpdateModifyCommand)
+cli.register(WPUpdateCleanCommand)
 cli.register(ECSDeployCommand)
 cli.register(ECSDeploySpecificCommand)
 cli.register(ECSStatusCommand)
