@@ -989,7 +989,15 @@ describe('WPUpdateCommand', () => {
       // Simulate branch creation and successful update
       branchRef.branch = 'joltWpUpdate/test-branch'
       branchRef.created = true
-      return true
+      return {
+        updated: true,
+        details: {
+          name: 'test-plugin',
+          title: 'Test Plugin',
+          fromVersion: '1.0.0',
+          toVersion: '1.1.0',
+        },
+      }
     })
     vi.spyOn(command, 'parseThemeJson').mockReturnValue([])
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
@@ -1012,7 +1020,15 @@ describe('WPUpdateCommand', () => {
       // Simulate branch creation and successful update
       branchRef.branch = 'joltWpUpdate/test-branch'
       branchRef.created = true
-      return true
+      return {
+        updated: true,
+        details: {
+          name: 'test-theme',
+          title: 'Test Theme',
+          fromVersion: '1.0.0',
+          toVersion: '1.1.0',
+        },
+      }
     })
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue(false)
 
@@ -1053,7 +1069,13 @@ describe('WPUpdateCommand', () => {
 
     // Mock successful core update
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue('6.3.2')
-    vi.spyOn(command, 'maybeUpdateCore').mockResolvedValue(true)
+    vi.spyOn(command, 'maybeUpdateCore').mockResolvedValue({
+      updated: true,
+      details: {
+        fromVersion: '6.3.1',
+        toVersion: '6.3.2',
+      },
+    })
     vi.spyOn(command, 'createBranch').mockResolvedValue('joltWpUpdate/test-branch')
 
     const result = await command.command()
@@ -1074,7 +1096,15 @@ describe('WPUpdateCommand', () => {
       // Simulate branch creation and successful update
       branchRef.branch = 'joltWpUpdate/test-branch'
       branchRef.created = true
-      return true
+      return {
+        updated: true,
+        details: {
+          name: 'test-plugin',
+          title: 'Test Plugin',
+          fromVersion: '1.0.0',
+          toVersion: '1.1.0',
+        },
+      }
     })
     vi.spyOn(command, 'maybeUpdateTranslations').mockResolvedValue(false)
 

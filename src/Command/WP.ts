@@ -21,6 +21,13 @@ type ThemeDetails = {
   title: string
 }
 
+type UpdateSummary = {
+  plugins: Array<{ name: string; title: string; fromVersion: string; toVersion: string }>
+  themes: Array<{ name: string; title: string; fromVersion: string; toVersion: string }>
+  core: { fromVersion: string; toVersion: string } | null
+  translations: boolean
+}
+
 // Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
 const possibleCliArgs = [
   'alias',
@@ -183,6 +190,14 @@ export class WPUpdateCommand extends JoltCommand {
     let updatedThemeCount = 0
     let updatedCore = false
 
+    // Track detailed update information for summary
+    const updateSummary: UpdateSummary = {
+      plugins: [],
+      themes: [],
+      core: null,
+      translations: false,
+    }
+
     // Get current status
     if (!skipPlugins) {
       stdout.write(ansis.cyan('🔌 Checking plugins...\n'))
@@ -233,9 +248,12 @@ export class WPUpdateCommand extends JoltCommand {
           const plugins = this.parsePluginJson(pluginsJson)
 
           for (const plugin of plugins) {
-            const didUpdate = await this.maybeUpdatePlugin(plugin, wpConfig, branchRef)
-            if (didUpdate) {
+            const result = await this.maybeUpdatePlugin(plugin, wpConfig, branchRef)
+            if (result.updated) {
               updatedPluginCount++
+              if (result.details) {
+                updateSummary.plugins.push(result.details)
+              }
             }
           }
         }
@@ -255,9 +273,12 @@ export class WPUpdateCommand extends JoltCommand {
           const themes = this.parseThemeJson(themesJson)
 
           for (const theme of themes) {
-            const didUpdate = await this.maybeUpdateTheme(theme, wpConfig, branchRef)
-            if (didUpdate) {
+            const result = await this.maybeUpdateTheme(theme, wpConfig, branchRef)
+            if (result.updated) {
               updatedThemeCount++
+              if (result.details) {
+                updateSummary.themes.push(result.details)
+              }
             }
           }
         }
@@ -266,7 +287,11 @@ export class WPUpdateCommand extends JoltCommand {
       // Update core
       if (!skipCore) {
         stdout.write(ansis.cyan('📦 Checking WordPress core...\n'))
-        updatedCore = await this.maybeUpdateCore(wpConfig, branchRef)
+        const coreResult = await this.maybeUpdateCore(wpConfig, branchRef)
+        updatedCore = coreResult.updated
+        if (coreResult.updated && coreResult.details) {
+          updateSummary.core = coreResult.details
+        }
       }
     } finally {
       await this.rollbackGitHooks(originalHookPath)
@@ -290,6 +315,37 @@ export class WPUpdateCommand extends JoltCommand {
     if (!skipLanguages && (totalUpdates > 0 || !branchRef.created)) {
       stdout.write(ansis.cyan('🌐 Updating translations...\n'))
       updatedTranslations = await this.maybeUpdateTranslations(branchRef)
+      updateSummary.translations = updatedTranslations
+    }
+
+    // Show detailed update summary
+    if (totalUpdates > 0 || updatedTranslations) {
+      stdout.write(ansis.bold('\n📋 Update Summary:\n'))
+
+      if (updateSummary.plugins.length > 0) {
+        stdout.write(ansis.green('🔌 Plugins updated:\n'))
+        for (const plugin of updateSummary.plugins) {
+          stdout.write(ansis.cyan(`  • ${plugin.title} (${plugin.fromVersion} → ${plugin.toVersion})\n`))
+        }
+      }
+
+      if (updateSummary.themes.length > 0) {
+        stdout.write(ansis.green('🎨 Themes updated:\n'))
+        for (const theme of updateSummary.themes) {
+          stdout.write(ansis.cyan(`  • ${theme.title} (${theme.fromVersion} → ${theme.toVersion})\n`))
+        }
+      }
+
+      if (updateSummary.core) {
+        stdout.write(ansis.green('📦 WordPress core updated:\n'))
+        stdout.write(
+          ansis.cyan(`  • WordPress (${updateSummary.core.fromVersion} → ${updateSummary.core.toVersion})\n`),
+        )
+      }
+
+      if (updateSummary.translations) {
+        stdout.write(ansis.green('🌐 Translations updated\n'))
+      }
     }
 
     if (totalUpdates > 0 && branchRef.created) {
@@ -374,14 +430,14 @@ export class WPUpdateCommand extends JoltCommand {
     plugin: PluginDetails,
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
-  ): Promise<boolean> {
+  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
     const {
       context: { stdout },
     } = this
 
     if (wpConfig.doNotUpdate.includes(plugin.name)) {
       stdout.write(ansis.dim(`  Skipping ${plugin.name} (configured to skip)\n`))
-      return false
+      return { updated: false }
     }
 
     stdout.write(`  Checking ${plugin.name}...`)
@@ -399,21 +455,21 @@ export class WPUpdateCommand extends JoltCommand {
       stdout.write(ansis.red(` unknown status: ${plugin.update}\n`))
     }
 
-    return false
+    return { updated: false }
   }
 
   private async maybeUpdateTheme(
     theme: ThemeDetails,
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
-  ): Promise<boolean> {
+  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
     const {
       context: { stdout },
     } = this
 
     if (wpConfig.doNotUpdate.includes(theme.name)) {
       stdout.write(ansis.dim(`  Skipping ${theme.name} (configured to skip)\n`))
-      return false
+      return { updated: false }
     }
 
     stdout.write(`  Checking ${theme.name}...`)
@@ -431,14 +487,14 @@ export class WPUpdateCommand extends JoltCommand {
       stdout.write(ansis.red(` unknown status: ${theme.update}\n`))
     }
 
-    return false
+    return { updated: false }
   }
 
   private async updatePlugin(
     plugin: PluginDetails,
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
-  ): Promise<boolean> {
+  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
     const {
       config,
       context,
@@ -449,7 +505,7 @@ export class WPUpdateCommand extends JoltCommand {
       const gitCommand = await config.command('git')
       const details = await this.getPluginDetails(plugin.name)
       if (!details) {
-        return false
+        return { updated: false }
       }
 
       const fromVersion = details.version
@@ -464,13 +520,13 @@ export class WPUpdateCommand extends JoltCommand {
 
       if (!updateResultStr) {
         stderr.write(ansis.red(`    Error updating ${plugin.name}\n`))
-        return false
+        return { updated: false }
       }
 
       const newDetails = await this.getPluginDetails(plugin.name)
       if (!newDetails || newDetails.version === details.version) {
         stderr.write(ansis.red('    Update failed!\n'))
-        return false
+        return { updated: false }
       }
 
       // Ensure branch is created before making our first commit
@@ -486,10 +542,18 @@ export class WPUpdateCommand extends JoltCommand {
       })
 
       stdout.write(ansis.green(`    Updated ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
-      return true
+      return {
+        updated: true,
+        details: {
+          name: plugin.name,
+          title: prettyTitle,
+          fromVersion,
+          toVersion: newDetails.version,
+        },
+      }
     } catch (error) {
       stderr.write(ansis.red(`    Error updating ${plugin.name}: ${error}\n`))
-      return false
+      return { updated: false }
     }
   }
 
@@ -497,7 +561,7 @@ export class WPUpdateCommand extends JoltCommand {
     theme: ThemeDetails,
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
-  ): Promise<boolean> {
+  ): Promise<{ updated: boolean; details?: { name: string; title: string; fromVersion: string; toVersion: string } }> {
     const {
       config,
       context,
@@ -508,7 +572,7 @@ export class WPUpdateCommand extends JoltCommand {
       const gitCommand = await config.command('git')
       const details = await this.getThemeDetails(theme.name)
       if (!details) {
-        return false
+        return { updated: false }
       }
 
       const fromVersion = details.version
@@ -523,13 +587,13 @@ export class WPUpdateCommand extends JoltCommand {
 
       if (!updateResultStr) {
         stderr.write(ansis.red(`    Error updating ${theme.name}\n`))
-        return false
+        return { updated: false }
       }
 
       const newDetails = await this.getThemeDetails(theme.name)
       if (!newDetails || newDetails.version === details.version) {
         stderr.write(ansis.red('    Update failed!\n'))
-        return false
+        return { updated: false }
       }
 
       // Ensure branch is created before making our first commit
@@ -545,10 +609,18 @@ export class WPUpdateCommand extends JoltCommand {
       })
 
       stdout.write(ansis.green(`    Updated theme ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
-      return true
+      return {
+        updated: true,
+        details: {
+          name: theme.name,
+          title: prettyTitle,
+          fromVersion,
+          toVersion: newDetails.version,
+        },
+      }
     } catch (error) {
       stderr.write(ansis.red(`    Error updating ${theme.name}: ${error}\n`))
-      return false
+      return { updated: false }
     }
   }
 
@@ -606,7 +678,7 @@ export class WPUpdateCommand extends JoltCommand {
   private async maybeUpdateCore(
     wpConfig: WordPressConfig,
     branchRef: { branch?: string; created: boolean },
-  ): Promise<boolean> {
+  ): Promise<{ updated: boolean; details?: { fromVersion: string; toVersion: string } }> {
     const {
       context: { stdout },
     } = this
@@ -615,8 +687,11 @@ export class WPUpdateCommand extends JoltCommand {
 
     if (!newVersion) {
       stdout.write(ansis.dim('  WordPress core is up to date\n'))
-      return false
+      return { updated: false }
     }
+
+    // Get current version before updating
+    const currentVersion = await this.getCurrentCoreVersion()
 
     stdout.write(ansis.green(`  Updating WordPress core to ${newVersion}\n`))
 
@@ -630,12 +705,34 @@ export class WPUpdateCommand extends JoltCommand {
     try {
       await this.doCoreUpdate(wpConfig.wpRoot, newVersion, wpConfig, branchRef)
       stdout.write(ansis.green(`    Updated WordPress core to ${newVersion}\n`))
-      return true
+      return {
+        updated: true,
+        details: {
+          fromVersion: currentVersion || 'unknown',
+          toVersion: newVersion,
+        },
+      }
     } finally {
       if (shouldStash) {
         stdout.write(ansis.yellow('    Restoring stashed changes...\n'))
         await this.unstashChanges()
       }
+    }
+  }
+
+  private async getCurrentCoreVersion(): Promise<string | null> {
+    const { config } = this
+    try {
+      const yarnCommand = await config.command('yarn')
+      const versionResult = await execC(yarnCommand, ['jolt', 'wp', 'cli', 'core', 'version'], {
+        reject: false,
+      })
+      if (versionResult.exitCode === 0) {
+        return String(versionResult.stdout || '').trim()
+      }
+      return null
+    } catch {
+      return null
     }
   }
 
