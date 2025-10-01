@@ -280,12 +280,13 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     const totalUpdates = updatedPluginCount + updatedThemeCount + (updatedCore ? 1 : 0)
+    const yarnCommand = await config.command('yarn')
 
     if (totalUpdates > 0 && branchRef.created) {
       stdout.write(ansis.yellow('\nNext steps:\n'))
-      stdout.write(`• Review updates: ${ansis.dim('jolt wp update modify')}\n`)
+      stdout.write(`• Review updates: ${ansis.dim(`${yarnCommand} jolt wp update modify`)}\n`)
       // Use root config value directly
-      stdout.write(`• Merge to ${await config.get('branch')}: ${ansis.dim('jolt wp update merge')}\n`)
+      stdout.write(`• Merge to ${await config.get('branch')}: ${ansis.dim(`${yarnCommand} jolt wp update merge`)}\n`)
     } else if (totalUpdates === 0) {
       stdout.write(ansis.green('\n✅ No updates available - staying on current branch\n'))
     }
