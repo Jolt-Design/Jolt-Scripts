@@ -1,6 +1,8 @@
-type PrepareTimingOption = 'early' | 'normal'
+import type { ComposeService } from './compose.js'
 
-type PrepareCommandConfig = {
+export type PrepareTimingOption = 'early' | 'normal'
+
+export type PrepareCommandConfig = {
   cmd: string
   name?: string
   fail?: boolean
@@ -8,36 +10,41 @@ type PrepareCommandConfig = {
   timing?: PrepareTimingOption
 }
 
-type SiteConfig = Record<string, string>
-type ConfigEntry = string | Array<string | PrepareCommandConfig> | Record<string, SiteConfig> | WordPressUpdatesConfig
+export type SiteConfig = Record<string, string>
 
-type WordPressUpdatesConfig = {
+export type ConfigEntry =
+  | string
+  | Array<string | PrepareCommandConfig>
+  | Record<string, SiteConfig>
+  | WordPressUpdatesConfig
+
+export type WordPressUpdatesConfig = {
   doNotUpdate?: string[]
   pluginFolder?: string
   themeFolder?: string
   wpRoot?: string
 }
 
-type WordPressConfig = {
+export type WordPressConfig = {
   doNotUpdate: string[]
   pluginFolder: string
   themeFolder: string
   wpRoot: string
 }
 
-type InternalConfig = Record<string, string> & {
+export type InternalConfig = Record<string, string> & {
   prepareCommands?: Array<string | PrepareCommandConfig>
   sites?: Record<string, SiteConfig>
   wpUpdates?: WordPressUpdatesConfig
 }
 
-type CommandOverride = {
+export type CommandOverride = {
   command: string
   source: string
   sourceType: string
 }
 
-type DBContainerInfo = {
+export type DBContainerInfo = {
   name: string | undefined
   type: 'mysql' | 'mariadb'
   service: ComposeService
@@ -51,7 +58,7 @@ type DBContainerInfo = {
   }
 }
 
-type TerraformOutputJson = {
+export type TerraformOutputJson = {
   sensitive: boolean
   type: string
   // TODO: Not necessarily a string - could be an object

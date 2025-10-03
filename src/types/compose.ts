@@ -1,4 +1,4 @@
-type ComposeNetwork = {
+export type ComposeNetwork = {
   driver?: string
   driver_opts?: Record<string, string>
   attachable?: boolean
@@ -19,7 +19,7 @@ type ComposeNetwork = {
   labels?: Record<string, string>
 }
 
-type ComposeService = {
+export type ComposeService = {
   build?: {
     context: string
     dockerfile: string
@@ -66,7 +66,7 @@ type ComposeService = {
   profiles?: string[]
 }
 
-type ComposeServiceVolume = {
+export type ComposeServiceVolume = {
   type: 'volume' | 'bind' | 'tmpfs' | 'image' | 'npipe' | 'cluster'
   source?: string
   target: string
@@ -90,7 +90,7 @@ type ComposeServiceVolume = {
   consistency: string
 }
 
-type ComposePort = {
+export type ComposePort = {
   name?: string
   mode: 'ingress' | 'host'
   target: number
@@ -100,7 +100,7 @@ type ComposePort = {
   app_protocol?: string
 }
 
-type ComposeVolume = {
+export type ComposeVolume = {
   driver?: string
   driver_opts?: Record<string, string>
   name: string
@@ -108,7 +108,7 @@ type ComposeVolume = {
   labels?: Record<string, string>
 }
 
-type ComposeConfig = {
+export type ComposeConfig = {
   version?: string
   name?: string
   networks: Record<string, ComposeNetwork>

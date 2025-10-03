@@ -5,6 +5,19 @@ import resolvePath from 'object-resolve-path'
 import { z } from 'zod'
 import { ConfigValidationError } from './errors.js'
 import { PrepareCommandsSchema } from './schemas.js'
+import type {
+  CommandOverride,
+  ComposeConfig,
+  ConfigEntry,
+  DBContainerInfo,
+  InternalConfig,
+  PackageJson,
+  PrepareCommandConfig,
+  PrepareTimingOption,
+  TerraformOutputJson,
+  WordPressConfig,
+  WordPressUpdatesConfig,
+} from './types/index.js'
 import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from './utils.js'
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i

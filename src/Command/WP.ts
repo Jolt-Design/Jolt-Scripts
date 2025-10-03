@@ -2,6 +2,7 @@ import { userInfo } from 'node:os'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
+import type { WordPressConfig } from '../types/index.js'
 import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 

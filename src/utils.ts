@@ -7,6 +7,7 @@ import type { Options } from 'execa'
 import { execa } from 'execa'
 import realWhich from 'which'
 import { ContainerRuntimeError } from './errors.js'
+import type { PackageJson } from './types/index.js'
 
 type ExecCOptions = Options & {
   context?: BaseContext

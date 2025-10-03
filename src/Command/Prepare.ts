@@ -4,6 +4,7 @@ import { Option } from 'clipanion'
 import * as t from 'typanion'
 import getConfig from '../Config.js'
 import { ConfigValidationError } from '../errors.js'
+import type { PrepareCommandConfig, PrepareTimingOption } from '../types/index.js'
 import { directoryExists, execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 

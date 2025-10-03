@@ -1,4 +1,4 @@
-type PackageJson = {
+export type PackageJson = {
   name: string
   version: string
   scripts?: Record<string, string>
