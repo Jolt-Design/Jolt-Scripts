@@ -1,16 +1,20 @@
+import type { z } from 'zod'
+import type {
+  JoltConfigSchema,
+  PrepareCommandSchema,
+  PrepareTimingSchema,
+  SiteConfigSchema,
+  WordPressConfigSchema,
+} from '../schemas.js'
 import type { ComposeService } from './compose.js'
 
-export type PrepareTimingOption = 'early' | 'normal'
+export type PrepareTimingOption = z.infer<typeof PrepareTimingSchema>
 
-export type PrepareCommandConfig = {
-  cmd: string
-  name?: string
-  fail?: boolean
-  dir?: string
-  timing?: PrepareTimingOption
-}
+export type PrepareCommandConfig = z.infer<typeof PrepareCommandSchema>
 
-export type SiteConfig = Record<string, string>
+export type SiteConfig = z.infer<typeof SiteConfigSchema>
+
+export type WordPressUpdatesConfig = z.infer<typeof JoltConfigSchema>['wpUpdates']
 
 export type ConfigEntry =
   | string
@@ -18,25 +22,9 @@ export type ConfigEntry =
   | Record<string, SiteConfig>
   | WordPressUpdatesConfig
 
-export type WordPressUpdatesConfig = {
-  doNotUpdate?: string[]
-  pluginFolder?: string
-  themeFolder?: string
-  wpRoot?: string
-}
+export type WordPressConfig = z.infer<typeof WordPressConfigSchema>
 
-export type WordPressConfig = {
-  doNotUpdate: string[]
-  pluginFolder: string
-  themeFolder: string
-  wpRoot: string
-}
-
-export type InternalConfig = Record<string, string> & {
-  prepareCommands?: Array<string | PrepareCommandConfig>
-  sites?: Record<string, SiteConfig>
-  wpUpdates?: WordPressUpdatesConfig
-}
+export type InternalConfig = Partial<z.infer<typeof JoltConfigSchema>>
 
 export type CommandOverride = {
   command: string

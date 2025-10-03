@@ -17,6 +17,14 @@ export const PrepareCommandsSchema = z.array(
 // Site-specific configuration schema
 export const SiteConfigSchema = z.record(z.string(), z.string())
 
+// WordPress resolved configuration schema (with required fields)
+export const WordPressConfigSchema = z.object({
+  doNotUpdate: z.array(z.string()).describe('List of plugins/themes to skip during updates'),
+  pluginFolder: z.string().describe('Path to WordPress plugins folder'),
+  themeFolder: z.string().describe('Path to WordPress themes folder'),
+  wpRoot: z.string().describe('Path to WordPress root directory'),
+})
+
 // Complete Jolt configuration schema
 export const JoltConfigSchema = z
   .object({
