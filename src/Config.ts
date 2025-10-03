@@ -412,9 +412,11 @@ export class Config {
         if (match?.groups) {
           result.name = serviceName
           result.type = match.groups.type.toLowerCase() as DBContainerInfo['type']
-          result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type as string)
-          result.cliCommand = this.getDBCLICommandFromImageType(match.groups?.type as string)
-          result.adminCommand = this.getAdminCLICommandFromImageType(match.groups?.type as string)
+
+          result.dumpCommand = this.getDBDumpCommandFromImageType(match.groups?.type, service.image || undefined)
+          result.cliCommand = this.getDBCLICommandFromImageType(match.groups?.type, service.image || undefined)
+          result.adminCommand = this.getAdminCLICommandFromImageType(match.groups?.type, service.image || undefined)
+
           result.credentials = {
             db: service.environment?.DB_NAME,
             user: service.environment?.DB_USER,
@@ -436,9 +438,9 @@ export class Config {
       if (image) {
         const match = image.match(dbImageRegex)
         result.type = match?.groups?.type.toLowerCase() as DBContainerInfo['type']
-        result.adminCommand = this.getAdminCLICommandFromImageType(match?.groups?.type as string)
-        result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string)
-        result.cliCommand = this.getDBCLICommandFromImageType(match?.groups?.type as string)
+        result.adminCommand = this.getAdminCLICommandFromImageType(match?.groups?.type as string, image)
+        result.dumpCommand = this.getDBDumpCommandFromImageType(match?.groups?.type as string, image)
+        result.cliCommand = this.getDBCLICommandFromImageType(match?.groups?.type as string, image)
       }
     }
 
@@ -675,31 +677,114 @@ export class Config {
     return delaySeconds || DEFAULT_DEV_PLUGIN_DELAY
   }
 
-  private getDBCLICommandFromImageType(type: string): string | undefined {
+  private getDBCLICommandFromImageType(type: string, image?: string): string | undefined {
     switch (type) {
       case 'mysql':
         return 'mysql'
       case 'mariadb':
-        return 'mariadb'
+        return this.getMariaDBCLICommandFromVersion(image)
     }
   }
 
-  private getDBDumpCommandFromImageType(type: string): string | undefined {
+  private getMariaDBCLICommandFromVersion(image?: string): string {
+    if (!image) {
+      // Default to newer command if no image specified
+      return 'mariadb'
+    }
+
+    const version = this.parseMariaDBVersionFromImage(image)
+
+    if (!version) {
+      // Default to newer command if version can't be parsed
+      return 'mariadb'
+    }
+
+    // For MariaDB < 10.5, use mysql for better compatibility
+    // For MariaDB >= 10.5, use mariadb as it's the preferred command
+    if (version.major < 10 || (version.major === 10 && version.minor < 5)) {
+      return 'mysql'
+    }
+
+    return 'mariadb'
+  }
+
+  private getDBDumpCommandFromImageType(type: string, image?: string): string | undefined {
     switch (type) {
       case 'mysql':
         return 'mysqldump'
       case 'mariadb':
-        return 'mariadb-dump'
+        return this.getMariaDBDumpCommandFromVersion(image)
     }
   }
 
-  private getAdminCLICommandFromImageType(type: string): string | undefined {
+  private getMariaDBDumpCommandFromVersion(image?: string): string {
+    if (!image) {
+      // Default to newer command if no image specified
+      return 'mariadb-dump'
+    }
+
+    const version = this.parseMariaDBVersionFromImage(image)
+
+    if (!version) {
+      // Default to newer command if version can't be parsed
+      return 'mariadb-dump'
+    }
+
+    // For MariaDB < 10.5, use mysqldump for better compatibility
+    // For MariaDB >= 10.5, use mariadb-dump as it's the preferred command
+    if (version.major < 10 || (version.major === 10 && version.minor < 5)) {
+      return 'mysqldump'
+    }
+
+    return 'mariadb-dump'
+  }
+
+  private parseMariaDBVersionFromImage(image: string): { major: number; minor: number; patch?: number } | null {
+    // Match various MariaDB image tag patterns:
+    // mariadb:10, mariadb:10.5, mariadb:10.5.8, mariadb:10.5-focal, etc.
+    // Use word boundary to ensure we match exactly "mariadb" and not "not-mariadb"
+    const versionMatch = image.match(/(?:^|\/)\bmariadb:(\d+)(?:\.(\d+)(?:\.(\d+))?)?(?:-|$)/)
+
+    if (!versionMatch) {
+      return null
+    }
+
+    return {
+      major: Number.parseInt(versionMatch[1], 10),
+      minor: versionMatch[2] ? Number.parseInt(versionMatch[2], 10) : 0,
+      patch: versionMatch[3] ? Number.parseInt(versionMatch[3], 10) : undefined,
+    }
+  }
+
+  private getAdminCLICommandFromImageType(type: string, image?: string): string | undefined {
     switch (type) {
       case 'mysql':
         return 'mysqladmin'
       case 'mariadb':
-        return 'mariadb-admin'
+        return this.getMariaDBAdminCommandFromVersion(image)
     }
+  }
+
+  private getMariaDBAdminCommandFromVersion(image?: string): string {
+    if (!image) {
+      // Default to newer command if no image specified
+      return 'mariadb-admin'
+    }
+
+    const version = this.parseMariaDBVersionFromImage(image)
+
+    if (!version) {
+      // Default to newer command if version can't be parsed
+      return 'mariadb-admin'
+    }
+
+    // For MariaDB < 10.5, use mysqladmin for better compatibility
+    // For MariaDB >= 10.5, use mariadb-admin as it's the preferred command
+    if (version.major < 10 || (version.major === 10 && version.minor < 5)) {
+      return 'mysqladmin'
+    }
+
+    return 'mariadb-admin'
   }
 
   private parseTfJson(json: Record<string, TerraformOutputJson>) {

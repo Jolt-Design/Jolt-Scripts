@@ -379,4 +379,141 @@ describe('Config', () => {
       expect(result).toBe('eu-west-1') // The awsRegion method doesn't actually use AWS_DEFAULT_REGION
     })
   })
+
+  describe('MariaDB version detection', () => {
+    describe('parseMariaDBVersionFromImage', () => {
+      it('should parse simple version tags', () => {
+        const parseVersion = (config as any).parseMariaDBVersionFromImage.bind(config)
+
+        expect(parseVersion('mariadb:10.5')).toEqual({ major: 10, minor: 5, patch: undefined })
+        expect(parseVersion('mariadb:11.0')).toEqual({ major: 11, minor: 0, patch: undefined })
+        expect(parseVersion('mariadb:10.4')).toEqual({ major: 10, minor: 4, patch: undefined })
+      })
+
+      it('should parse version tags with patch numbers', () => {
+        const parseVersion = (config as any).parseMariaDBVersionFromImage.bind(config)
+
+        expect(parseVersion('mariadb:10.5.8')).toEqual({ major: 10, minor: 5, patch: 8 })
+        expect(parseVersion('mariadb:11.0.1')).toEqual({ major: 11, minor: 0, patch: 1 })
+        expect(parseVersion('mariadb:10.4.21')).toEqual({ major: 10, minor: 4, patch: 21 })
+      })
+
+      it('should parse version tags with suffixes', () => {
+        const parseVersion = (config as any).parseMariaDBVersionFromImage.bind(config)
+
+        expect(parseVersion('mariadb:10.5-focal')).toEqual({ major: 10, minor: 5, patch: undefined })
+        expect(parseVersion('mariadb:11.0-jammy')).toEqual({ major: 11, minor: 0, patch: undefined })
+        expect(parseVersion('mariadb:10.5.8-focal')).toEqual({ major: 10, minor: 5, patch: 8 })
+      })
+
+      it('should parse major-version-only tags', () => {
+        const parseVersion = (config as any).parseMariaDBVersionFromImage.bind(config)
+
+        expect(parseVersion('mariadb:10')).toEqual({ major: 10, minor: 0, patch: undefined })
+        expect(parseVersion('mariadb:11')).toEqual({ major: 11, minor: 0, patch: undefined })
+        expect(parseVersion('mariadb:10-focal')).toEqual({ major: 10, minor: 0, patch: undefined })
+        expect(parseVersion('mariadb:11-jammy')).toEqual({ major: 11, minor: 0, patch: undefined })
+      })
+
+      it('should return null for invalid formats', () => {
+        const parseVersion = (config as any).parseMariaDBVersionFromImage.bind(config)
+
+        expect(parseVersion('mysql:8.0')).toBeNull()
+        expect(parseVersion('mariadb:latest')).toBeNull()
+        expect(parseVersion('mariadb')).toBeNull()
+        expect(parseVersion('')).toBeNull()
+        expect(parseVersion('not-mariadb:10.5')).toBeNull()
+      })
+    })
+
+    describe('getMariaDBDumpCommandFromVersion', () => {
+      it('should return mariadb-dump for MariaDB >= 10.5', () => {
+        const getCommand = (config as any).getMariaDBDumpCommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.5')).toBe('mariadb-dump')
+        expect(getCommand('mariadb:10.6')).toBe('mariadb-dump')
+        expect(getCommand('mariadb:11.0')).toBe('mariadb-dump')
+        expect(getCommand('mariadb:11.2.1')).toBe('mariadb-dump')
+        expect(getCommand('mariadb:11')).toBe('mariadb-dump')
+      })
+
+      it('should return mysqldump for MariaDB < 10.5', () => {
+        const getCommand = (config as any).getMariaDBDumpCommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.4')).toBe('mysqldump')
+        expect(getCommand('mariadb:10.3')).toBe('mysqldump')
+        expect(getCommand('mariadb:10.0')).toBe('mysqldump')
+        expect(getCommand('mariadb:5.5')).toBe('mysqldump')
+        expect(getCommand('mariadb:10')).toBe('mysqldump')
+      })
+
+      it('should return mariadb-dump as default when no image provided', () => {
+        const getCommand = (config as any).getMariaDBDumpCommandFromVersion.bind(config)
+
+        expect(getCommand()).toBe('mariadb-dump')
+        expect(getCommand(undefined)).toBe('mariadb-dump')
+      })
+
+      it('should return mariadb-dump as default when version cannot be parsed', () => {
+        const getCommand = (config as any).getMariaDBDumpCommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:latest')).toBe('mariadb-dump')
+        expect(getCommand('mariadb')).toBe('mariadb-dump')
+        expect(getCommand('invalid')).toBe('mariadb-dump')
+      })
+    })
+
+    describe('getMariaDBCLICommandFromVersion', () => {
+      it('should return mariadb for MariaDB >= 10.5', () => {
+        const getCommand = (config as any).getMariaDBCLICommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.5')).toBe('mariadb')
+        expect(getCommand('mariadb:11.0')).toBe('mariadb')
+        expect(getCommand('mariadb:11')).toBe('mariadb')
+      })
+
+      it('should return mysql for MariaDB < 10.5', () => {
+        const getCommand = (config as any).getMariaDBCLICommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.4')).toBe('mysql')
+        expect(getCommand('mariadb:10.3')).toBe('mysql')
+        expect(getCommand('mariadb:10')).toBe('mysql')
+      })
+    })
+
+    describe('getMariaDBAdminCommandFromVersion', () => {
+      it('should return mariadb-admin for MariaDB >= 10.5', () => {
+        const getCommand = (config as any).getMariaDBAdminCommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.5')).toBe('mariadb-admin')
+        expect(getCommand('mariadb:11.0')).toBe('mariadb-admin')
+        expect(getCommand('mariadb:11')).toBe('mariadb-admin')
+      })
+
+      it('should return mysqladmin for MariaDB < 10.5', () => {
+        const getCommand = (config as any).getMariaDBAdminCommandFromVersion.bind(config)
+
+        expect(getCommand('mariadb:10.4')).toBe('mysqladmin')
+        expect(getCommand('mariadb:10.3')).toBe('mysqladmin')
+        expect(getCommand('mariadb:10')).toBe('mysqladmin')
+      })
+    })
+
+    describe('getDBDumpCommandFromImageType integration', () => {
+      it('should return mysqldump for MySQL images', () => {
+        const getCommand = (config as any).getDBDumpCommandFromImageType.bind(config)
+
+        expect(getCommand('mysql', 'mysql:8.0')).toBe('mysqldump')
+        expect(getCommand('mysql', 'mysql:5.7')).toBe('mysqldump')
+      })
+
+      it('should return version-appropriate command for MariaDB images', () => {
+        const getCommand = (config as any).getDBDumpCommandFromImageType.bind(config)
+
+        expect(getCommand('mariadb', 'mariadb:10.4')).toBe('mysqldump')
+        expect(getCommand('mariadb', 'mariadb:10.5')).toBe('mariadb-dump')
+        expect(getCommand('mariadb', 'mariadb:11.0')).toBe('mariadb-dump')
+      })
+    })
+  })
 })
