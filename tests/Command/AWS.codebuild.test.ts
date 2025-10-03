@@ -10,6 +10,7 @@ const mockAbortController = {
   signal: { aborted: false },
   abort: vi.fn(),
 }
+
 global.AbortController = vi.fn(() => mockAbortController) as any
 
 // Test implementation that extends CodeBuildStartCommand to access protected methods
@@ -68,6 +69,7 @@ describe('CodeBuildStartCommand', () => {
           buildNumber: 1,
         },
       }
+
       // Mock execC for build start
       ;(execC as Mock).mockResolvedValueOnce({
         stdout: JSON.stringify(mockBuildOutput),

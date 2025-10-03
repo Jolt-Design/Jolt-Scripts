@@ -79,6 +79,7 @@ export class ECSDeployCommand extends AWSCommand {
       dev,
       context: { stdout, stderr },
     } = this
+
     const awsCommand = await config.command('aws')
 
     let cluster = await config.get(dev ? 'devEcsCluster' : 'ecsCluster')

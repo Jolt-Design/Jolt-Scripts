@@ -6,6 +6,7 @@ export type {
   ComposeServiceVolume,
   ComposeVolume,
 } from './compose.js'
+
 export type {
   CommandOverride,
   ConfigEntry,
@@ -18,4 +19,5 @@ export type {
   WordPressConfig,
   WordPressUpdatesConfig,
 } from './config.js'
+
 export type { PackageJson } from './package.js'
