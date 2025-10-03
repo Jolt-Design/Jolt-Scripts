@@ -313,16 +313,31 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     if (totalUpdates > 0 && branchRef.created) {
-      const yarnCommand = await config.command('yarn')
       stdout.write(ansis.yellow('\nNext steps:\n'))
-      stdout.write(`• Review updates: ${ansis.dim(`${yarnCommand} jolt wp update modify`)}\n`)
+      stdout.write(`• Review updates: ${ansis.dim(await this.getUpdateCommand('modify'))}\n`)
       // Use root config value directly
-      stdout.write(`• Merge to ${await config.get('branch')}: ${ansis.dim(`${yarnCommand} jolt wp update merge`)}\n`)
+      stdout.write(`• Merge to ${await config.get('branch')}: ${ansis.dim(await this.getUpdateCommand('merge'))}\n`)
     } else if (totalUpdates === 0 && !updatedTranslations) {
       stdout.write(ansis.green('\n✅ No updates available - staying on current branch\n'))
     }
 
     return 0
+  }
+
+  // Helper method to get the appropriate command format (short or long form)
+  private async getUpdateCommand(subCommand: string): Promise<string> {
+    const { config } = this
+    const yarnCommand = await config.command('yarn')
+    const packageJson = await config.getPackageJson()
+
+    // Check if there's an 'update' script that acts as a shortcut for 'jolt wp update'
+    const updateScript = packageJson?.scripts?.update
+    if (updateScript && (updateScript === 'jolt wp update' || updateScript.startsWith('jolt wp update '))) {
+      return `${yarnCommand} update ${subCommand}`
+    }
+
+    // Fall back to the full command
+    return `${yarnCommand} jolt wp update ${subCommand}`
   }
 
   // Helper method to execute WP CLI commands

@@ -1144,6 +1144,47 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('jolt wp update merge'))
   })
 
+  it('should suggest short form commands when update script exists', async () => {
+    command.skipThemes = true
+    command.skipCore = true
+
+    // Mock package.json with update script shortcut
+    vi.spyOn(mockConfig, 'getPackageJson').mockResolvedValue({
+      scripts: {
+        update: 'jolt wp update',
+      },
+    } as any)
+
+    // Mock successful plugin update
+    vi.spyOn(command, 'processItemUpdates').mockImplementation(
+      async (type: any, skip: any, _config: any, branchRef: any) => {
+        if (type === 'plugin' && !skip) {
+          branchRef.branch = 'joltWpUpdate/test-branch'
+          branchRef.created = true
+          return {
+            count: 1,
+            details: [
+              {
+                name: 'test-plugin',
+                title: 'Test Plugin',
+                fromVersion: '1.0.0',
+                toVersion: '1.1.0',
+              },
+            ],
+          }
+        }
+        return { count: 0, details: [] }
+      },
+    )
+    vi.spyOn(command, 'maybeUpdateTranslations').mockResolvedValue(false)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('yarn update modify'))
+    expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('yarn update merge'))
+  })
+
   it('should update translations after component updates', async () => {
     command.skipPlugins = true
     command.skipThemes = true
