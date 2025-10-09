@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream } from 'node:fs'
+import { createReadStream, createWriteStream, statSync } from 'node:fs'
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
@@ -9,6 +9,108 @@ import { execa } from 'execa'
 import * as t from 'typanion'
 import { delay, execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
+
+/**
+ * Format file size in human readable format
+ */
+function formatFileSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = bytes
+  let unitIndex = 0
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex++
+  }
+
+  return `${size.toFixed(1)} ${units[unitIndex]}`
+}
+
+/**
+ * Get database size in bytes
+ */
+async function getDatabaseSize(
+  composeCommand: string,
+  composeArgs: string[],
+  containerInfo: { name: string; cliCommand: string; credentials: { db: string; user: string; pass: string } },
+): Promise<number | null> {
+  try {
+    const { name: container, cliCommand, credentials } = containerInfo
+
+    // SQL query to get database size in bytes
+    const sizeQuery = `SELECT SUM(data_length + index_length) AS size_bytes FROM information_schema.tables WHERE table_schema = '${credentials.db}';`
+
+    const result = await execC(
+      composeCommand,
+      [
+        ...composeArgs,
+        'exec',
+        container,
+        cliCommand,
+        '-h',
+        '127.0.0.1',
+        '-u',
+        credentials.user,
+        `-p${credentials.pass}`,
+        credentials.db,
+        '-e',
+        sizeQuery,
+        '--skip-column-names',
+      ],
+      {
+        shell: false,
+        reject: false,
+      },
+    )
+
+    if (result.exitCode === 0 && result.stdout != null) {
+      // Convert stdout to string regardless of its type
+      const stdoutStr = String(result.stdout).trim()
+
+      const sizeBytes = Number.parseInt(stdoutStr, 10)
+      return Number.isNaN(sizeBytes) ? null : sizeBytes
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Monitor file size and show progress
+ */
+function startProgressMonitor(filePath: string, stderr: NodeJS.WritableStream, expectedSize?: number): () => void {
+  const startTime = Date.now()
+
+  const interval = setInterval(() => {
+    try {
+      const stats = statSync(filePath)
+      const currentSize = stats.size
+      const elapsed = Math.floor((Date.now() - startTime) / 1000)
+      const bytesPerSecond = elapsed > 0 ? currentSize / elapsed : 0
+      const rate = formatFileSize(bytesPerSecond)
+
+      let progressText = `🛢️ Dumping... ${formatFileSize(currentSize)} written (${rate}/s, ${elapsed}s elapsed)`
+
+      if (expectedSize && expectedSize > 0) {
+        const percentage = Math.min(100, Math.floor((currentSize / expectedSize) * 100))
+        progressText = `🛢️ Dumping... ${formatFileSize(currentSize)}/${formatFileSize(expectedSize)} (${percentage}%, ${rate}/s, ${elapsed}s elapsed)`
+      }
+
+      // Clear previous line and show progress
+      stderr.write('\r\x1b[K') // Clear line
+      stderr.write(ansis.blue(progressText))
+    } catch {
+      // File might not exist yet, ignore errors
+    }
+  }, 1000) // Update every second
+
+  return () => {
+    clearInterval(interval)
+    stderr.write('\r\x1b[K') // Clear progress line
+  }
+}
 
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
@@ -51,7 +153,7 @@ export class DBDumpCommand extends JoltCommand {
       return 2
     }
 
-    const { name: container, dumpCommand, credentials } = containerInfo
+    const { name: container, dumpCommand, credentials, cliCommand } = containerInfo
     const backupPath = backup ? await config.get('dbBackupPath') : undefined
     let filePath = backup ? path.resolve(backupPath as string, filename) : path.resolve(filename)
 
@@ -61,6 +163,25 @@ export class DBDumpCommand extends JoltCommand {
     }
 
     stdout.write(ansis.blue(`🛢️ Dumping contents of the DB in container '${container}' to ${filePath}...\n`))
+
+    // Try to get database size for progress estimation
+    let dbSize: number | null = null
+    if (cliCommand && credentials.db && credentials.user && credentials.pass) {
+      stdout.write(ansis.blue('🛢️ Getting database size for progress estimation...\n'))
+      dbSize = await getDatabaseSize(composeCommand, args, {
+        name: container || '',
+        cliCommand,
+        credentials: {
+          db: credentials.db,
+          user: credentials.user,
+          pass: credentials.pass,
+        },
+      })
+
+      if (dbSize) {
+        stdout.write(ansis.blue(`🛢️ Database size: ${formatFileSize(dbSize)}\n`))
+      }
+    }
 
     args.push(
       'exec',
@@ -73,11 +194,20 @@ export class DBDumpCommand extends JoltCommand {
       credentials.db || '',
     )
 
-    const result = await execa(composeCommand, args, {
-      buffer: { stdout: false },
-      stderr,
-      stdout: { file: filePath },
-    })
+    // Start progress monitoring
+    const stopProgress = startProgressMonitor(filePath, stderr, dbSize || undefined)
+
+    let result: Awaited<ReturnType<typeof execa>>
+    try {
+      result = await execa(composeCommand, args, {
+        buffer: { stdout: false },
+        stderr,
+        stdout: { file: filePath },
+      })
+    } finally {
+      // Always stop progress monitoring
+      stopProgress()
+    }
 
     if (shouldGzip) {
       if (await which('gzip')) {

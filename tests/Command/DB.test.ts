@@ -1,6 +1,12 @@
+import { createReadStream, createWriteStream, statSync } from 'node:fs'
+import { unlink } from 'node:fs/promises'
+import { pipeline } from 'node:stream/promises'
+import { createGzip } from 'node:zlib'
+import { execa } from 'execa'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DBDumpCommand } from '../../src/Command/DB.js'
 import type { Config } from '../../src/Config.js'
+import { execC, which } from '../../src/utils.js'
 
 vi.mock('../../src/utils.js', () => ({
   execC: vi.fn(),
@@ -17,10 +23,15 @@ vi.mock('node:zlib', () => ({
   createGzip: vi.fn(),
 }))
 
-vi.mock('node:fs', () => ({
-  createReadStream: vi.fn(),
-  createWriteStream: vi.fn(),
-}))
+vi.mock('node:fs', async (importOriginal) => {
+  const actual: object = await importOriginal()
+  return {
+    ...actual,
+    createReadStream: vi.fn(),
+    createWriteStream: vi.fn(),
+    statSync: vi.fn(),
+  }
+})
 
 vi.mock('node:fs/promises', () => ({
   unlink: vi.fn(),
@@ -66,25 +77,23 @@ describe('DBDumpCommand', () => {
     command.backup = false
 
     // Mock execa to return successful result
-    const { execa } = await import('execa')
     vi.mocked(execa).mockResolvedValue({ exitCode: 0 } as any)
 
     // Setup Node.js module mocks
-    const { pipeline } = await import('node:stream/promises')
-    const { createGzip } = await import('node:zlib')
-    const { createReadStream, createWriteStream } = await import('node:fs')
-    const { unlink } = await import('node:fs/promises')
-
     vi.mocked(pipeline).mockResolvedValue(undefined)
     vi.mocked(createGzip).mockReturnValue('gzip-stream' as any)
     vi.mocked(createReadStream).mockReturnValue('read-stream' as any)
     vi.mocked(createWriteStream).mockReturnValue('write-stream' as any)
     vi.mocked(unlink).mockResolvedValue(undefined)
+
+    // Mock statSync for progress monitoring
+    vi.mocked(statSync).mockReturnValue({ size: 1024 } as any)
+
+    // Mock execC for database size queries - default to failure so tests don't expect db size queries
+    vi.mocked(execC).mockResolvedValue({ exitCode: 1, stdout: '', stderr: '', failed: true } as any)
   })
 
   it('should use external gzip when available', async () => {
-    const { which } = await import('../../src/utils.js')
-
     // Explicitly set backup to false
     command.backup = false
 
@@ -103,6 +112,9 @@ describe('DBDumpCommand', () => {
     vi.mocked(mockConfig.getDBContainerInfo).mockResolvedValue({
       name: 'test-db',
       dumpCommand: 'mysqldump',
+      cliCommand: 'mysql',
+      adminCommand: 'mysqladmin',
+      type: 'mysql' as const,
       credentials: { user: 'root', pass: 'password', db: 'testdb' },
       service: {},
     })
@@ -116,12 +128,6 @@ describe('DBDumpCommand', () => {
   })
 
   it('should fallback to Node zlib when gzip is not available', async () => {
-    const { which } = await import('../../src/utils.js')
-    const { pipeline } = await import('node:stream/promises')
-    const { createGzip } = await import('node:zlib')
-    const { createReadStream, createWriteStream } = await import('node:fs')
-    const { unlink } = await import('node:fs/promises')
-
     // Explicitly set backup to false
     command.backup = false
 
@@ -140,6 +146,9 @@ describe('DBDumpCommand', () => {
     vi.mocked(mockConfig.getDBContainerInfo).mockResolvedValue({
       name: 'test-db',
       dumpCommand: 'mysqldump',
+      cliCommand: 'mysql',
+      adminCommand: 'mysqladmin',
+      type: 'mysql' as const,
       credentials: { user: 'root', pass: 'password', db: 'testdb' },
       service: {},
     })
@@ -161,9 +170,6 @@ describe('DBDumpCommand', () => {
   })
 
   it('should handle zlib compression errors for backup files', async () => {
-    const { which } = await import('../../src/utils.js')
-    const { pipeline } = await import('node:stream/promises')
-
     command.backup = true
 
     // Mock gzip not being available
@@ -181,6 +187,9 @@ describe('DBDumpCommand', () => {
     vi.mocked(mockConfig.getDBContainerInfo).mockResolvedValue({
       name: 'test-db',
       dumpCommand: 'mysqldump',
+      cliCommand: 'mysql',
+      adminCommand: 'mysqladmin',
+      type: 'mysql' as const,
       credentials: { user: 'root', pass: 'password', db: 'testdb' },
       service: {},
     })
@@ -199,9 +208,6 @@ describe('DBDumpCommand', () => {
   })
 
   it('should return error code for zlib compression errors on non-backup files', async () => {
-    const { which } = await import('../../src/utils.js')
-    const { pipeline } = await import('node:stream/promises')
-
     // Explicitly set backup to false
     command.backup = false
 
@@ -220,6 +226,9 @@ describe('DBDumpCommand', () => {
     vi.mocked(mockConfig.getDBContainerInfo).mockResolvedValue({
       name: 'test-db',
       dumpCommand: 'mysqldump',
+      cliCommand: 'mysql',
+      adminCommand: 'mysqladmin',
+      type: 'mysql' as const,
       credentials: { user: 'root', pass: 'password', db: 'testdb' },
       service: {},
     })
@@ -238,9 +247,6 @@ describe('DBDumpCommand', () => {
   })
 
   it('should not attempt gzipping when filename does not end with .gz', async () => {
-    const { which } = await import('../../src/utils.js')
-    const { pipeline } = await import('node:stream/promises')
-
     // Explicitly set backup to false
     command.backup = false
 
@@ -256,6 +262,9 @@ describe('DBDumpCommand', () => {
     vi.mocked(mockConfig.getDBContainerInfo).mockResolvedValue({
       name: 'test-db',
       dumpCommand: 'mysqldump',
+      cliCommand: 'mysql',
+      adminCommand: 'mysqladmin',
+      type: 'mysql' as const,
       credentials: { user: 'root', pass: 'password', db: 'testdb' },
       service: {},
     })
