@@ -220,7 +220,7 @@ export class Config {
     }
 
     try {
-      return resolvePath(this.tfCache, key)
+      return this.tfCache ? resolvePath(this.tfCache, key) : undefined
     } catch {
       return undefined
     }
