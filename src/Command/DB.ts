@@ -116,6 +116,7 @@ export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
   requiredCommands = ['docker', 'compose']
   backup = Option.Boolean('--backup', false, { description: 'Create a timestamped backup file' })
+  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress progress output' })
 
   getRequiredConfig(): string[] {
     return this.backup ? ['dbBackupPath'] : ['dbSeed']
@@ -124,6 +125,7 @@ export class DBDumpCommand extends JoltCommand {
   async command(): Promise<number | undefined> {
     const {
       backup,
+      quiet,
       config,
       context: { stdout, stderr },
     } = this
@@ -162,12 +164,18 @@ export class DBDumpCommand extends JoltCommand {
       filePath = filePath.replace(/\.gz$/, '')
     }
 
-    stdout.write(ansis.blue(`🛢️ Dumping contents of the DB in container '${container}' to ${filePath}...\n`))
+    if (!quiet) {
+      stdout.write(ansis.blue(`🛢️ Dumping contents of the DB in container '${container}' to ${filePath}...\n`))
+    }
 
     // Try to get database size for progress estimation
     let dbSize: number | null = null
+
     if (cliCommand && credentials.db && credentials.user && credentials.pass) {
-      stdout.write(ansis.blue('🛢️ Getting database size for progress estimation...\n'))
+      if (!quiet) {
+        stdout.write(ansis.blue('🛢️ Getting database size for progress estimation...\n'))
+      }
+
       dbSize = await getDatabaseSize(composeCommand, args, {
         name: container || '',
         cliCommand,
@@ -178,7 +186,7 @@ export class DBDumpCommand extends JoltCommand {
         },
       })
 
-      if (dbSize) {
+      if (dbSize && !quiet) {
         stdout.write(ansis.blue(`🛢️ Database size: ${formatFileSize(dbSize)}\n`))
       }
     }
@@ -194,8 +202,8 @@ export class DBDumpCommand extends JoltCommand {
       credentials.db || '',
     )
 
-    // Start progress monitoring
-    const stopProgress = startProgressMonitor(filePath, stderr, dbSize || undefined)
+    // Start progress monitoring (only if not quiet)
+    const stopProgress = quiet ? () => {} : startProgressMonitor(filePath, stderr, dbSize || undefined)
 
     let result: Awaited<ReturnType<typeof execa>>
     try {
@@ -252,7 +260,9 @@ export class DBDumpCommand extends JoltCommand {
       }
     }
 
-    stdout.write(ansis.blue(`🛢️ Successfully dumped contents of the DB in container '${container}' to ${filePath}.\n`))
+    if (!quiet) {
+      stdout.write(ansis.blue(`🛢️ Successfully dumped contents of the DB in container '${container}' to ${filePath}.\n`))
+    }
 
     return result.exitCode
   }
@@ -261,6 +271,7 @@ export class DBDumpCommand extends JoltCommand {
 export class DBResetCommand extends JoltCommand {
   static paths = [['db', 'reset']]
   requiredCommands = ['docker', 'compose']
+  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
 
   async command(): Promise<number | undefined> {
     const {
@@ -268,9 +279,13 @@ export class DBResetCommand extends JoltCommand {
       cli,
       context,
       context: { stdout, stderr },
+      quiet,
     } = this
 
-    stdout.write(ansis.blue('🛢️ Backing up current database...\n'))
+    if (!quiet) {
+      stdout.write(ansis.blue('🛢️ Backing up current database...\n'))
+    }
+
     const backupResult = await cli.run(['db', 'dump', '--backup'], context)
 
     if (backupResult > 0) {
@@ -279,7 +294,10 @@ export class DBResetCommand extends JoltCommand {
     }
 
     const [composeCommand, args] = await config.getComposeCommand()
-    stdout.write(ansis.blue('🛢️ Bringing containers down...\n'))
+    if (!quiet) {
+      stdout.write(ansis.blue('🛢️ Bringing containers down...\n'))
+    }
+
     await execC(composeCommand, [...args, 'down'], { context })
 
     const composeConfig = await config.getComposeConfig()
@@ -309,18 +327,27 @@ export class DBResetCommand extends JoltCommand {
         fullVolumeNames.push(volumes[volume].name)
       }
 
-      stdout.write(ansis.blue(`🛢️ Deleting the following volumes: ${fullVolumeNames.join(', ')}\n`))
+      if (!quiet) {
+        stdout.write(ansis.blue(`🛢️ Deleting the following volumes: ${fullVolumeNames.join(', ')}\n`))
+      }
+
       await execC(await config.command('docker'), ['volume', 'rm', ...fullVolumeNames], {
         stdout: 'ignore',
         stderr,
         reject: false,
       })
-      stdout.write(ansis.blue('🛢️ Deleted volumes.\n'))
-    } else {
+
+      if (!quiet) {
+        stdout.write(ansis.blue('🛢️ Deleted volumes.\n'))
+      }
+    } else if (!quiet) {
       stdout.write(ansis.yellow(`🛢️ Didn't find any DB or cache volumes to delete. Maybe there's a config issue?\n`))
     }
 
-    stdout.write(ansis.blue('🛢️ Bringing containers back up...\n'))
+    if (!quiet) {
+      stdout.write(ansis.blue('🛢️ Bringing containers back up...\n'))
+    }
+
     await execC(composeCommand, [...args, 'up', '--detach'], { context })
     const devPlugins = await await config.get('devPlugins')
 
@@ -329,22 +356,35 @@ export class DBResetCommand extends JoltCommand {
       let delaySeconds = Number.parseFloat(devPluginDelay || '5')
 
       if (Number.isNaN(delaySeconds)) {
-        stdout.write(
-          ansis.yellow(`🛢️ Unreadable devPluginDelay config value "${devPluginDelay}". Defaulting to 5 seconds.\n`),
-        )
+        if (!quiet) {
+          stdout.write(
+            ansis.yellow(`🛢️ Unreadable devPluginDelay config value "${devPluginDelay}". Defaulting to 5 seconds.\n`),
+          )
+        }
+
         delaySeconds = 5
       }
 
       if (delaySeconds > 0) {
         const delayMs = delaySeconds * 1000
-        stdout.write(ansis.blue(`🛢️ Waiting for ${delaySeconds} seconds for DB to populate...\n`))
+
+        if (!quiet) {
+          stdout.write(ansis.blue(`🛢️ Waiting for ${delaySeconds} seconds for DB to populate...\n`))
+        }
+
         await delay(delayMs)
       }
 
-      stdout.write(ansis.blue('🛢️ Activating dev plugins...\n'))
+      if (!quiet) {
+        stdout.write(ansis.blue('🛢️ Activating dev plugins...\n'))
+      }
+
       await cli.run(['wp', 'plugin', 'activate', ...devPlugins.split(',').map((x) => x.trim())], context)
 
-      stdout.write(ansis.blue('🛢️ Done resetting DB!\n'))
+      if (!quiet) {
+        stdout.write(ansis.blue('🛢️ Done resetting DB!\n'))
+      }
+
       return 0
     }
   }
