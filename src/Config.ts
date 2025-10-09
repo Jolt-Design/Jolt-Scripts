@@ -43,6 +43,9 @@ export class Config {
   private site: string | undefined
   private tfCache: Record<string, string> | undefined
   private packageJsonCache: PackageJson | false | undefined
+  private parseArgCache: Map<string, Promise<string>> = new Map()
+  private composeCommandCache: [string, string[]] | undefined
+  private wordPressConfigCache: WordPressConfig | null | undefined
 
   get configPath() {
     return this._configPath
@@ -340,9 +343,16 @@ export class Config {
   }
 
   async getComposeCommand(): Promise<[string, string[]]> {
+    if (this.composeCommandCache) {
+      return this.composeCommandCache
+    }
+
     const command = await this.command('compose')
     const parts = command.split(' ')
-    return [parts[0], parts.slice(1)]
+    const result: [string, string[]] = [parts[0], parts.slice(1)]
+
+    this.composeCommandCache = result
+    return result
   }
 
   async getCacheContainerInfo() {
@@ -531,14 +541,21 @@ export class Config {
   }
 
   async loadWordPressConfig(): Promise<WordPressConfig | null> {
+    if (this.wordPressConfigCache !== undefined) {
+      return this.wordPressConfigCache
+    }
+
     const wpUpdatesConfig = this.getWordPressUpdatesConfig()
     if (wpUpdatesConfig) {
-      return {
+      const config = {
         doNotUpdate: wpUpdatesConfig.doNotUpdate || [],
         pluginFolder: wpUpdatesConfig.pluginFolder || 'code/wp-content/plugins',
         themeFolder: wpUpdatesConfig.themeFolder || 'code/wp-content/themes',
         wpRoot: wpUpdatesConfig.wpRoot || 'code/',
       }
+
+      this.wordPressConfigCache = config
+      return config
     }
 
     // Fall back to legacy config file
@@ -551,14 +568,18 @@ export class Config {
       try {
         const contents = await readFile(legacyConfigPath, 'utf-8')
         const json = JSON.parse(contents)
-        return {
+        const config = {
           doNotUpdate: json.doNotUpdate || [],
           pluginFolder: json.pluginFolder || 'code/wp-content/plugins',
           themeFolder: json.themeFolder || 'code/wp-content/themes',
           wpRoot: json.wpRoot || 'code/',
         }
+
+        this.wordPressConfigCache = config
+        return config
       } catch (error) {
         console.error(`Error reading legacy config: ${error}`)
+        this.wordPressConfigCache = null
         return null
       }
     } catch {
@@ -566,12 +587,15 @@ export class Config {
     }
 
     // Default config
-    return {
+    const defaultConfig = {
       doNotUpdate: [],
       pluginFolder: 'code/wp-content/plugins',
       themeFolder: 'code/wp-content/themes',
       wpRoot: 'code/',
     }
+
+    this.wordPressConfigCache = defaultConfig
+    return defaultConfig
   }
 
   asJson() {
@@ -584,7 +608,21 @@ export class Config {
   }
 
   async parseArg(arg: string, params: Record<string, string> = {}): Promise<string> {
-    return await replaceAsync(arg, ARG_REGEX, async (x, ...args) => await this.parseArgCallback(x, params, ...args))
+    // Create a cache key that includes both the arg and params for uniqueness
+    const cacheKey = `${arg}::${JSON.stringify(params)}`
+
+    if (this.parseArgCache.has(cacheKey)) {
+      const cachedPromise = this.parseArgCache.get(cacheKey)
+
+      if (cachedPromise) {
+        return await cachedPromise
+      }
+    }
+
+    const promise = replaceAsync(arg, ARG_REGEX, async (x, ...args) => await this.parseArgCallback(x, params, ...args))
+    this.parseArgCache.set(cacheKey, promise)
+
+    return await promise
   }
 
   private async parseArgCallback(
