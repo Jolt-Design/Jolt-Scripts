@@ -49,16 +49,19 @@ export class RsyncCommand extends JoltCommand {
       dryRun,
     } = this
 
-    const sshCommand = await config.command('ssh')
-    const rsyncCommand = await config.command('rsync')
-    const sshPort = (await config.get('sshPort')) || '22'
+    const [sshCommand, rsyncCommand, sshPort, sshAccount, contentFolder] = await Promise.all([
+      config.command('ssh'),
+      config.command('rsync'),
+      config.get('sshPort').then((port) => port || '22'),
+      dev ? config.get('devSshAccount') : config.get('sshAccount'),
+      dev ? config.get('devFolder') : config.get('liveFolder'),
+    ])
     const dryRunArg = dryRun ? '--dry-run' : ''
-    const sshAccount = dev ? await config.get('devSshAccount') : await config.get('sshAccount')
 
     // sshAccount is guaranteed to exist due to getRequiredConfig() validation
     const params = {
       acc: sshAccount as string,
-      contentFolder: (dev ? await config.get('devFolder') : await config.get('liveFolder')) ?? '',
+      contentFolder: contentFolder ?? '',
     }
 
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x, params)))

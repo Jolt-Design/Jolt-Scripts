@@ -65,12 +65,19 @@ export class ConfigCommand extends JoltCommand {
 
     stdout.write(ansis.bold.blue('Commands:\n'))
 
-    for (const commandName of commands) {
-      const { command, source, sourceType } = await config.getCommandOverride(commandName)
+    // Parallelize command override and which checks
+    const commandInfos = await Promise.all(
+      commands.map(async (commandName) => {
+        const { command, source, sourceType } = await config.getCommandOverride(commandName)
+        const isAvailable = await which(command)
+        return { commandName, command, source, sourceType, isAvailable }
+      }),
+    )
 
+    for (const { commandName, command, source, sourceType, isAvailable } of commandInfos) {
       stdout.write(ansis.bold(`${commandName}: `))
 
-      if (await which(command)) {
+      if (isAvailable) {
         stdout.write(ansis.green(command))
       } else {
         stdout.write(ansis.red(`${command} ${ansis.bold('[Missing!]')}`))

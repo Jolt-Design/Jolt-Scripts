@@ -24,12 +24,14 @@ export class NexcessDeployCommand extends JoltCommand {
       dev,
     } = this
 
-    const deployFolder = dev ? await config.get('devFolder') : await config.get('liveFolder')
-    const deployScript = (await config.get('nexcessDeployScript')) ?? 'bin/nexcess-deploy-script.sh'
-    const cleanupScript = (await config.get('nexcessCleanupScript')) ?? 'bin/nexcess-cleanup.sh'
-    const branch = dev ? await config.get('devBranch') : await config.get('branch')
-    const repo = await config.get('repo')
-    const codeSubfolder = await config.get('codeSubfolder')
+    const [deployFolder, deployScript, cleanupScript, branch, repo, codeSubfolder] = await Promise.all([
+      dev ? config.get('devFolder') : config.get('liveFolder'),
+      config.get('nexcessDeployScript').then((script) => script ?? 'bin/nexcess-deploy-script.sh'),
+      config.get('nexcessCleanupScript').then((script) => script ?? 'bin/nexcess-cleanup.sh'),
+      dev ? config.get('devBranch') : config.get('branch'),
+      config.get('repo'),
+      config.get('codeSubfolder'),
+    ])
     const now = new Date()
     const date = now
       .toISOString()

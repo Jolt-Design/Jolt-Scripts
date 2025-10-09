@@ -72,15 +72,18 @@ export default abstract class JoltCommand extends Command {
     this.config = config
 
     if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {
-      const missingCommands = []
+      // Parallelize command resolution and validation
+      const commandChecks = await Promise.all(
+        this.requiredCommands.map(async (baseCommand) => {
+          const realCommand = await config.command(baseCommand)
+          const isAvailable = await which(realCommand)
+          return { baseCommand, realCommand, isAvailable }
+        }),
+      )
 
-      for (const baseCommand of this.requiredCommands) {
-        const realCommand = await config.command(baseCommand)
-
-        if (!(await which(realCommand))) {
-          missingCommands.push(realCommand)
-        }
-      }
+      const missingCommands = commandChecks
+        .filter(({ isAvailable }) => !isAvailable)
+        .map(({ realCommand }) => realCommand)
 
       if (missingCommands.length > 0) {
         stderr.write(this.getHeader())

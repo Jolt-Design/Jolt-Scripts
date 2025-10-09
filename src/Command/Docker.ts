@@ -110,8 +110,10 @@ export class DockerLoginCommand extends DockerCommand {
     } = this
 
     // TODO get URL from ecr_repo_url, get region from repo URL
-    const ecrBaseUrl = (await config.get('ecrBaseUrl')) ?? (await config.tfVar('ecr_base_url'))
-    const region = (await config.get('awsRegion')) ?? (await config.tfVar('region')) ?? config.awsRegion()
+    const [ecrBaseUrl, region] = await Promise.all([
+      config.get('ecrBaseUrl').then((url) => url ?? config.tfVar('ecr_base_url')),
+      config.get('awsRegion').then((r) => r ?? config.tfVar('region').then((tfR) => tfR ?? config.awsRegion())),
+    ])
 
     stdout.write(ansis.blue(`🐳 Logging in to ECR repository ${ecrBaseUrl} on ${region}...\n`))
 
