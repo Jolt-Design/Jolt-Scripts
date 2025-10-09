@@ -67,7 +67,7 @@ describe('DBDumpCommand', () => {
 
     // Create command instance
     command = new DBDumpCommand()
-    command.config = mockConfig as Config
+    command.config = mockConfig as unknown as Config
     command.context = {
       stderr: mockStderr,
       stdout: mockStdout,
