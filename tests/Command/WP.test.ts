@@ -1144,6 +1144,58 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('jolt wp update merge'))
   })
 
+  it('should overwrite Redis dropin and stage it when redis-cache plugin is updated', async () => {
+    // Prepare command instance
+    vi.mocked(execC).mockClear()
+
+    // Mock getDetails to return older then newer version
+    vi.spyOn(command, 'getDetails')
+      .mockResolvedValueOnce({ name: 'redis-cache', version: '1.0.0', title: 'Redis Object Cache' } as any)
+      .mockResolvedValueOnce({ name: 'redis-cache', version: '1.1.0', title: 'Redis Object Cache' } as any)
+
+    // Mock executeWpCli for the plugin update command
+    vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '' } as any)
+
+    // Mock filesystem to indicate plugin provides object-cache.php
+    const fs = await import('node:fs')
+    vi.spyOn(fs.promises, 'stat').mockImplementation(async (_p: any) => {
+      return {} as any
+    })
+    vi.spyOn(fs.promises, 'readFile').mockResolvedValue(Buffer.from('<?php // Redis Object Cache ?>'))
+    vi.spyOn(fs.promises, 'copyFile').mockResolvedValue()
+
+    // Ensure git command is available
+    vi.spyOn(mockConfig, 'command').mockResolvedValue('git')
+
+    // Call updateItem via maybeUpdateItem
+    const wpConfig = await mockConfig.loadWordPressConfig()
+
+    const result = await command.maybeUpdateItem(
+      {
+        name: 'redis-cache',
+        status: 'active',
+        update: 'available',
+        version: '1.0.0',
+        title: 'Redis Object Cache',
+      } as any,
+      wpConfig,
+      { branch: undefined, created: false },
+      command.getItemConfig('plugin'),
+    )
+
+    expect(result.updated).toBe(true)
+
+    // git add should be called - one for plugin folder and one for dropin
+    expect(vi.mocked(execC)).toHaveBeenCalledWith('git', [
+      'add',
+      expect.stringContaining('wp-content/plugins/redis-cache'),
+    ])
+    expect(vi.mocked(execC)).toHaveBeenCalledWith('git', [
+      'add',
+      expect.stringContaining('wp-content/object-cache.php'),
+    ])
+  })
+
   it('should suggest short form commands when update script exists', async () => {
     command.skipThemes = true
     command.skipCore = true

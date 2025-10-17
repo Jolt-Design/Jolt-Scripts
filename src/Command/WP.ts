@@ -1,9 +1,11 @@
+import fs from 'node:fs/promises'
 import { userInfo } from 'node:os'
+import path from 'node:path'
 import ansis from 'ansis'
 import { Option } from 'clipanion'
 import * as t from 'typanion'
 import type { WordPressConfig } from '../types/index.js'
-import { execC, which } from '../utils.js'
+import { execC, fileExists, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 type PluginDetails = {
@@ -522,6 +524,27 @@ export class WPUpdateCommand extends JoltCommand {
       // Ensure branch is created before making our first commit
       await this.ensureBranchCreated(wpConfig, branchRef)
 
+      // Special case handling for Redis dropin
+      try {
+        const looksLikeRedis = /redis/i.test(String(item.name || details.title || ''))
+
+        if (looksLikeRedis) {
+          const cliResult = await this.executeWpCli(['redis', 'update-dropin'], { silent: true })
+          const wpContentDir = path.join(wpConfig.wpRoot, 'wp-content')
+          const dropinDest = path.join(wpContentDir, 'object-cache.php')
+
+          if (cliResult.exitCode === 0) {
+            const gitCommand = await config.command('git')
+            await execC(gitCommand, ['add', dropinDest])
+          } else {
+            // WP-CLI failed - fall back to copying the plugin-provided dropin
+            await this.updateRedisDropinFromPlugin(item, wpConfig, itemConfig)
+          }
+        }
+      } catch {
+        // non-fatal - continue
+      }
+
       const commitMessage = this.sanitizeCommitMessage(
         `${itemConfig.commitPrefix} ${prettyTitle} to ${newDetails.version}`,
       )
@@ -533,6 +556,7 @@ export class WPUpdateCommand extends JoltCommand {
       })
 
       stdout.write(ansis.green(`    Updated ${prettyTitle} from ${fromVersion} to ${newDetails.version}\n`))
+
       return {
         updated: true,
         details: {
@@ -830,6 +854,43 @@ export class WPUpdateCommand extends JoltCommand {
     } catch (error) {
       stderr.write(ansis.red(`Error updating translations: ${error}\n`))
       return false
+    }
+  }
+
+  /**
+   * Update Redis drop-in from plugin files if WP-CLI fails
+   */
+  private async updateRedisDropinFromPlugin(
+    item: ItemDetails,
+    wpConfig: WordPressConfig,
+    itemConfig: ItemConfig,
+  ): Promise<void> {
+    const pluginBase = path.join(itemConfig.getFolder(wpConfig), item.name)
+    const candidatePaths = [
+      path.join(pluginBase, 'object-cache.php'),
+      path.join(pluginBase, 'includes', 'object-cache.php'),
+      path.join(pluginBase, 'drop-in', 'object-cache.php'),
+    ]
+    const wpContentDir = path.join(wpConfig.wpRoot, 'wp-content')
+    const dropinDestLocal = path.join(wpContentDir, 'object-cache.php')
+    const { config } = this
+
+    for (const candidate of candidatePaths) {
+      if (!(await fileExists(candidate))) {
+        continue
+      }
+      try {
+        const contents = String(await fs.readFile(candidate))
+        if (!/Redis Object Cache|Redis\b/i.test(contents)) {
+          break
+        }
+        await fs.copyFile(candidate, dropinDestLocal)
+        const gitCommand = await config.command('git')
+        await execC(gitCommand, ['add', dropinDestLocal])
+        break
+      } catch {
+        break
+      }
     }
   }
 }
