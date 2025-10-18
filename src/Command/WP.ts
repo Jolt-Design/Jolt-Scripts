@@ -598,10 +598,16 @@ export class WPUpdateCommand extends JoltCommand {
   }
 
   private async disableGitHooks(): Promise<string> {
-    const { config, context } = this
+    const {
+      config,
+      context,
+      context: { stderr },
+    } = this
+
     const gitCommand = await config.command('git')
+
     try {
-      const result = await execC(gitCommand, ['config', '--get', 'core.hooksPath'], { context, reject: false })
+      const result = await execC(gitCommand, ['config', '--get', 'core.hooksPath'], { stderr, reject: false })
       const originalHookPath = String(result.stdout || '').trim()
       await execC(gitCommand, ['config', 'core.hooksPath', '/dev/null'], { context })
       return originalHookPath
@@ -613,7 +619,9 @@ export class WPUpdateCommand extends JoltCommand {
 
   private async rollbackGitHooks(originalHookPath: string): Promise<void> {
     const { config, context } = this
+
     const gitCommand = await config.command('git')
+
     if (originalHookPath) {
       await execC(gitCommand, ['config', 'core.hooksPath', originalHookPath], { context })
     } else {
