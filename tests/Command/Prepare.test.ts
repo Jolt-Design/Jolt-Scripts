@@ -360,7 +360,7 @@ describe('PrepareCommand', () => {
       command.dbSeeds = false
       command.devPlugins = false
 
-      const earlyCommands = [{ cmd: 'echo "early command"', name: 'Early Test', timing: 'early' as const }]
+      const earlyCommands = [{ cmd: 'echo "early command"', name: 'Early Test', timing: 'early' as const, fail: true }]
 
       vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce(earlyCommands).mockReturnValueOnce([])
 
@@ -382,7 +382,9 @@ describe('PrepareCommand', () => {
       command.dbSeeds = false
       command.devPlugins = false
 
-      const normalCommands = [{ cmd: 'echo "normal command"', name: 'Normal Test', timing: 'normal' as const }]
+      const normalCommands = [
+        { cmd: 'echo "normal command"', name: 'Normal Test', timing: 'normal' as const, fail: true },
+      ]
 
       vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce([]).mockReturnValueOnce(normalCommands)
 
@@ -402,7 +404,7 @@ describe('PrepareCommand', () => {
       command.dbSeeds = false
       command.devPlugins = false
 
-      const commands = [{ cmd: 'ls', dir: '/some/path', timing: 'normal' as const }]
+      const commands = [{ cmd: 'ls', dir: '/some/path', timing: 'normal' as const, fail: false }]
 
       vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce([]).mockReturnValueOnce(commands)
 
@@ -484,7 +486,7 @@ describe('PrepareCommand', () => {
       command.dbSeeds = false
       command.devPlugins = false
 
-      const commands = [{ cmd: 'echo test', timing: 'normal' as const }]
+      const commands = [{ cmd: 'echo test', timing: 'normal' as const, fail: false }]
 
       vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce([]).mockReturnValueOnce(commands)
 
@@ -518,8 +520,8 @@ describe('PrepareCommand', () => {
       vi.mocked(mockConfig.get).mockResolvedValue('test-plugin')
       vi.mocked(mockConfig.command).mockResolvedValue('test-command')
 
-      const earlyCommands = [{ cmd: 'early-cmd', timing: 'early' as const }]
-      const normalCommands = [{ cmd: 'normal-cmd', timing: 'normal' as const }]
+      const earlyCommands = [{ cmd: 'early-cmd', timing: 'early' as const, fail: false }]
+      const normalCommands = [{ cmd: 'normal-cmd', timing: 'normal' as const, fail: false }]
 
       vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce(earlyCommands).mockReturnValueOnce(normalCommands)
 
