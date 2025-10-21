@@ -109,11 +109,36 @@ export class DockerLoginCommand extends DockerCommand {
       context: { stdout, stderr },
     } = this
 
-    // TODO get URL from ecr_repo_url, get region from repo URL
-    const [ecrBaseUrl, region] = await Promise.all([
-      config.get('ecrBaseUrl').then((url) => url ?? config.tfVar('ecr_base_url')),
-      config.get('awsRegion').then((r) => r ?? config.tfVar('region').then((tfR) => tfR ?? config.awsRegion())),
-    ])
+    // First try to get the ECR repo URL and base URL
+    const ecrRepoUrl = await config.get('ecrRepoUrl').then((url) => url ?? config.tfVar('ecr_repo_url'))
+    const ecrBaseUrl = await config.get('ecrBaseUrl').then((url) => url ?? config.tfVar('ecr_base_url'))
+
+    // Try to extract region from ECR repo URL first
+    let region = null
+
+    if (ecrRepoUrl) {
+      const match = ecrRepoUrl.match(/dkr\.ecr\.([^.]+)\.amazonaws\.com/)
+      if (match) {
+        region = match[1]
+      }
+    }
+
+    // Fall back to other region sources if we couldn't extract it from URL
+    if (!region) {
+      const awsRegion = await config.get('awsRegion')
+
+      if (awsRegion) {
+        region = awsRegion
+      } else {
+        const tfRegion = await config.tfVar('region')
+
+        if (tfRegion) {
+          region = tfRegion
+        } else {
+          region = await config.awsRegion()
+        }
+      }
+    }
 
     stdout.write(ansis.blue(`🐳 Logging in to ECR repository ${ecrBaseUrl} on ${region}...\n`))
 
