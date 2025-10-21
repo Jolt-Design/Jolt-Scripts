@@ -117,8 +117,22 @@ export class PrepareCommand extends JoltCommand {
 
     if (husky && (await shouldPrepareHusky())) {
       stdout.write(ansis.white(`${indent}🐕 Preparing Husky hooks... `))
-      // TODO: Check if husky is installed in the repo and use yarn if so
-      await execC(await config.command('npx'), ['--yes', '--prefer-offline', 'husky'])
+
+      const packageJson = await config.getPackageJson()
+
+      const isHuskyInDeps = Boolean(
+        packageJson?.dependencies?.husky || packageJson?.devDependencies?.husky
+      )
+
+      const huskyCommand = isHuskyInDeps
+        ? await config.command('yarn')
+        : await config.command('npx')
+
+      const huskyArgs = isHuskyInDeps
+        ? ['run', 'husky']
+        : ['--yes', '--prefer-offline', 'husky']
+
+      await execC(huskyCommand, huskyArgs)
       stdout.write(ansis.green('OK\n'))
     }
 

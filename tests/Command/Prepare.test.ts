@@ -81,20 +81,70 @@ describe('PrepareCommand', () => {
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('📋 Repo prepared'))
     })
 
-    it('should prepare Husky hooks when .husky directory exists', async () => {
+    it('should prepare Husky hooks using npx when husky is not in package.json', async () => {
       command.tofu = false
       command.dbSeeds = false
       command.devPlugins = false
 
       vi.mocked(directoryExists).mockResolvedValue(true)
       vi.mocked(readdir).mockResolvedValue([] as any)
-      vi.mocked(mockConfig.command).mockResolvedValue('npx')
+      vi.mocked(mockConfig.command).mockResolvedValueOnce('npx')
+      vi.mocked(mockConfig.getPackageJson).mockResolvedValue({
+        name: 'test-package',
+        version: '1.0.0',
+        dependencies: {},
+        devDependencies: {},
+      })
 
       const result = await command.command()
 
       expect(result).toBe(0)
       expect(mockConfig.command).toHaveBeenCalledWith('npx')
       expect(execC).toHaveBeenCalledWith('npx', ['--yes', '--prefer-offline', 'husky'])
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
+    })
+
+    it('should prepare Husky hooks using yarn when husky is in dependencies', async () => {
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      vi.mocked(directoryExists).mockResolvedValue(true)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+      vi.mocked(mockConfig.command).mockResolvedValueOnce('yarn')
+      vi.mocked(mockConfig.getPackageJson).mockResolvedValue({
+        name: 'test-package',
+        version: '1.0.0',
+        dependencies: { husky: '^8.0.0' },
+      })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockConfig.command).toHaveBeenCalledWith('yarn')
+      expect(execC).toHaveBeenCalledWith('yarn', ['run', 'husky'])
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
+    })
+
+    it('should prepare Husky hooks using yarn when husky is in devDependencies', async () => {
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      vi.mocked(directoryExists).mockResolvedValue(true)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+      vi.mocked(mockConfig.command).mockResolvedValueOnce('yarn')
+      vi.mocked(mockConfig.getPackageJson).mockResolvedValue({
+        name: 'test-package',
+        version: '1.0.0',
+        devDependencies: { husky: '^8.0.0' },
+      })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockConfig.command).toHaveBeenCalledWith('yarn')
+      expect(execC).toHaveBeenCalledWith('yarn', ['run', 'husky'])
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
     })
 
