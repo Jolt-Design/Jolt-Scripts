@@ -81,7 +81,7 @@ describe('PrepareCommand', () => {
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('📋 Repo prepared'))
     })
 
-    it('should prepare Husky hooks using npx when husky is not in package.json', async () => {
+    it('should prepare Husky hooks using npx when husky is not in package.json and not using Yarn 2+', async () => {
       command.tofu = false
       command.dbSeeds = false
       command.devPlugins = false
@@ -101,6 +101,54 @@ describe('PrepareCommand', () => {
       expect(result).toBe(0)
       expect(mockConfig.command).toHaveBeenCalledWith('npx')
       expect(execC).toHaveBeenCalledWith('npx', ['--yes', '--prefer-offline', 'husky'])
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
+    })
+
+    it('should prepare Husky hooks using yarn dlx when husky is not in package.json and using Yarn 2', async () => {
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      vi.mocked(directoryExists).mockResolvedValue(true)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+      vi.mocked(mockConfig.command).mockResolvedValueOnce('yarn')
+      vi.mocked(mockConfig.getPackageJson).mockResolvedValue({
+        name: 'test-package',
+        version: '1.0.0',
+        packageManager: 'yarn@2.4.3',
+        dependencies: {},
+        devDependencies: {},
+      })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockConfig.command).toHaveBeenCalledWith('yarn')
+      expect(execC).toHaveBeenCalledWith('yarn', ['dlx', '--quiet', '--package', 'husky', 'husky'])
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
+    })
+
+    it('should prepare Husky hooks using yarn dlx when husky is not in package.json and using Yarn with SHA version', async () => {
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      vi.mocked(directoryExists).mockResolvedValue(true)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+      vi.mocked(mockConfig.command).mockResolvedValueOnce('yarn')
+      vi.mocked(mockConfig.getPackageJson).mockResolvedValue({
+        name: 'test-package',
+        version: '1.0.0',
+        packageManager: 'yarn@3.2.1+sha224.953c8233f7a92884eee2de69a1b92d1f2ec1655e66d08071ba9a02fa',
+        dependencies: {},
+        devDependencies: {},
+      })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockConfig.command).toHaveBeenCalledWith('yarn')
+      expect(execC).toHaveBeenCalledWith('yarn', ['dlx', '--quiet', '--package', 'husky', 'husky'])
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('🐕 Preparing Husky hooks'))
     })
 

@@ -120,17 +120,28 @@ export class PrepareCommand extends JoltCommand {
 
       const packageJson = await config.getPackageJson()
 
-      const isHuskyInDeps = Boolean(
-        packageJson?.dependencies?.husky || packageJson?.devDependencies?.husky
+      const isHuskyInDeps = Boolean(packageJson?.dependencies?.husky || packageJson?.devDependencies?.husky)
+
+      // Check if we're using Yarn 2+ by looking at packageManager field
+      const isYarn2Plus = Boolean(
+        packageJson?.packageManager?.startsWith('yarn@') &&
+          // Extract version, handling both normal versions and SHA versions
+          Number.parseInt(packageJson.packageManager.split('@')[1].split(/[+.]/)[0], 10) >= 2,
       )
 
-      const huskyCommand = isHuskyInDeps
-        ? await config.command('yarn')
-        : await config.command('npx')
+      let huskyCommand: string
+      let huskyArgs: string[]
 
-      const huskyArgs = isHuskyInDeps
-        ? ['run', 'husky']
-        : ['--yes', '--prefer-offline', 'husky']
+      if (isHuskyInDeps) {
+        huskyCommand = await config.command('yarn')
+        huskyArgs = ['run', 'husky']
+      } else if (isYarn2Plus) {
+        huskyCommand = await config.command('yarn')
+        huskyArgs = ['dlx', '--quiet', '--package', 'husky', 'husky']
+      } else {
+        huskyCommand = await config.command('npx')
+        huskyArgs = ['--yes', '--prefer-offline', 'husky']
+      }
 
       await execC(huskyCommand, huskyArgs)
       stdout.write(ansis.green('OK\n'))
