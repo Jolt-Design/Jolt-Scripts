@@ -36,8 +36,7 @@ export class DockerCombinedCommand extends DockerCommand {
 export class DockerBuildCommand extends DockerCommand {
   static paths = [['docker', 'build']]
 
-  buildArgs = Option.Array('--build-arg', { required: false, description: 'Build arguments to pass to Docker build' })
-  provenance = Option.Boolean('--provenance', true, { description: 'Generate provenance attestation for the build' })
+  args = Option.Proxy()
 
   async command(): Promise<number | undefined> {
     const {
@@ -73,22 +72,23 @@ export class DockerBuildCommand extends DockerCommand {
   }
 
   async buildCommandArgs(): Promise<string[]> {
-    const { buildArgs, config, dev, provenance } = this
+    const { args, config, dev } = this
+
+    // Include backwards compat for old --no-provenance config
+    const parsedArgsPromises = args.map((x) => (x === '--no-provenance' ? '--provenance=false' : config.parseArg(x)))
+    const parsedArgs = await Promise.all(parsedArgsPromises)
     const imageName = await config.getDockerImageName(dev)
     const platform = await config.get('buildPlatform')
     const context = await config.get('buildContext')
     const dockerFile = await config.getDockerfilePath()
-    const parsedBuildArgs = await Promise.all((buildArgs || []).map((x) => config.parseArg(x)))
-    const additionalBuildArgs = parsedBuildArgs?.map((x) => `--build-arg=${x}`) || []
     const devBuildArg = dev ? '--build-arg=DEVBUILD=1' : ''
-    const allBuildArgs = [devBuildArg, ...additionalBuildArgs]
+    const allBuildArgs = [devBuildArg, ...parsedArgs]
 
     return [
       'buildx',
       'build',
       platform && `--platform=${platform}`,
       dockerFile && `-f ${dockerFile}`,
-      !provenance && '--provenance=false',
       `-t ${imageName}`,
       ...allBuildArgs,
       context ?? '.',

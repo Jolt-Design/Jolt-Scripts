@@ -24,10 +24,9 @@ describe('DockerBuildCommand', () => {
 
     // Create command instance
     command = new DockerBuildCommand()
+    command.args = []
     command.config = mockConfig
     command.dev = false
-    command.buildArgs = []
-    command.provenance = true
   })
 
   describe('buildCommandArgs', () => {
@@ -82,14 +81,15 @@ describe('DockerBuildCommand', () => {
       expect(args).toContain('-t test-image-dev')
     })
 
-    it('should include custom build args', async () => {
-      command.buildArgs = ['ARG1=value1', 'ARG2=value2']
+    it('should proxy arguments', async () => {
+      command.args = ['--build-arg=ARG1=value1', '--build-arg=ARG2=value2', '--test=1']
       vi.spyOn(mockConfig, 'getDockerfilePath').mockResolvedValue('Dockerfile')
 
       const args = await command.buildCommandArgs()
 
       expect(args).toContain('--build-arg=ARG1=value1')
       expect(args).toContain('--build-arg=ARG2=value2')
+      expect(args).toContain('--test=1')
     })
 
     it('should include platform when configured', async () => {
@@ -107,8 +107,8 @@ describe('DockerBuildCommand', () => {
       expect(args).toContain('--platform=linux/amd64,linux/arm64')
     })
 
-    it('should disable provenance when provenance flag is false', async () => {
-      command.provenance = false
+    it('should provide backward compatibility for the old --no-provenance flag', async () => {
+      command.args = ['--no-provenance']
       vi.spyOn(mockConfig, 'getDockerfilePath').mockResolvedValue('Dockerfile')
 
       const args = await command.buildCommandArgs()
