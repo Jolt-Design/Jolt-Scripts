@@ -1,7 +1,4 @@
 {
-  "[typescript][json][jsonc]": {
-    "editor.defaultFormatter": "biomejs.biome"
-  },
   "editor.formatOnSave": true,
   "search.exclude": {
     "**/.yarn": true,
@@ -12,6 +9,12 @@
   "typescript.preferences.preferTypeOnlyAutoImports": true,
   "biome.lsp.bin": ".yarn/unplugged/@biomejs-cli-*/node_modules/@biomejs/cli-*/biome",
   "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome"
   }
 }
