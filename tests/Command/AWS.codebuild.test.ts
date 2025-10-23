@@ -5,13 +5,24 @@ import { delay, execC } from '../../src/utils.js'
 vi.mock('../../src/utils.js')
 vi.mock('../../src/Config.js')
 
-// Mock AbortController globally
-const mockAbortController = {
-  signal: { aborted: false },
-  abort: vi.fn(),
+/**
+ * Mock AbortController implementation that allows static access to the mock data
+ */
+class MockAbortController {
+  abort: Mock<(...args: any[]) => any>
+  signal: { aborted: boolean }
+
+  static _abort = vi.fn()
+  static _signal = { aborted: false }
+
+  constructor() {
+    this.abort = MockAbortController._abort
+    this.signal = MockAbortController._signal
+  }
 }
 
-global.AbortController = vi.fn(() => mockAbortController) as any
+// Replace AbortController with mock
+global.AbortController = vi.fn(MockAbortController) as any
 
 // Test implementation that extends CodeBuildStartCommand to access protected methods
 class TestCodeBuildStartCommand extends CodeBuildStartCommand {
@@ -32,7 +43,7 @@ describe('CodeBuildStartCommand', () => {
 
   beforeEach(async () => {
     vi.resetAllMocks()
-    mockAbortController.abort.mockClear()
+    MockAbortController._abort.mockClear()
 
     mockStdout = { write: vi.fn() }
     mockStderr = { write: vi.fn() }
@@ -84,7 +95,7 @@ describe('CodeBuildStartCommand', () => {
       const result = await command.command()
 
       expect(result).toBe(0)
-      expect(mockAbortController.abort).toHaveBeenCalled()
+      expect(MockAbortController._abort).toHaveBeenCalled()
       expect(mockStdout.write).toHaveBeenCalledWith(
         expect.stringContaining('⛅ Starting the test-project CodeBuild project...'),
       )
@@ -122,7 +133,7 @@ describe('CodeBuildStartCommand', () => {
         'aws',
         expect.arrayContaining(['logs', 'tail', '--follow']),
         expect.objectContaining({
-          cancelSignal: mockAbortController.signal,
+          cancelSignal: MockAbortController._signal,
         }),
       )
     })
