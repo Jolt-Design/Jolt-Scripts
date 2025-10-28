@@ -715,6 +715,10 @@ export class Config {
     return delaySeconds || DEFAULT_DEV_PLUGIN_DELAY
   }
 
+  getSites(): Record<string, Record<string, string>> {
+    return this.config.sites || {}
+  }
+
   private getDBCLICommandFromImageType(type: string, image?: string): string | undefined {
     switch (type) {
       case 'mysql':

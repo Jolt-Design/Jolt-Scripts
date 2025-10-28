@@ -328,3 +328,37 @@ export class ConfigInitCommand extends JoltCommand {
     return 0
   }
 }
+
+export class ConfigSitesCommand extends JoltCommand {
+  static paths = [['config', 'sites']]
+
+  format = Option.String('-f,--format', {
+    required: false,
+    validator: t.isEnum(['json', 'spaces', 'lines']),
+  })
+
+  async command(): Promise<number | undefined> {
+    const {
+      config,
+      context: { stdout },
+      format,
+    } = this
+
+    const sites = config.getSites()
+    const siteKeys = Object.keys(sites)
+
+    switch (format) {
+      case 'spaces':
+        stdout.write(`${siteKeys.join(' ')}\n`)
+        break
+      case 'lines':
+        stdout.write(`${siteKeys.join('\n')}\n`)
+        break
+      default:
+        stdout.write(`${JSON.stringify(siteKeys)}\n`)
+        break
+    }
+
+    return 0
+  }
+}
