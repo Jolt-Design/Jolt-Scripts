@@ -56,6 +56,11 @@ type ItemConfig = {
   commitPrefix: string
 }
 
+type BranchRef = {
+  branch?: string
+  created: boolean
+}
+
 // Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
 const possibleCliArgs = [
   'alias',
@@ -204,15 +209,12 @@ export class WPUpdateCommand extends JoltCommand {
 
     stdout.write(ansis.bold(`${logo} WordPress Updates\n\n`))
 
-    // Load configuration
     const wpConfig = await config.loadWordPressConfig()
 
     if (!wpConfig) {
       stderr.write(ansis.red('Failed to load WordPress configuration\n'))
       return 1
     }
-
-    // Use `jolt wp cli ...` via execC with the configured package runner
 
     let updatedPluginCount = 0
     let updatedThemeCount = 0
@@ -248,6 +250,7 @@ export class WPUpdateCommand extends JoltCommand {
         stdout.write(ansis.cyan('📦 Checking WordPress core...\n'))
         const coreResult = await this.maybeUpdateCore(wpConfig, branchRef)
         updatedCore = coreResult.updated
+
         if (coreResult.updated && coreResult.details) {
           updateSummary.core = coreResult.details
         }
@@ -282,6 +285,7 @@ export class WPUpdateCommand extends JoltCommand {
 
       if (updateSummary.plugins.length > 0) {
         stdout.write(ansis.green('🔌 Plugins updated:\n'))
+
         for (const plugin of updateSummary.plugins) {
           stdout.write(ansis.cyan(`  • ${plugin.title} (${plugin.fromVersion} → ${plugin.toVersion})\n`))
         }
@@ -289,6 +293,7 @@ export class WPUpdateCommand extends JoltCommand {
 
       if (updateSummary.themes.length > 0) {
         stdout.write(ansis.green('🎨 Themes updated:\n'))
+
         for (const theme of updateSummary.themes) {
           stdout.write(ansis.cyan(`  • ${theme.title} (${theme.fromVersion} → ${theme.toVersion})\n`))
         }
@@ -326,6 +331,7 @@ export class WPUpdateCommand extends JoltCommand {
 
     // Check if there's an 'update' script that acts as a shortcut for 'jolt wp update'
     const updateScript = packageJson?.scripts?.update
+
     if (updateScript && (updateScript === 'jolt wp update' || updateScript.startsWith('jolt wp update '))) {
       return `${yarnCommand} update ${subCommand}`
     }
@@ -346,7 +352,7 @@ export class WPUpdateCommand extends JoltCommand {
     const execOptions = {
       reject: false,
       ...options,
-      ...(!options?.silent ? { context } : {}),
+      ...(options?.silent ? {} : { context }),
     }
 
     const result = await execC(yarnCommand, ['jolt', 'wp', 'cli', ...args], execOptions)
@@ -357,7 +363,12 @@ export class WPUpdateCommand extends JoltCommand {
     }
   }
 
-  // Configuration for different item types
+  /**
+   * Get the configuration for different item types
+   *
+   * @param type the type of item to get config details for
+   * @returns the config
+   */
   private getItemConfig(type: ItemType): ItemConfig {
     const configs: Record<ItemType, ItemConfig> = {
       plugin: {
@@ -377,14 +388,21 @@ export class WPUpdateCommand extends JoltCommand {
         commitPrefix: 'Update theme',
       },
     }
+
     return configs[type]
   }
 
-  // Generic method to get and parse item lists
+  /**
+   * Generic method to get and parse item lists
+   *
+   * @param type the type of item to get
+   * @returns a list of the installed items
+   */
   private async getItems<T extends ItemDetails>(type: ItemType): Promise<T[]> {
     const {
       context: { stdout },
     } = this
+
     const itemConfig = this.getItemConfig(type)
 
     stdout.write(ansis.cyan(`${itemConfig.icon} Checking ${type}s...\n`))
@@ -396,10 +414,19 @@ export class WPUpdateCommand extends JoltCommand {
 
     const items = this.parseItemJson<T>(result.stdout)
     stdout.write(`Found ${items.length} ${type}s\n`)
+
     return items
   }
 
-  // Generic method to parse item JSON (plugins/themes have same structure)
+  /**
+   * Generic method to parse item JSON (plugins/themes have same structure)
+   *
+   * Attempts to handle issues where PHP warnings are dumped into the output.
+   * Also filters out any unwanted data, like must-use plugins.
+   *
+   * @param itemJson the JSON string to parse
+   * @returns the parsed object
+   */
   private parseItemJson<T extends ItemDetails>(itemJson: string): T[] {
     // Trim off any preceding warnings, try to look for the start of the actual JSON.
     const trimmed = itemJson.substring(itemJson.indexOf('[{'))
@@ -409,12 +436,20 @@ export class WPUpdateCommand extends JoltCommand {
     return allItems.filter((item: ItemDetails) => !['dropin', 'must-use'].includes(item.status))
   }
 
-  // Generic method to handle updating items
+  /**
+   * Updating all the items of the given type
+   *
+   * @param type the type to update (plugins, themes)
+   * @param skip whether to skip this item (gives an empty response)
+   * @param wpConfig the WP updater config
+   * @param branchRef info about the Git branch being used
+   * @returns informations about the updates
+   */
   private async processItemUpdates<T extends ItemDetails>(
     type: ItemType,
     skip: boolean,
     wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
+    branchRef: BranchRef,
   ): Promise<{ count: number; details: UpdateDetails[] }> {
     if (skip) {
       return { count: 0, details: [] }
@@ -430,8 +465,10 @@ export class WPUpdateCommand extends JoltCommand {
 
       for (const item of items) {
         const result = await this.maybeUpdateItem(item, wpConfig, branchRef, itemConfig)
+
         if (result.updated) {
           count++
+
           if (result.details) {
             updateDetails.push(result.details)
           }
@@ -442,11 +479,19 @@ export class WPUpdateCommand extends JoltCommand {
     return { count, details: updateDetails }
   }
 
-  // Generic method to check and maybe update an item (plugin/theme)
+  /**
+   * Update the given item if necessary
+   *
+   * @param item the item to update
+   * @param wpConfig the WP updater config
+   * @param branchRef info about the Git branch being used
+   * @param itemConfig the item configuration (determines how the output looks, etc.)
+   * @returns information about the update results
+   */
   private async maybeUpdateItem<T extends ItemDetails>(
     item: T,
     wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
+    branchRef: BranchRef,
     itemConfig: ItemConfig,
   ): Promise<UpdateResult> {
     const {
@@ -476,11 +521,19 @@ export class WPUpdateCommand extends JoltCommand {
     return { updated: false }
   }
 
-  // Generic method to update an item (plugin/theme)
+  /**
+   * Actually update the given item
+   *
+   * @param item the item to update
+   * @param wpConfig the WP updater config
+   * @param branchRef info about the Git branch being used
+   * @param itemConfig the item configuration (determines how the output looks, etc.)
+   * @returns information about the update results
+   */
   private async updateItem<T extends ItemDetails>(
     item: T,
     wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
+    branchRef: BranchRef,
     itemConfig: ItemConfig,
   ): Promise<UpdateResult> {
     const {
@@ -491,6 +544,7 @@ export class WPUpdateCommand extends JoltCommand {
     try {
       const gitCommand = await config.command('git')
       const details = await this.getDetails(item.name, itemConfig.type)
+
       if (!details) {
         return { updated: false }
       }
@@ -498,7 +552,6 @@ export class WPUpdateCommand extends JoltCommand {
       const fromVersion = details.version
       const prettyTitle = this.cleanTitle(details.title)
       const location = `${itemConfig.getFolder(wpConfig)}/${item.name}`
-
       const updateResult = await this.executeWpCli(itemConfig.updateCommand(item.name), { silent: true })
 
       if (updateResult.exitCode !== 0) {
@@ -507,13 +560,14 @@ export class WPUpdateCommand extends JoltCommand {
       }
 
       const newDetails = await this.getDetails(item.name, itemConfig.type)
+
       if (!newDetails || newDetails.version === details.version) {
         stderr.write(ansis.red('    Update failed!\n'))
         return { updated: false }
       }
 
       // Ensure branch is created before making our first commit
-      await this.ensureBranchCreated(wpConfig, branchRef)
+      await this.ensureBranchCreated(branchRef)
 
       // Special case handling for Redis dropin
       try {
@@ -563,6 +617,11 @@ export class WPUpdateCommand extends JoltCommand {
     }
   }
 
+  /**
+   * Create a Git branch for the updates
+   *
+   * @returns the name of the branch
+   */
   private async createBranch(): Promise<string> {
     const { config } = this
     const isoDate = new Date().toISOString().replace(/[:.]/g, '-').replace(/T/, '_').slice(0, -5)
@@ -573,18 +632,23 @@ export class WPUpdateCommand extends JoltCommand {
     return branchName
   }
 
-  private async ensureBranchCreated(
-    _wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<string> {
+  /**
+   * Create the Git branch if necessary and return the updated branchRef object if need be
+   *
+   * @param branchRef the current branchRef
+   * @returns the updated branchRef
+   */
+  private async ensureBranchCreated(branchRef: BranchRef): Promise<string> {
     if (!branchRef.created) {
-      branchRef.branch = await this.createBranch()
-      branchRef.created = true
       const {
         context: { stdout },
       } = this
+
+      branchRef.branch = await this.createBranch()
+      branchRef.created = true
       stdout.write(ansis.green(`📋 Created update branch ${branchRef.branch}\n`))
     }
+
     return branchRef.branch as string
   }
 
@@ -658,7 +722,7 @@ export class WPUpdateCommand extends JoltCommand {
 
   private async maybeUpdateCore(
     wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
+    branchRef: BranchRef,
   ): Promise<{ updated: boolean; details?: { fromVersion: string; toVersion: string } }> {
     const {
       context: { stdout },
@@ -684,8 +748,9 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     try {
-      await this.doCoreUpdate(wpConfig.wpRoot, newVersion, wpConfig, branchRef)
+      await this.doCoreUpdate(wpConfig.wpRoot, newVersion, branchRef)
       stdout.write(ansis.green(`    Updated WordPress core to ${newVersion}\n`))
+
       return {
         updated: true,
         details: {
@@ -760,16 +825,11 @@ export class WPUpdateCommand extends JoltCommand {
     await execC(gitCommand, ['reset', 'HEAD', '--'])
   }
 
-  private async doCoreUpdate(
-    path: string,
-    version: string,
-    wpConfig: WordPressConfig,
-    branchRef: { branch?: string; created: boolean },
-  ): Promise<void> {
+  private async doCoreUpdate(path: string, version: string, branchRef: BranchRef): Promise<void> {
     const { config } = this
 
     // Ensure branch is created before making our first commit
-    await this.ensureBranchCreated(wpConfig, branchRef)
+    await this.ensureBranchCreated(branchRef)
 
     const gitCommand = await config.command('git')
     await this.executeWpCli(['core', 'update'], { silent: true })
@@ -782,7 +842,7 @@ export class WPUpdateCommand extends JoltCommand {
     })
   }
 
-  private async maybeUpdateTranslations(branchRef: { branch?: string; created: boolean }): Promise<boolean> {
+  private async maybeUpdateTranslations(branchRef: BranchRef): Promise<boolean> {
     const {
       config,
       context: { stdout, stderr },
@@ -823,7 +883,7 @@ export class WPUpdateCommand extends JoltCommand {
         }
 
         // Create or ensure we're on the update branch
-        await this.ensureBranchCreated(wpConfig, branchRef)
+        await this.ensureBranchCreated(branchRef)
 
         const gitCommand = await config.command('git')
 
