@@ -226,15 +226,6 @@ export class WPUpdateCommand extends JoltCommand {
       translations: false,
     }
 
-    // Get current status
-    if (!skipPlugins) {
-      await this.getItems<PluginDetails>('plugin')
-    }
-
-    if (!skipThemes) {
-      await this.getItems<ThemeDetails>('theme')
-    }
-
     // We'll create the update branch only when we need to make our first commit
     const branchRef = { branch: undefined as string | undefined, created: false }
 
