@@ -117,12 +117,12 @@
       "type": "string"
     },
     "devPlugins": {
-      "description": "WordPress plugins to activate in development",
+      "description": "WordPress plugins to activate on development servers",
       "type": "string"
     },
     "devPluginDelay": {
       "default": "30",
-      "description": "Delay in seconds before activating dev plugins",
+      "description": "Maximum number of seconds to wait for dev plugins to be activated",
       "type": "string"
     },
     "wpCliContainer": {

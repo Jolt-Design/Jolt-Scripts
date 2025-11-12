@@ -85,8 +85,12 @@ export const JoltConfigSchema = z
     dbBackupPath: z.string().optional().describe('Path for database backups'),
 
     // WordPress Configuration
-    devPlugins: z.string().optional().describe('WordPress plugins to activate in development'),
-    devPluginDelay: z.string().optional().describe('Delay in seconds before activating dev plugins').default('30'),
+    devPlugins: z.string().optional().describe('WordPress plugins to activate on development servers'),
+    devPluginDelay: z
+      .string()
+      .optional()
+      .describe('Maximum number of seconds to wait for dev plugins to be activated')
+      .default('30'),
     wpCliContainer: z.string().optional().describe('Docker container name for WP-CLI operations'),
     wpCliContainerProfile: z.string().optional().describe('Docker Compose profile for WP-CLI container'),
     wpUpdates: z
