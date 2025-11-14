@@ -28,10 +28,12 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+      - name: Move schema to artifact folder
+        run: mv ./jolt-config.schema.json ${{ runner.temp }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./jolt-config.schema.json
+          path: ${{ runner.temp }}
 
   deploy:
     environment:
