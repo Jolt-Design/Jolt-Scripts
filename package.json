@@ -10,11 +10,11 @@
     "@biomejs/biome": "^2.3.6",
     "@types/node": "^24.10.1",
     "@types/which": "^3.0.4",
-    "@vitest/coverage-v8": "^4.0.9",
-    "@vitest/ui": "^4.0.9",
+    "@vitest/coverage-v8": "^4.0.10",
+    "@vitest/ui": "^4.0.10",
     "rimraf": "^6.1.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.9"
+    "vitest": "^4.0.10"
   },
   "files": [
     "/dist",

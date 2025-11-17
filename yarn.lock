@@ -366,8 +366,8 @@ __metadata:
     "@biomejs/biome": "npm:^2.3.6"
     "@types/node": "npm:^24.10.1"
     "@types/which": "npm:^3.0.4"
-    "@vitest/coverage-v8": "npm:^4.0.9"
-    "@vitest/ui": "npm:^4.0.9"
+    "@vitest/coverage-v8": "npm:^4.0.10"
+    "@vitest/ui": "npm:^4.0.10"
     ansis: "npm:^4.2.0"
     change-case: "npm:^5.4.4"
     clipanion: "npm:^4.0.0-rc.4"
@@ -377,7 +377,7 @@ __metadata:
     rimraf: "npm:^6.1.0"
     typanion: "npm:^3.14.0"
     typescript: "npm:^5.9.3"
-    vitest: "npm:^4.0.9"
+    vitest: "npm:^4.0.10"
     which: "npm:^6.0.0"
     zod: "npm:^4.1.12"
   bin:
@@ -653,7 +653,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/coverage-v8@npm:^4.0.9":
+"@vitest/coverage-v8@npm:^4.0.10":
   version: 4.0.10
   resolution: "@vitest/coverage-v8@npm:4.0.10"
   dependencies:
@@ -748,7 +748,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/ui@npm:^4.0.9":
+"@vitest/ui@npm:^4.0.10":
   version: 4.0.10
   resolution: "@vitest/ui@npm:4.0.10"
   dependencies:
@@ -2164,7 +2164,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^4.0.9":
+"vitest@npm:^4.0.10":
   version: 4.0.10
   resolution: "vitest@npm:4.0.10"
   dependencies:
