@@ -41,6 +41,11 @@ export const JoltConfigSchema = z
     buildPlatform: z.string().optional().describe('Docker build platform (e.g., linux/amd64, linux/arm64)'),
     buildContext: z.string().optional().describe('Docker build context path').default('.'),
     ecrBaseUrl: z.string().optional().describe('ECR repository base URL'),
+    dockerBuildArgs: z
+      .record(z.string(), z.string())
+      .optional()
+      .describe('Build arguments to be passed to the docker build command')
+      .default({}),
 
     // ECS Configuration
     ecsCluster: z.string().optional().describe('Production ECS cluster name'),

@@ -53,7 +53,7 @@ export class Config {
 
   *[Symbol.iterator](): IterableIterator<[string, ConfigEntry]> {
     for (const entry of Object.entries(this.config)) {
-      yield entry
+      yield typeof entry === 'string' ? entry : [entry[0], JSON.stringify(entry[1])]
     }
   }
 
@@ -156,21 +156,24 @@ export class Config {
     }
   }
 
-  async get(key: string): Promise<string | undefined> {
+  // TODO: Can we infer this automatically from the schema?
+  async get(key: 'dockerBuildArgs'): Promise<Record<string, string> | undefined>
+  async get(key: string): Promise<string | undefined>
+  async get(key: string): Promise<string | Record<string, string> | undefined> {
     if (this.site) {
       if (this.config?.sites?.[this.site]?.[key] !== undefined) {
-        return await this.parseArg(this.config?.sites?.[this.site]?.[key])
+        return await this.cleanReturnValue(this.config?.sites?.[this.site]?.[key])
       }
 
       const capitalisedKey = key.charAt(0).toUpperCase() + key.slice(1)
       const keyToTry = `${this.site}${capitalisedKey}`
 
       if (this.config[keyToTry] !== undefined) {
-        return await this.parseArg(this.config[keyToTry])
+        return await this.cleanReturnValue(this.config[keyToTry])
       }
     }
 
-    return this.config[key] === undefined ? undefined : await this.parseArg(this.config[key])
+    return this.config[key] === undefined ? undefined : await this.cleanReturnValue(this.config[key])
   }
 
   has(key: string): boolean {
@@ -885,6 +888,26 @@ export class Config {
     }
 
     return retVal
+  }
+
+  private async cleanReturnValue(
+    val: string | Record<string, string> | undefined,
+  ): Promise<string | Record<string, string> | undefined> {
+    if (typeof val === 'undefined') {
+      return {}
+    }
+
+    if (typeof val === 'string') {
+      return await this.parseArg(val)
+    }
+
+    const entries = Object.entries(val)
+
+    const parsedEntries = Promise.all(
+      entries.map(async ([k, v]) => await Promise.all([this.parseArg(k), this.parseArg(v)])),
+    )
+
+    return Object.fromEntries(await parsedEntries)
   }
 }
 
