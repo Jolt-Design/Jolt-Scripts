@@ -53,7 +53,7 @@ export class Config {
 
   *[Symbol.iterator](): IterableIterator<[string, ConfigEntry]> {
     for (const entry of Object.entries(this.config)) {
-      yield typeof entry === 'string' ? entry : [entry[0], JSON.stringify(entry[1])]
+      yield [entry[0], typeof entry[1] === 'string' ? entry[1] : JSON.stringify(entry[1])]
     }
   }
 
