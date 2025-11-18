@@ -17,8 +17,7 @@
     "vitest": "^4.0.10"
   },
   "files": [
-    "/dist",
-    "jolt-config.schema.json"
+    "/dist"
   ],
   "scripts": {
     "build": "tsc -b && yarn run generate-schema",
