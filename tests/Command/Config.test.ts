@@ -695,13 +695,11 @@ describe('ConfigInitCommand', () => {
 
       expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
         '.jolt.json',
-        expect.stringContaining(
-          '"$schema": "https://raw.githubusercontent.com/Jolt-Design/jolt-scripts/master/jolt-config.schema.json"',
-        ),
+        expect.stringContaining('"$schema": "https://jolt-design.github.io/Jolt-Scripts/jolt-config.schema.json"'),
       )
       expect(mockStdout.write).toHaveBeenCalledWith(
         expect.stringContaining(
-          'Schema reference: https://raw.githubusercontent.com/Jolt-Design/jolt-scripts/master/jolt-config.schema.json (online)',
+          'Schema reference: https://jolt-design.github.io/Jolt-Scripts/jolt-config.schema.json (online)',
         ),
       )
     })
