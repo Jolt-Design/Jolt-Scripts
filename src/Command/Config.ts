@@ -176,7 +176,7 @@ export class ConfigInitCommand extends JoltCommand {
 
     // Determine the best schema reference to use
     // For shared config files, use online reference to ensure cross-environment compatibility
-    let schemaReference = 'https://raw.githubusercontent.com/Jolt-Design/jolt-scripts/master/jolt-config.schema.json'
+    let schemaReference = 'https://jolt-design.github.io/Jolt-Scripts/jolt-config.schema.json'
     let schemaSource = 'online'
 
     // Only use local schema in development when explicitly available

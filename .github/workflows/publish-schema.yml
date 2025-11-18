@@ -25,11 +25,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Build and generate schema
+        run: corepack yarn run build
+
       - name: Move schema to artifact folder
         run: mv ./jolt-config.schema.json ${{ runner.temp }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
