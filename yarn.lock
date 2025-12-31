@@ -358,7 +358,7 @@ __metadata:
     change-case: "npm:^5.4.4"
     clipanion: "npm:^4.0.0-rc.4"
     dotenv: "npm:^17.2.3"
-    execa: "npm:^9.6.0"
+    execa: "npm:^9.6.1"
     object-resolve-path: "npm:^1.1.1"
     rimraf: "npm:^6.1.2"
     typanion: "npm:^3.14.0"
@@ -1009,7 +1009,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^9.6.0":
+"execa@npm:^9.6.1":
   version: 9.6.1
   resolution: "execa@npm:9.6.1"
   dependencies:
