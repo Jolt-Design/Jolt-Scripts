@@ -298,6 +298,7 @@ export class DBResetCommand extends JoltCommand {
     }
 
     const [composeCommand, args] = await config.getComposeCommand()
+
     if (!quiet) {
       stdout.write(ansis.blue('🛢️ Bringing containers down...\n'))
     }
