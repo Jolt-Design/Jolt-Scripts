@@ -43,8 +43,8 @@ export class Config {
   private site: string | undefined
   private tfCache: Record<string, string> | undefined
   private packageJsonCache: PackageJson | false | undefined
-  private parseArgCache: Map<string, Promise<string>> = new Map()
-  private composeCommandCache: [string, string[]] | undefined
+  private parseArgCache = new Map<string, Promise<string>>()
+  private commandOverrideCache = new Map<string, CommandOverride>()
   private wordPressConfigCache: WordPressConfig | null | undefined
 
   get configPath() {
@@ -74,6 +74,16 @@ export class Config {
   }
 
   async getCommandOverride(command: string): Promise<CommandOverride> {
+    const cache = this.commandOverrideCache
+
+    if (!cache.has(command)) {
+      cache.set(command, await this.getCommandOverrideInternal(command))
+    }
+
+    return cache.get(command) as CommandOverride
+  }
+
+  private async getCommandOverrideInternal(command: string): Promise<CommandOverride> {
     let envVar: string
     let def: string
 
@@ -346,16 +356,9 @@ export class Config {
   }
 
   async getComposeCommand(): Promise<[string, string[]]> {
-    if (this.composeCommandCache) {
-      return this.composeCommandCache
-    }
-
     const command = await this.command('compose')
     const parts = command.split(' ')
-    const result: [string, string[]] = [parts[0], parts.slice(1)]
-
-    this.composeCommandCache = result
-    return result
+    return [parts[0], parts.slice(1)]
   }
 
   async getCacheContainerInfo() {
