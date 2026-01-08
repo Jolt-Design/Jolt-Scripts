@@ -272,9 +272,11 @@ export class DBResetCommand extends JoltCommand {
   static paths = [['db', 'reset']]
   requiredCommands = ['docker', 'compose']
   quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
+  backup = Option.Boolean('--backup', true, { description: 'Backup existing DB first' })
 
   async command(): Promise<number | undefined> {
     const {
+      backup,
       config,
       cli,
       context,
@@ -286,11 +288,13 @@ export class DBResetCommand extends JoltCommand {
       stdout.write(ansis.blue('🛢️ Backing up current database...\n'))
     }
 
-    const backupResult = await cli.run(['db', 'dump', '--backup'], context)
+    if (backup) {
+      const backupResult = await cli.run(['db', 'dump', '--backup'], context)
 
-    if (backupResult > 0) {
-      stderr.write(ansis.red('🛢️ Failed to backup database!\n'))
-      return backupResult
+      if (backupResult > 0) {
+        stderr.write(ansis.red('🛢️ Failed to backup database!\n'))
+        return backupResult
+      }
     }
 
     const [composeCommand, args] = await config.getComposeCommand()
