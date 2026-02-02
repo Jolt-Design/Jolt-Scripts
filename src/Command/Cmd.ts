@@ -20,38 +20,37 @@ export class CmdCommand extends JoltCommand {
 
     // See: https://github.com/arcanis/clipanion/issues/85
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
-    let proxyArgs = parsedArgs
     let quiet = false
-    let parsingCwd = false
     let cwdArg: string | undefined
+    let i = 0
 
-    // Horrible custom arg parsing
-    while (true) {
-      if (parsingCwd) {
-        cwdArg = proxyArgs[0]
-        parsingCwd = false
-        proxyArgs = proxyArgs.slice(1)
-      } else if (['-q', '--quiet'].includes(proxyArgs[0])) {
+    // Parse custom options: -q/--quiet and -c/--cwd
+    while (i < parsedArgs.length) {
+      const arg = parsedArgs[i]
+
+      if (['-q', '--quiet'].includes(arg)) {
         quiet = true
-        proxyArgs = proxyArgs.slice(1)
-      } else if (['-c', '--cwd'].includes(proxyArgs[0])) {
-        // This is a short cwd arg or two part cwd arg, e.g. `-c x/y` or `--cwd x/y`
-        parsingCwd = true
-        proxyArgs = proxyArgs.slice(1)
-      } else if (proxyArgs[0]?.match(/^--cwd=/)) {
-        // This is a one part long cwd arg, e.g. `--cwd=x/y`
-        cwdArg = proxyArgs[0].replace(/^--cwd=/, '')
-        proxyArgs = proxyArgs.slice(1)
+        i++
+      } else if (['-c', '--cwd'].includes(arg)) {
+        // Short or long two-part form: -c x/y or --cwd x/y
+        cwdArg = parsedArgs[i + 1]
+        i += 2
+      } else if (arg?.match(/^--cwd=/)) {
+        // Long one-part form: --cwd=x/y
+        cwdArg = arg.replace(/^--cwd=/, '')
+        i++
       } else {
         break
       }
     }
 
+    const commandArgs = parsedArgs.slice(i)
+
     if (!quiet) {
-      stdout.write(ansis.blue(`Running command: ${proxyArgs.join(' ')}...\n`))
+      stdout.write(ansis.blue(`Running command: ${commandArgs.join(' ')}...\n`))
     }
 
-    const result = await execC(proxyArgs[0], proxyArgs.slice(1), { cwd: cwdArg, context, shell: true })
+    const result = await execC(commandArgs[0], commandArgs.slice(1), { cwd: cwdArg, context, shell: true })
     return result.exitCode
   }
 }
