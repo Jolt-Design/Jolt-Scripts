@@ -32,6 +32,7 @@ export const JoltConfigSchema = z
     awsRegion: z.string().optional().describe('AWS region for operations').default('eu-west-1'),
 
     // Docker Configuration
+    composeProject: z.string().optional().describe('Name of the Compose project'),
     imageName: z.string().optional().describe('Docker image name for production builds'),
     devImageName: z
       .string()
@@ -88,6 +89,10 @@ export const JoltConfigSchema = z
     // Database Configuration
     dbSeed: z.string().optional().describe('Database seed file path'),
     dbBackupPath: z.string().optional().describe('Path for database backups'),
+    dbContainer: z.string().optional().describe('Name of the database container'),
+    dbName: z.string().optional().describe('Name of the database schema to use'),
+    dbUser: z.string().optional().describe('Username for the database container'),
+    dbPass: z.string().optional().describe('Password for the database container'),
 
     // WordPress Configuration
     devPlugins: z.string().optional().describe('WordPress plugins to activate on development servers'),
