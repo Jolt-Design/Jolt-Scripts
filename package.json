@@ -37,7 +37,7 @@
     "ansis": "^4.2.0",
     "change-case": "^5.4.4",
     "clipanion": "^4.0.0-rc.4",
-    "dotenv": "^17.2.4",
+    "dotenv": "^17.3.1",
     "execa": "^9.6.1",
     "object-resolve-path": "^1.1.1",
     "typanion": "^3.14.0",
