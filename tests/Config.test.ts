@@ -209,8 +209,8 @@ describe('Config', () => {
       })
       const commands = config.getPrepareCommands()
       expect(commands).toEqual([
-        { cmd: 'yarn build', fail: true, timing: 'normal' },
-        { cmd: 'npm test', fail: true, timing: 'normal' },
+        { cmd: 'yarn build', fail: true, timing: 'normal', hidden: false },
+        { cmd: 'npm test', fail: true, timing: 'normal', hidden: false },
       ])
     })
 
@@ -223,8 +223,8 @@ describe('Config', () => {
       })
       const commands = config.getPrepareCommands()
       expect(commands).toEqual([
-        { cmd: 'yarn build', fail: false, timing: 'early' },
-        { cmd: 'npm test', dir: 'packages/test', fail: true, timing: 'normal' },
+        { cmd: 'yarn build', fail: false, timing: 'early', hidden: false },
+        { cmd: 'npm test', dir: 'packages/test', fail: true, timing: 'normal', hidden: false },
       ])
     })
 

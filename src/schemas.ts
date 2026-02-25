@@ -8,6 +8,11 @@ export const PrepareCommandSchema = z.object({
   fail: z.boolean().optional().default(true).describe('Whether to fail if command returns non-zero exit code'),
   dir: z.string().optional().describe('Working directory for the command'),
   timing: PrepareTimingSchema.optional().default('normal').describe('When to run the command during preparation'),
+  hidden: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('If true, the parsed text of the command is hidden. Useful if the command contains secrets.'),
 })
 
 export const PrepareCommandsSchema = z.array(

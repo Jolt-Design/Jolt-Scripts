@@ -518,8 +518,9 @@ export class Config {
       const validatedCommands = PrepareCommandsSchema.parse(this.config.prepareCommands)
       const parsed: PrepareCommandConfig[] = validatedCommands.map((cmd) => {
         if (typeof cmd === 'string') {
-          return { cmd, fail: true, timing: 'normal' }
+          return { cmd, fail: true, timing: 'normal', hidden: false }
         }
+
         return cmd
       })
 

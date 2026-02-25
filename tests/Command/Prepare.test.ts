@@ -546,6 +546,85 @@ describe('PrepareCommand', () => {
       expect(result).toBe(0)
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('echo test'))
     })
+
+    it('should pass --quiet flag when hidden property is true', async () => {
+      command.husky = false
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      const commands = [
+        {
+          cmd: 'export SECRET_TOKEN=abc123 && deploy.sh',
+          name: 'Deploy with Secret',
+          timing: 'normal' as const,
+          fail: false,
+          hidden: true,
+        },
+      ]
+
+      vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce([]).mockReturnValueOnce(commands)
+
+      vi.mocked(directoryExists).mockResolvedValue(false)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockCli.run).toHaveBeenCalledWith(
+        ['cmd', '--quiet', 'export SECRET_TOKEN=abc123 && deploy.sh'],
+        mockContext,
+      )
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('output hidden'))
+    })
+
+    it('should not pass --quiet flag when hidden property is false', async () => {
+      command.husky = false
+      command.tofu = false
+      command.dbSeeds = false
+      command.devPlugins = false
+
+      const commands = [
+        {
+          cmd: 'yarn build',
+          name: 'Build Project',
+          timing: 'normal' as const,
+          fail: false,
+          hidden: false,
+        },
+      ]
+
+      vi.mocked(mockConfig.getPrepareCommands).mockReturnValueOnce([]).mockReturnValueOnce(commands)
+
+      vi.mocked(directoryExists).mockResolvedValue(false)
+      vi.mocked(readdir).mockResolvedValue([] as any)
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockCli.run).toHaveBeenCalledWith(['cmd', 'yarn build'], mockContext)
+    })
+
+    it('should pass --quiet flag when hidden command fails', async () => {
+      const commands = [
+        {
+          cmd: 'secret-command',
+          timing: 'early' as const,
+          fail: true,
+          hidden: true,
+        },
+      ]
+
+      vi.mocked(mockConfig.getPrepareCommands).mockReturnValue(commands)
+      vi.mocked(mockCli.run).mockResolvedValue(1)
+
+      const result = await command.command()
+
+      expect(result).toBe(1)
+      expect(mockCli.run).toHaveBeenCalledWith(['cmd', '--quiet', 'secret-command'], mockContext)
+      expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Error running prepare step'))
+      expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Returned code 1'))
+    })
   })
 
   describe('integration scenarios', () => {
