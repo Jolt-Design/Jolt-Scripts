@@ -84,7 +84,7 @@ export class PrepareCommand extends JoltCommand {
         const retval = await cli.run(args, context)
 
         if (command.hidden && retval === 0) {
-          stdout.write(ansis.blue(`Running command: ${ansis.dim('[command hidden by configuration]')}\n`))
+          stdout.write(ansis.blue(`Running command: ${ansis.dim('[output hidden by configuration]')}\n`))
         }
 
         if (command.fail && retval > 0) {
