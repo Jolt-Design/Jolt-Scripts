@@ -26,6 +26,7 @@ import {
 import { NexcessDeployCommand, NexcessDeployLocalCommand, NexcessDeploySpecificCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
+import { TemplateCommand } from './Command/Template.js'
 import {
   WPCLICommand,
   WPCommand,
@@ -77,6 +78,7 @@ cli.register(NexcessDeployLocalCommand)
 cli.register(SSHCommand)
 cli.register(RsyncCommand)
 cli.register(CmdCommand)
+cli.register(TemplateCommand)
 cli.register(CloudFrontInvalidateCommand)
 cli.register(PrepareCommand)
 cli.runExit(args)
