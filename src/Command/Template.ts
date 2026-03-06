@@ -8,13 +8,16 @@ export class TemplateCommand extends JoltCommand {
 
   input = Option.String({ required: true })
   output = Option.String({ required: true })
+  quiet = Option.Boolean('-q,--quiet', false, { description: 'Suppress command output' })
 
   async command(): Promise<number | undefined> {
-    const { input, output, config, context } = this
+    const { input, output, config, context, quiet } = this
     const { stdout, stderr } = context
 
     try {
-      stdout.write(this.getHeader('Template'))
+      if (!quiet) {
+        stdout.write(this.getHeader('Template'))
+      }
 
       // Read the input file
       let content: string
@@ -42,9 +45,12 @@ export class TemplateCommand extends JoltCommand {
       // Write to the output file
       try {
         await writeFile(output, parsedContent, 'utf-8')
-        stdout.write(ansis.green('✓ Template processed successfully\n'))
-        stdout.write(ansis.blue(`  Input:  ${input}\n`))
-        stdout.write(ansis.blue(`  Output: ${output}\n`))
+
+        if (!quiet) {
+          stdout.write(ansis.green('✓ Template processed successfully\n'))
+          stdout.write(ansis.blue(`  Input:  ${input}\n`))
+          stdout.write(ansis.blue(`  Output: ${output}\n`))
+        }
       } catch (error) {
         stderr.write(
           ansis.red(

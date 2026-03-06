@@ -93,4 +93,51 @@ describe('TemplateCommand', () => {
 
     expect(result).toBe(3)
   })
+
+  it('suppresses output when quiet is true', async () => {
+    const mockReadFile = readFile as Mock
+    const mockWriteFile = writeFile as Mock
+
+    command.input = 'input.txt'
+    command.output = 'output.txt'
+    command.quiet = true
+    mockReadFile.mockResolvedValueOnce(Buffer.from('Hello'))
+    mockConfig.parseArg.mockResolvedValueOnce('Hello')
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockStdout.write).not.toHaveBeenCalled()
+    expect(mockWriteFile).toHaveBeenCalledWith('output.txt', 'Hello', 'utf-8')
+  })
+
+  it('outputs normally when quiet is false', async () => {
+    const mockReadFile = readFile as Mock
+
+    command.input = 'input.txt'
+    command.output = 'output.txt'
+    command.quiet = false
+    mockReadFile.mockResolvedValueOnce(Buffer.from('Hello'))
+    mockConfig.parseArg.mockResolvedValueOnce('Hello')
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockStdout.write).toHaveBeenCalledWith('Test Header\n')
+    expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Template processed successfully'))
+  })
+
+  it('shows errors even in quiet mode', async () => {
+    const mockReadFile = readFile as Mock
+
+    command.input = 'missing.txt'
+    command.output = 'output.txt'
+    command.quiet = true
+    mockReadFile.mockRejectedValueOnce(new Error('File not found'))
+
+    const result = await command.command()
+
+    expect(result).toBe(1)
+    expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Error reading input file'))
+  })
 })
