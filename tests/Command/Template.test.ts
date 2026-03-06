@@ -1,10 +1,15 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { TemplateCommand } from '../../src/Command/Template.js'
+import { fileExists } from '../../src/utils.js'
 
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
+}))
+
+vi.mock('../../src/utils.js', () => ({
+  fileExists: vi.fn(),
 }))
 
 describe('TemplateCommand', () => {
@@ -139,5 +144,65 @@ describe('TemplateCommand', () => {
 
     expect(result).toBe(1)
     expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Error reading input file'))
+  })
+
+  it('skips writing when if-not-exists is true and file exists', async () => {
+    const mockReadFile = readFile as Mock
+    const mockWriteFile = writeFile as Mock
+    const mockFileExists = fileExists as Mock
+
+    command.input = 'input.txt'
+    command.output = 'output.txt'
+    command.quiet = false
+    command.ifNotExists = true
+    mockReadFile.mockResolvedValueOnce(Buffer.from('Hello'))
+    mockConfig.parseArg.mockResolvedValueOnce('Hello')
+    mockFileExists.mockResolvedValueOnce(true)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockFileExists).toHaveBeenCalledWith('output.txt')
+    expect(mockWriteFile).not.toHaveBeenCalled()
+    expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('already exists'))
+  })
+
+  it('writes normally when if-not-exists is true and file does not exist', async () => {
+    const mockReadFile = readFile as Mock
+    const mockWriteFile = writeFile as Mock
+    const mockFileExists = fileExists as Mock
+
+    command.input = 'input.txt'
+    command.output = 'output.txt'
+    command.quiet = false
+    command.ifNotExists = true
+    mockReadFile.mockResolvedValueOnce(Buffer.from('Hello'))
+    mockConfig.parseArg.mockResolvedValueOnce('Hello')
+    mockFileExists.mockResolvedValueOnce(false)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockFileExists).toHaveBeenCalledWith('output.txt')
+    expect(mockWriteFile).toHaveBeenCalledWith('output.txt', 'Hello', 'utf-8')
+    expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Template processed successfully'))
+  })
+
+  it('suppresses skip message when quiet is true with if-not-exists', async () => {
+    const mockReadFile = readFile as Mock
+    const mockFileExists = fileExists as Mock
+
+    command.input = 'input.txt'
+    command.output = 'output.txt'
+    command.quiet = true
+    command.ifNotExists = true
+    mockReadFile.mockResolvedValueOnce(Buffer.from('Hello'))
+    mockConfig.parseArg.mockResolvedValueOnce('Hello')
+    mockFileExists.mockResolvedValueOnce(true)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockStdout.write).not.toHaveBeenCalled()
   })
 })
