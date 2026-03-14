@@ -10,10 +10,10 @@ vi.mock('../../src/Config.js')
  */
 class MockAbortController {
   abort: Mock<(...args: any[]) => any>
-  signal: { aborted: boolean }
+  signal: { aborted: boolean; addEventListener: Mock }
 
   static _abort = vi.fn()
-  static _signal = { aborted: false }
+  static _signal = { aborted: false, addEventListener: vi.fn() }
 
   constructor() {
     this.abort = MockAbortController._abort
