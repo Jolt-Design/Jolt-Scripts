@@ -516,4 +516,118 @@ describe('Config', () => {
       })
     })
   })
+
+  describe('parseArg with site variables', () => {
+    beforeEach(async () => {
+      // Restore the real parseArg implementation for these tests
+      vi.spyOn(Config.prototype, 'parseArg').mockRestore()
+      // Use the real replaceAsync from utils
+      const realUtils = await vi.importActual<typeof utils>('../src/utils.js')
+      vi.mocked(utils.replaceAsync).mockImplementation(realUtils.replaceAsync)
+    })
+
+    afterEach(() => {
+      // Restore the mocked parseArg for other tests
+      vi.spyOn(Config.prototype, 'parseArg').mockImplementation(function (this: Config, value: string) {
+        return Promise.resolve(value)
+      })
+    })
+
+    it('should replace {site:name} with the current site name', async () => {
+      const config = new Config()
+      config.setSite('production')
+
+      const result = await config.parseArg('Server: {site:name}')
+
+      expect(result).toBe('Server: production')
+    })
+
+    it('should return original text when site is not set and {site:name} is used', async () => {
+      const config = new Config()
+
+      const result = await config.parseArg('Server: {site:name}')
+
+      expect(result).toBe('Server: {site:name}')
+    })
+
+    it('should handle {site:name} in the middle of a string', async () => {
+      const config = new Config()
+      config.setSite('staging')
+
+      const result = await config.parseArg('Deploy to {site:name} environment')
+
+      expect(result).toBe('Deploy to staging environment')
+    })
+
+    it('should handle multiple {site:name} replacements in one string', async () => {
+      const config = new Config()
+      config.setSite('development')
+
+      const result = await config.parseArg('Environment: {site:name}, Region: us-east-1, Site: {site:name}')
+
+      expect(result).toBe('Environment: development, Region: us-east-1, Site: development')
+    })
+
+    it('should handle unknown site variables by returning original text', async () => {
+      const config = new Config()
+      config.setSite('production')
+
+      // siteArg only supports 'name', other variables should return the original substring
+      const result = await config.parseArg('Value: {site:unknown}')
+
+      expect(result).toBe('Value: {site:unknown}')
+    })
+
+    it('should handle site variable with other variable types in the same string', async () => {
+      const config = new Config({ mykey: 'myvalue' })
+      config.setSite('test')
+      vi.mocked(utils.which).mockResolvedValue('/bin/git')
+
+      const result = await config.parseArg('Site: {site:name}, Config: {config:mykey}')
+
+      // Note: {config:mykey} should be replaced with 'myvalue' since we're testing the actual implementation
+      expect(result).toBe('Site: test, Config: myvalue')
+    })
+
+    it('should preserve case sensitivity in site variable type', async () => {
+      const config = new Config()
+      config.setSite('production')
+
+      // The regex is case-insensitive for the type, so SITE:name should still work
+      const result = await config.parseArg('Server: {SITE:name}')
+
+      expect(result).toBe('Server: production')
+    })
+
+    it('should not replace partial matches', async () => {
+      const config = new Config()
+      config.setSite('production')
+
+      const result = await config.parseArg('Website: example.com and {site:name} is the domain')
+
+      // example.com should not be replaced, only {site:name}
+      expect(result).toBe('Website: example.com and production is the domain')
+    })
+
+    it('should handle site variable independently from parameters', async () => {
+      const config = new Config()
+      config.setSite('demo')
+
+      const result = await config.parseArg('Command: /bin/deploy --site={site:name}', {
+        site: 'override',
+      })
+
+      // site: variables are independent from arg:/param: parameter substitution
+      expect(result).toBe('Command: /bin/deploy --site=demo')
+    })
+
+    it('should handle site:name with underscores and hyphens in site names', async () => {
+      const config = new Config()
+      config.setSite('prod-us-west-2')
+
+      const result = await config.parseArg('Deploy target: {site:name}')
+
+      expect(result).toBe('Deploy target: prod-us-west-2')
+    })
+  })
 })

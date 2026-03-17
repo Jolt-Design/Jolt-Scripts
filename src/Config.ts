@@ -21,7 +21,8 @@ import type {
 import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from './utils.js'
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
-const ARG_REGEX = /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git)):(?<variable>[a-z0-9_.[\]"-]+)}/gi
+const ARG_REGEX =
+  /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git|site)):(?<variable>[a-z0-9_.[\]"-]+)}/gi
 const DEFAULT_DEV_PLUGIN_DELAY = 30
 
 function parseEnvFile(env: Record<string, string>): InternalConfig {
@@ -658,6 +659,8 @@ export class Config {
         return (await this.get(name)) ?? substring
       case 'git':
         return (await this.gitVar(name)) ?? substring
+      case 'site':
+        return (await this.siteArg(name)) ?? substring
     }
 
     return substring
@@ -871,6 +874,13 @@ export class Config {
           return sha
         }
       }
+    }
+  }
+
+  private async siteArg(name: string): Promise<string | undefined> {
+    switch (name) {
+      case 'name':
+        return this.site ?? undefined
     }
   }
 
