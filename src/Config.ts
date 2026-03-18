@@ -68,6 +68,7 @@ export class Config {
 
   setSite(site: string) {
     this.site = site
+    this.parseArgCache.clear()
   }
 
   async command(name: string): Promise<string> {

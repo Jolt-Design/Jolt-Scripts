@@ -55,6 +55,7 @@ describe('JoltCommand', () => {
       stderr: mockStderr,
     } as any
     command.cli = { binaryLabel: 'test-binary' } as any
+    command.forEachSite = false // Explicitly set default
 
     vi.mocked(getConfig).mockResolvedValue({
       setSite: vi.fn(),
@@ -62,6 +63,7 @@ describe('JoltCommand', () => {
       get: vi.fn(),
       tfVar: vi.fn(),
       parseArg: vi.fn((x) => x),
+      getSites: vi.fn().mockReturnValue({}),
     } as any)
 
     // Reset environment variables
@@ -112,6 +114,7 @@ describe('JoltCommand', () => {
       vi.mocked(getConfig).mockResolvedValueOnce({
         setSite,
         command: vi.fn().mockResolvedValue('test-command'),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
       vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
 
@@ -131,6 +134,7 @@ describe('JoltCommand', () => {
         stderr: mockStderr,
       } as any
       commandWithConfig.cli = { binaryLabel: 'test-binary' } as any
+      commandWithConfig.forEachSite = false // Explicitly set default
     })
 
     it('should check for required config entries', async () => {
@@ -139,6 +143,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockResolvedValue('test-config-value'),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await commandWithConfig.execute()
@@ -153,6 +158,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockResolvedValue(undefined),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await commandWithConfig.execute()
@@ -179,6 +185,7 @@ describe('JoltCommand', () => {
           setSite: vi.fn(),
           command: vi.fn().mockResolvedValue('test-command'),
           get: vi.fn().mockResolvedValue(undefined),
+          getSites: vi.fn().mockReturnValue({}),
         } as any)
 
         const result = await commandWithConfig.execute()
@@ -198,6 +205,7 @@ describe('JoltCommand', () => {
         stderr: mockStderr,
       } as any
       conditionalCommand.cli = { binaryLabel: 'test-binary' } as any
+      conditionalCommand.forEachSite = false // Explicitly set default
     })
 
     it('should validate prod config when dev=false', async () => {
@@ -207,6 +215,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockImplementation((key) => (key === 'prodConfigKey' ? 'prod-value' : undefined)),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await conditionalCommand.execute()
@@ -222,6 +231,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockImplementation((key) => (key === 'devConfigKey' ? 'dev-value' : undefined)),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await conditionalCommand.execute()
@@ -237,6 +247,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockResolvedValue(undefined),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await conditionalCommand.execute()
@@ -255,6 +266,7 @@ describe('JoltCommand', () => {
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
         get: vi.fn().mockResolvedValue(undefined),
+        getSites: vi.fn().mockReturnValue({}),
       } as any)
 
       const result = await conditionalCommand.execute()
@@ -283,6 +295,78 @@ describe('JoltCommand', () => {
       const header = command.getHeader('test-suffix')
 
       expect(header).toContain('test-suffix')
+    })
+  })
+
+  describe('--for-each-site option', () => {
+    let mockStdout: { write: Mock }
+
+    beforeEach(() => {
+      mockStdout = { write: vi.fn() }
+      command = new TestCommand() // Create fresh instance
+      command.site = undefined // Explicitly clear site
+      command.forEachSite = false // Explicitly clear forEachSite
+      command.context = {
+        stdout: mockStdout,
+        stderr: mockStderr,
+      } as any
+      command.cli = { binaryLabel: 'test-binary' } as any
+    })
+
+    it('should return 0 when --for-each-site=false (default)', async () => {
+      command.forEachSite = false
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      const result = await command.execute()
+
+      expect(result).toBe(0)
+    })
+
+    it('should return 0 when --for-each-site=true (series mode)', async () => {
+      command.forEachSite = true
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      const result = await command.execute()
+
+      expect(result).toBe(0)
+    })
+
+    it('should return 0 when --for-each-site=series (explicit series mode)', async () => {
+      command.forEachSite = 'series'
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      const result = await command.execute()
+
+      expect(result).toBe(0)
+    })
+
+    it('should return 0 when --for-each-site=parallel (parallel mode)', async () => {
+      command.forEachSite = 'parallel'
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        command: vi.fn().mockResolvedValue('test-command'),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      const result = await command.execute()
+
+      expect(result).toBe(0)
     })
   })
 })

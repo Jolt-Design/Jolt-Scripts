@@ -1,5 +1,6 @@
 import ansis from 'ansis'
 import { Command, Option } from 'clipanion'
+import * as t from 'typanion'
 import type { Config } from '../Config.js'
 import getConfig from '../Config.js'
 import { which } from '../utils.js'
@@ -10,6 +11,15 @@ export default abstract class JoltCommand extends Command {
   requiredCommands: string[] = []
   requiredConfig: string[] = []
   site = Option.String('-s,--site', { required: false, description: 'Target site configuration to use' })
+
+  forEachSite = Option.String('-x,--for-each-site', false, {
+    tolerateBoolean: true,
+    description:
+      'Run command for each configured site. Specify "series" or "parallel" to change the run type. Defaults to series.',
+    validator: t.isEnum([false, 'series', 'parallel']),
+  })
+
+  static schema = [t.hasMutuallyExclusiveKeys(['site', 'forEachSite'], { missingIf: 'falsy' })]
 
   abstract command(): Promise<number | undefined>
 
@@ -64,12 +74,21 @@ export default abstract class JoltCommand extends Command {
   async execute(): Promise<number | undefined> {
     const { stderr } = this.context
     const config = await getConfig()
+    this.config = config
+
+    if (this.forEachSite) {
+      const mode = this.getForEachSiteMode(this.forEachSite)
+
+      if (!mode) {
+        throw new Error(`Invalid for each mode: ${mode}`)
+      }
+
+      return await this.executeForAllSites(mode)
+    }
 
     if (this.site) {
       config.setSite(this.site)
     }
-
-    this.config = config
 
     if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {
       // Parallelize command resolution and validation
@@ -100,6 +119,102 @@ export default abstract class JoltCommand extends Command {
 
     // Config validation will happen in the command wrapper after options are parsed
     return await this.runCommandWithValidation()
+  }
+
+  private getForEachSiteMode(forEachSite: string | boolean): 'series' | 'parallel' | false {
+    if (forEachSite === true) {
+      return 'series'
+    }
+
+    if (forEachSite === false) {
+      return false
+    }
+
+    const lower = forEachSite.toLowerCase()
+
+    if (lower === 'series') {
+      return 'series'
+    }
+
+    if (lower === 'parallel') {
+      return 'parallel'
+    }
+
+    return false
+  }
+
+  private async executeForAllSites(forEachSiteMode: string): Promise<number | undefined> {
+    const sites = this.config.getSites()
+    const siteNames = Object.keys(sites)
+
+    if (siteNames.length === 0) {
+      return 0
+    }
+
+    // Check for required commands once before running for all sites
+    if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {
+      const commandChecks = await Promise.all(
+        this.requiredCommands.map(async (baseCommand) => {
+          const realCommand = await this.config.command(baseCommand)
+          const isAvailable = await which(realCommand)
+
+          return { baseCommand, realCommand, isAvailable }
+        }),
+      )
+
+      const missingCommands = commandChecks
+        .filter(({ isAvailable }) => !isAvailable)
+        .map(({ realCommand }) => realCommand)
+
+      if (missingCommands.length > 0) {
+        const { stderr } = this.context
+        stderr.write(this.getHeader())
+        stderr.write(ansis.red('Missing the following commands:\n'))
+
+        for (const missingCommand of missingCommands) {
+          stderr.write(ansis.red(`- ${missingCommand}\n`))
+        }
+
+        return 4
+      }
+    }
+
+    // Run all sites in parallel
+    if (forEachSiteMode === 'parallel') {
+      const promises = siteNames.map((siteName) => this.executeForSite(siteName))
+      const exitCodes = await Promise.all(promises)
+      const failedResult = exitCodes.find((code) => code !== 0 && code !== undefined)
+
+      return failedResult ?? 0
+    }
+
+    // Run sites in series (default)
+    for (const siteName of siteNames) {
+      const exitCode = await this.executeForSite(siteName)
+
+      if (exitCode !== 0 && exitCode !== undefined) {
+        return exitCode
+      }
+    }
+
+    return 0
+  }
+
+  private async executeForSite(siteName: string): Promise<number | undefined> {
+    // Create a fresh config instance for this site
+    const siteConfig = await getConfig()
+
+    siteConfig.setSite(siteName)
+    this.config = siteConfig
+
+    // Validate required config for this site
+    const configValidationResult = await this.validateRequiredConfig()
+
+    if (configValidationResult !== undefined) {
+      return configValidationResult
+    }
+
+    return await this.command()
   }
 
   private async runCommandWithValidation(): Promise<number | undefined> {
