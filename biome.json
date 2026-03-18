@@ -53,6 +53,9 @@
     {
       "includes": ["tests/**/*"],
       "linter": {
+        "domains": {
+          "test": "recommended"
+        },
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
