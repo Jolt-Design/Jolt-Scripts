@@ -1,13 +1,17 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import ansis from 'ansis'
 import { Command, Option } from 'clipanion'
 import * as t from 'typanion'
 import type { Config } from '../Config.js'
-import getConfig from '../Config.js'
+import getConfig, { getSiteConfig } from '../Config.js'
 import { which } from '../utils.js'
+
+// Per-execution async context for config to support parallel site execution
+const configContext = new AsyncLocalStorage<Config>()
 
 export default abstract class JoltCommand extends Command {
   logo = ansis.magentaBright('⚡')
-  config!: Config
+  private _config!: Config
   requiredCommands: string[] = []
   requiredConfig: string[] = []
   site = Option.String('-s,--site', { required: false, description: 'Target site configuration to use' })
@@ -22,6 +26,21 @@ export default abstract class JoltCommand extends Command {
   static schema = [t.hasMutuallyExclusiveKeys(['site', 'forEachSite'], { missingIf: 'falsy' })]
 
   abstract command(): Promise<number | undefined>
+
+  /**
+   * Get the effective config, checking async context first (for parallel execution)
+   */
+  get config(): Config {
+    const contextConfig = configContext.getStore()
+    return contextConfig ?? this._config
+  }
+
+  /**
+   * Set the config (typically used during initial setup or single-threaded execution)
+   */
+  set config(value: Config) {
+    this._config = value
+  }
 
   /**
    * Override this method to provide dynamic config requirements based on command options
@@ -201,20 +220,22 @@ export default abstract class JoltCommand extends Command {
   }
 
   private async executeForSite(siteName: string): Promise<number | undefined> {
-    // Create a fresh config instance for this site
-    const siteConfig = await getConfig()
+    // Get a site-specific cached config instance
+    // Each site gets its own Config instance, but they are cached and reused
+    const siteConfig = await getSiteConfig(siteName)
 
-    siteConfig.setSite(siteName)
-    this.config = siteConfig
+    // Run this site's execution within its own async context
+    // This prevents race conditions when multiple sites execute in parallel
+    return await configContext.run(siteConfig, async () => {
+      // Validate required config for this site
+      const configValidationResult = await this.validateRequiredConfig()
 
-    // Validate required config for this site
-    const configValidationResult = await this.validateRequiredConfig()
+      if (configValidationResult !== undefined) {
+        return configValidationResult
+      }
 
-    if (configValidationResult !== undefined) {
-      return configValidationResult
-    }
-
-    return await this.command()
+      return await this.command()
+    })
   }
 
   private async runCommandWithValidation(): Promise<number | undefined> {

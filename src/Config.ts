@@ -52,6 +52,10 @@ export class Config {
     return this._configPath
   }
 
+  get internalConfig(): InternalConfig {
+    return this.config
+  }
+
   *[Symbol.iterator](): IterableIterator<[string, ConfigEntry]> {
     for (const entry of Object.entries(this.config)) {
       yield [entry[0], typeof entry[1] === 'string' ? entry[1] : JSON.stringify(entry[1])]
@@ -927,6 +931,7 @@ export class Config {
 }
 
 let cachedConfig: Config
+const siteConfigCache = new Map<string, Config>()
 
 export default async function getConfig() {
   if (!cachedConfig) {
@@ -960,6 +965,32 @@ export default async function getConfig() {
   }
 
   return cachedConfig
+}
+
+/**
+ * Get a site-specific cached config instance.
+ * Each site gets its own Config instance to avoid race conditions in parallel execution,
+ * but the instances are cached so multiple invocations for the same site reuse the same instance.
+ */
+export async function getSiteConfig(siteName: string): Promise<Config> {
+  if (!siteConfigCache.has(siteName)) {
+    // Get the base config first to read all config files
+    const baseConfig = await getConfig()
+
+    // Create a fresh instance for this site with the same parsed config
+    const siteConfig = new Config(baseConfig.internalConfig, baseConfig.configPath)
+
+    siteConfig.setSite(siteName)
+    siteConfigCache.set(siteName, siteConfig)
+  }
+
+  const config = siteConfigCache.get(siteName)
+
+  if (!config) {
+    throw new Error(`Site config should have been cached for ${siteName}`)
+  }
+
+  return config
 }
 
 export type { Config as ConfigType }

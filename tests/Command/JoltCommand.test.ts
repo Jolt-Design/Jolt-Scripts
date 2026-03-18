@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import JoltCommand from '../../src/Command/JoltCommand.js'
-import getConfig from '../../src/Config.js'
+import getConfig, { getSiteConfig } from '../../src/Config.js'
 import { which } from '../../src/utils.js'
 
 vi.mock('../../src/utils.js')
@@ -367,6 +367,74 @@ describe('JoltCommand', () => {
       const result = await command.execute()
 
       expect(result).toBe(0)
+    })
+
+    it('should execute correct site config in parallel mode with multiple sites', async () => {
+      // Create a test command that tracks which site was active when command() was called
+      class TrackedCommand extends JoltCommand {
+        executedSites: string[] = []
+
+        async command(): Promise<number | undefined> {
+          // Record which site was active when this command ran
+          if (this.config && 'currentSite' in this.config) {
+            this.executedSites.push((this.config as any).currentSite)
+          }
+          return 0
+        }
+      }
+
+      const trackedCommand = new TrackedCommand()
+      trackedCommand.forEachSite = 'parallel'
+      trackedCommand.context = {
+        stdout: { write: vi.fn() },
+        stderr: { write: vi.fn() },
+      } as any
+      trackedCommand.cli = { binaryLabel: 'test-binary' } as any
+
+      // Mock getConfig to return the base config for the first call
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite: vi.fn(),
+        currentSite: 'base',
+        getSites: vi.fn().mockReturnValue({ site1: {}, site2: {}, site3: {} }),
+        command: vi.fn().mockResolvedValue('test-command'),
+        internalConfig: {},
+        configPath: '.jolt.json',
+      } as any)
+
+      // Mock getSiteConfig to return different config objects for each site
+      vi.mocked(getSiteConfig).mockImplementation(async (siteName: string) => {
+        const siteConfigs: Record<string, any> = {
+          site1: {
+            setSite: vi.fn(),
+            currentSite: 'site1',
+            getSites: vi.fn().mockReturnValue({ site1: {}, site2: {}, site3: {} }),
+            command: vi.fn().mockResolvedValue('test-command'),
+          },
+          site2: {
+            setSite: vi.fn(),
+            currentSite: 'site2',
+            getSites: vi.fn().mockReturnValue({ site1: {}, site2: {}, site3: {} }),
+            command: vi.fn().mockResolvedValue('test-command'),
+          },
+          site3: {
+            setSite: vi.fn(),
+            currentSite: 'site3',
+            getSites: vi.fn().mockReturnValue({ site1: {}, site2: {}, site3: {} }),
+            command: vi.fn().mockResolvedValue('test-command'),
+          },
+        }
+        return siteConfigs[siteName] as any
+      })
+
+      vi.mocked(which).mockResolvedValue('/usr/bin/test-command')
+
+      const result = await trackedCommand.execute()
+
+      expect(result).toBe(0)
+      // Each site should be executed once
+      expect(trackedCommand.executedSites.length).toBe(3)
+      // In parallel mode, we should see each site executed exactly once
+      expect(trackedCommand.executedSites.sort()).toEqual(['site1', 'site2', 'site3'])
     })
   })
 })
