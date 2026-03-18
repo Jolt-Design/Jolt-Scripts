@@ -123,6 +123,65 @@ describe('JoltCommand', () => {
 
       expect(setSite).toHaveBeenCalledWith('test-site')
     })
+
+    it('should use defaultSite when no site option is provided', async () => {
+      const setSite = vi.fn()
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite,
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockImplementation((key) => {
+          if (key === 'defaultSite') {
+            return Promise.resolve('default-site')
+          }
+          return Promise.resolve(undefined)
+        }),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      command.site = undefined
+      await command.execute()
+
+      expect(setSite).toHaveBeenCalledWith('default-site')
+    })
+
+    it('should not use defaultSite when site option is provided', async () => {
+      const setSite = vi.fn()
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite,
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockImplementation((key) => {
+          if (key === 'defaultSite') {
+            return Promise.resolve('default-site')
+          }
+          return Promise.resolve(undefined)
+        }),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      command.site = 'explicit-site'
+      await command.execute()
+
+      expect(setSite).toHaveBeenCalledWith('explicit-site')
+      expect(setSite).not.toHaveBeenCalledWith('default-site')
+    })
+
+    it('should not set site when defaultSite is not configured', async () => {
+      const setSite = vi.fn()
+      vi.mocked(getConfig).mockResolvedValueOnce({
+        setSite,
+        command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
+        getSites: vi.fn().mockReturnValue({}),
+      } as any)
+      vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
+
+      command.site = undefined
+      await command.execute()
+
+      expect(setSite).not.toHaveBeenCalled()
+    })
   })
 
   describe('requiredConfig validation', () => {
@@ -318,6 +377,7 @@ describe('JoltCommand', () => {
       vi.mocked(getConfig).mockResolvedValueOnce({
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
         getSites: vi.fn().mockReturnValue({}),
       } as any)
       vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
@@ -332,6 +392,7 @@ describe('JoltCommand', () => {
       vi.mocked(getConfig).mockResolvedValueOnce({
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
         getSites: vi.fn().mockReturnValue({}),
       } as any)
       vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
@@ -346,6 +407,7 @@ describe('JoltCommand', () => {
       vi.mocked(getConfig).mockResolvedValueOnce({
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
         getSites: vi.fn().mockReturnValue({}),
       } as any)
       vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')
@@ -360,6 +422,7 @@ describe('JoltCommand', () => {
       vi.mocked(getConfig).mockResolvedValueOnce({
         setSite: vi.fn(),
         command: vi.fn().mockResolvedValue('test-command'),
+        get: vi.fn().mockResolvedValue(undefined),
         getSites: vi.fn().mockReturnValue({}),
       } as any)
       vi.mocked(which).mockResolvedValueOnce('/usr/bin/test-command')

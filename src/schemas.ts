@@ -148,6 +148,9 @@ export const JoltConfigSchema = z
     // Prepare Commands
     prepareCommands: PrepareCommandsSchema.optional().describe('Commands to run during preparation phase'),
 
+    // Site Configuration
+    defaultSite: z.string().optional().describe('Default site to use when no site is specified'),
+
     // Site-specific configurations
     sites: z.record(z.string(), SiteConfigSchema).optional().describe('Site-specific configuration overrides'),
   })

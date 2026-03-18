@@ -107,6 +107,12 @@ export default abstract class JoltCommand extends Command {
 
     if (this.site) {
       config.setSite(this.site)
+    } else {
+      const defaultSite = await config.get('defaultSite')
+
+      if (defaultSite) {
+        config.setSite(defaultSite)
+      }
     }
 
     if (this.requiredCommands && !process.env.JOLT_IGNORE_REQUIRED_COMMANDS) {
