@@ -241,6 +241,106 @@ describe('ConfigCommand', () => {
 
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('[Source file: /path/to/.jolt.json]'))
     })
+
+    it('should display sites config with nested indentation', async () => {
+      const sitesConfig = JSON.stringify({
+        production: {
+          domain: 'product.example.com',
+          cluster: 'prod-cluster',
+        },
+        staging: {
+          domain: 'staging.example.com',
+          cluster: 'staging-cluster',
+        },
+      })
+
+      mockConfig[Symbol.iterator] = vi.fn().mockReturnValue([['sites', sitesConfig]][Symbol.iterator]())
+
+      mockConfig.parseArg.mockImplementation((value: string) => Promise.resolve(value))
+
+      await command.command()
+
+      // Verify header
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('sites:'))
+
+      // Verify site names are displayed with indentation
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('production:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('staging:'))
+
+      // Verify site values are displayed with proper indentation
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('domain:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('cluster:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('product.example.com'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('staging.example.com'))
+    })
+
+    it('should show parsed values for sites config with templating', async () => {
+      const sitesConfig = JSON.stringify({
+        production: {
+          domain: '{config:productionDomain}',
+          cluster: 'prod-cluster',
+        },
+      })
+
+      mockConfig[Symbol.iterator] = vi.fn().mockReturnValue([['sites', sitesConfig]][Symbol.iterator]())
+
+      mockConfig.parseArg.mockImplementation((value: string) => {
+        if (value === '{config:productionDomain}') {
+          return Promise.resolve('production.example.com')
+        }
+        return Promise.resolve(value)
+      })
+
+      await command.command()
+
+      // Verify the parsed value is displayed
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('production.example.com'))
+
+      // Verify original templated value is shown in dim text
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('[Parsed from: {config:productionDomain}]'))
+    })
+
+    it('should handle empty sites config', async () => {
+      const sitesConfig = JSON.stringify({})
+
+      mockConfig[Symbol.iterator] = vi.fn().mockReturnValue([['sites', sitesConfig]][Symbol.iterator]())
+
+      mockConfig.parseArg.mockImplementation((value: string) => Promise.resolve(value))
+
+      await command.command()
+
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('sites:'))
+
+      // Should not error when no sites are defined
+      expect(mockStdout.write).not.toHaveBeenCalledWith(expect.stringContaining('undefined'))
+    })
+
+    it('should handle sites config with multiple values per site', async () => {
+      const sitesConfig = JSON.stringify({
+        production: {
+          domain: 'prod.example.com',
+          cluster: 'prod-east',
+          region: 'us-east-1',
+          timezone: 'UTC',
+        },
+      })
+
+      mockConfig[Symbol.iterator] = vi.fn().mockReturnValue([['sites', sitesConfig]][Symbol.iterator]())
+
+      mockConfig.parseArg.mockImplementation((value: string) => Promise.resolve(value))
+
+      await command.command()
+
+      // Verify all values are displayed
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('domain:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('cluster:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('region:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('timezone:'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('prod.example.com'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('prod-east'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('us-east-1'))
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('UTC'))
+    })
   })
 
   describe('json format', () => {

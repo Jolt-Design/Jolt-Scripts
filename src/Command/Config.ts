@@ -109,6 +109,8 @@ export class ConfigCommand extends JoltCommand {
     } = this
 
     const sourceString = config.configPath ? ansis.dim(`[Source file: ${config.configPath}]`) : ''
+    const indent = '  '
+
     stdout.write(ansis.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
@@ -119,11 +121,34 @@ export class ConfigCommand extends JoltCommand {
       stdout.write(ansis.bold(`${key}: `))
 
       if (typeof value === 'string') {
-        const parsedValue = await config.parseArg(value)
-        stdout.write(parsedValue)
+        if (key === 'sites') {
+          const siteConfig = JSON.parse(value) as Record<string, Record<string, string>>
 
-        if (parsedValue !== value) {
-          stdout.write(ansis.dim(` [Parsed from: ${value}]`))
+          for (const [siteKey, siteValues] of Object.entries(siteConfig)) {
+            stdout.write(ansis.bold(`\n${indent}${siteKey}:\n`))
+            const siteValueKeys = Object.keys(siteValues)
+            const parsedSiteValuesList = await Promise.all(Object.values(siteValues).map((x) => config.parseArg(x)))
+            const parsedSiteValues = Object.fromEntries(siteValueKeys.map((x, i) => [x, parsedSiteValuesList[i]]))
+
+            for (const [siteValueKey, siteValue] of Object.entries(siteValues)) {
+              const parsedSiteValue = parsedSiteValues[siteValueKey]
+              stdout.write(ansis.bold(`${indent}${indent}${siteValueKey}: `))
+              stdout.write(parsedSiteValue)
+
+              if (parsedSiteValue !== siteValue) {
+                stdout.write(ansis.dim(` [Parsed from: ${siteValue}]`))
+              }
+
+              stdout.write('\n')
+            }
+          }
+        } else {
+          const parsedValue = await config.parseArg(value)
+          stdout.write(parsedValue)
+
+          if (parsedValue !== value) {
+            stdout.write(ansis.dim(` [Parsed from: ${value}]`))
+          }
         }
       } else if (Array.isArray(value)) {
         const parsedEntries = await Promise.all(value.map((x) => config.parseArg(typeof x === 'string' ? x : x.cmd)))
