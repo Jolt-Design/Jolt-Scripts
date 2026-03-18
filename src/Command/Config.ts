@@ -112,6 +112,10 @@ export class ConfigCommand extends JoltCommand {
     stdout.write(ansis.bold.blue(`Config: ${sourceString}\n`))
 
     for (const [key, value] of config) {
+      if (key === '$schema') {
+        continue
+      }
+
       stdout.write(ansis.bold(`${key}: `))
 
       if (typeof value === 'string') {
