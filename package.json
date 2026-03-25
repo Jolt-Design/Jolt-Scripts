@@ -16,6 +16,10 @@
     "typescript": "^6.0.2",
     "vitest": "^4.1.1"
   },
+  "jira-prepare-commit-msg": {
+    "messagePattern": "$J $M",
+    "ignoredBranchesPattern": "^(dependabot/|renovate/)"
+  },
   "files": [
     "/dist"
   ],
