@@ -4,6 +4,7 @@
     "target": "es2018",
     "module": "NodeNext",
     "moduleResolution": "nodenext",
+    "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
