@@ -3,6 +3,7 @@
 /coverage
 /jolt-config.schema.json
 /.jolt.json
+*.tsbuildinfo
 
 ## Yarn
 .yarn/*
