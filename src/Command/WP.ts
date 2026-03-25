@@ -779,7 +779,7 @@ export class WPUpdateCommand extends JoltCommand {
     try {
       const result = await this.executeWpCli(['core', 'check-update', '--json'], { silent: true })
 
-      if (!result.stdout || !result.stdout.trim() || result.stdout.trim() === '[]') {
+      if (!result.stdout?.trim() || result.stdout.trim() === '[]') {
         return false
       }
 
