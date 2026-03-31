@@ -47,7 +47,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@biomejs/biome@npm:^2.4.9":
+"@biomejs/biome@npm:^2.4.10":
   version: 2.4.10
   resolution: "@biomejs/biome@npm:2.4.10"
   dependencies:
@@ -158,7 +158,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@joltdesign/scripts@workspace:."
   dependencies:
-    "@biomejs/biome": "npm:^2.4.9"
+    "@biomejs/biome": "npm:^2.4.10"
     "@types/node": "npm:^24.12.0"
     "@types/which": "npm:^3.0.4"
     "@vitest/coverage-v8": "npm:^4.1.2"
