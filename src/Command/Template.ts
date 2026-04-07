@@ -19,10 +19,6 @@ export class TemplateCommand extends JoltCommand {
     const { stdout, stderr } = context
 
     try {
-      if (!quiet) {
-        stdout.write(this.getHeader('Template'))
-      }
-
       // Read the input file
       let content: string
 

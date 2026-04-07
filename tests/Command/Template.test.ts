@@ -35,7 +35,6 @@ describe('TemplateCommand', () => {
       stderr: mockStderr,
     } as any
     command.config = mockConfig as any
-    command.getHeader = vi.fn(() => 'Test Header\n')
   })
 
   afterEach(() => {
@@ -128,7 +127,6 @@ describe('TemplateCommand', () => {
     const result = await command.command()
 
     expect(result).toBe(0)
-    expect(mockStdout.write).toHaveBeenCalledWith('Test Header\n')
     expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Template processed successfully'))
   })
 
