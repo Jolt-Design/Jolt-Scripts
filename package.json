@@ -10,11 +10,11 @@
     "@biomejs/biome": "^2.4.12",
     "@types/node": "^24.12.2",
     "@types/which": "^3.0.4",
-    "@vitest/coverage-v8": "^4.1.4",
-    "@vitest/ui": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/ui": "^4.1.5",
     "rimraf": "^6.1.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.5"
   },
   "jira-prepare-commit-msg": {
     "messagePattern": "$J $M",
