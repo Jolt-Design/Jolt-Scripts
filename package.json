@@ -46,6 +46,6 @@
     "object-resolve-path": "^1.1.1",
     "typanion": "^3.14.0",
     "which": "^6.0.1",
-    "zod": "^4.4.1"
+    "zod": "^4.4.3"
   }
 }
