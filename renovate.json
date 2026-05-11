@@ -2,13 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>Jolt-Design/Renovate-Config"],
   "ignorePaths": ["**/.yarn/**"],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "recreateWhen": "always",
-    "schedule": ["after 8am on monday"],
-    "automerge": true,
-    "automergeStrategy": "rebase"
-  },
   "packageRules": [
     {
       "groupName": "types",
