@@ -55,7 +55,7 @@ function fixRequiredProperties(schema) {
 fixRequiredProperties(jsonSchema)
 
 // Override the schema metadata
-jsonSchema.$id = 'https://github.com/Jolt-Design/jolt-scripts/schema/jolt-config.json'
+jsonSchema.$id = 'https://jolt-design.github.io/Jolt-Scripts/jolt-config.schema.json'
 jsonSchema.title = 'Jolt Scripts Configuration'
 jsonSchema.description = 'Configuration schema for Jolt Scripts DevOps automation tool'
 
