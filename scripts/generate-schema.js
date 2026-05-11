@@ -6,7 +6,7 @@ import { JoltConfigSchema } from '../dist/schemas.js'
 
 // Generate JSON schema from Zod schema using the built-in method
 const jsonSchema = toJSONSchema(JoltConfigSchema, {
-  target: 'draft-7'
+  target: 'draft-2020-12'
 })
 
 // Add $schema property to allow JSON files to reference the schema
