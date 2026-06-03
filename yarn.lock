@@ -184,7 +184,7 @@ __metadata:
     "@types/which": "npm:^3.0.4"
     "@vitest/coverage-v8": "npm:^4.1.7"
     "@vitest/ui": "npm:^4.1.7"
-    ansis: "npm:^4.3.0"
+    ansis: "npm:^4.3.1"
     change-case: "npm:^5.4.4"
     clipanion: "npm:^4.0.0-rc.4"
     dotenv: "npm:^17.4.2"
@@ -567,7 +567,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansis@npm:^4.3.0":
+"ansis@npm:^4.3.1":
   version: 4.3.1
   resolution: "ansis@npm:4.3.1"
   checksum: 10c0/d1a48090f9c33b18f254a3496e5336a20391a51140b552a1c0bc38710ae7c8bc36a62658f28759797d7bce15e89b893e9ef1962ea1ea42a291d112263f6e593c
