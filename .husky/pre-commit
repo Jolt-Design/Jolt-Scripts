@@ -1,1 +1,1 @@
-npx --yes --prefer-offline git-format-staged --formatter 'yarn lint --write --files-ignore-unknown=true --no-errors-on-unmatched \"{}\"' .
+npx --yes --prefer-offline git-format-staged --formatter 'pnpm lint --write --files-ignore-unknown=true --no-errors-on-unmatched \"{}\"' .

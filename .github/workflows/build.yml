@@ -24,9 +24,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
-          cache: yarn
+          cache: pnpm
 
-      - run: yarn install --immutable
-      - run: yarn run biome ci
-      - run: yarn run build
-      - run: yarn run test
+      - run: pnpm install --immutable
+      - run: pnpm run biome ci
+      - run: pnpm run build
+      - run: pnpm run test

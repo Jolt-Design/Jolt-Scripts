@@ -1,13 +1,19 @@
 {
   "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/node_modules": true
+  },
   "search.exclude": {
     "**/.yarn": true,
     "**/.pnp.*": true
   },
-  "js/ts.tsdk.path": ".yarn/sdks/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "js/ts.preferences.preferTypeOnlyAutoImports": true,
-  "biome.lsp.bin": ".yarn/unplugged/@biomejs-cli-*/node_modules/@biomejs/cli-*/biome",
   "[typescript]": {
     "editor.defaultFormatter": "biomejs.biome"
   },

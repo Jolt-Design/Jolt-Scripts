@@ -39,10 +39,10 @@ jobs:
         run: npm install -g corepack
 
       - name: Install dependencies
-        run: corepack yarn install
+        run: corepack pnpm install
 
       - name: Build and generate schema
-        run: corepack yarn run build
+        run: corepack pnpm run build
 
       - name: Move schema to artifact folder
         run: mv ./jolt-config.schema.json ${{ runner.temp }}

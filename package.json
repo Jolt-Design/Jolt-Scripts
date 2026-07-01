@@ -1,6 +1,6 @@
 {
   "name": "@joltdesign/scripts",
-  "packageManager": "yarn@4.17.0+sha512.c2957de2f9025ab14d63b24d0d8be1f1655810e22c341042c27f7ecd017b180ec12db73d69ac366d71b304ef9f069349ce462de96f04f8f1da317f4f762c95ae",
+  "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b",
   "bin": {
     "jolt": "./dist/cli.js"
   },
@@ -18,14 +18,15 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b && yarn run generate-schema",
+    "build": "tsc -b && pnpm run generate-schema",
     "clean": "rimraf dist",
     "debug": "node --inspect-brk ./dist/cli.js",
-    "generate-schema": "yarn node ./scripts/generate-schema.js && yarn lint --write jolt-config.schema.json",
+    "generate-schema": "node ./scripts/generate-schema.js && pnpm lint --write jolt-config.schema.json",
+    "jolt": "node ./dist/cli.js",
     "lint": "biome check",
     "fmt": "biome format",
     "prepack": "run build",
-    "prepare": "jolt prepare",
+    "setup": "jolt prepare",
     "test": "vitest",
     "test:coverage": "vitest --coverage.enabled=true",
     "test:run": "vitest run",
