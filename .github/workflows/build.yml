@@ -27,6 +27,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run biome ci
+      - run: pnpm exec biome ci
       - run: pnpm run build
       - run: pnpm run test
