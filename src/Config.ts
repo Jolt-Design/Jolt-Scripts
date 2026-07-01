@@ -23,7 +23,7 @@ import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX =
   /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git|site)):(?<variable>[a-z0-9_.[\]"-]+)}/gi
-const DEFAULT_DEV_PLUGIN_DELAY = 30
+const DEFAULT_DEV_PLUGIN_DELAY = 120
 
 function parseEnvFile(env: Record<string, string>): InternalConfig {
   const parsed: InternalConfig = {}
