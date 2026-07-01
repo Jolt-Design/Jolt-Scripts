@@ -13,6 +13,9 @@
   "files": [
     "/dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b && yarn run generate-schema",
     "clean": "rimraf dist",
