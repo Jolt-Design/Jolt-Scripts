@@ -26,7 +26,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: yarn
 
-      - run: yarn install --immutable
-      - run: yarn run biome ci
-      - run: yarn run build
-      - run: yarn run test
+      - run: corepack yarn install --immutable
+      - run: corepack yarn run biome ci
+      - run: corepack yarn run build
+      - run: corepack yarn run test
