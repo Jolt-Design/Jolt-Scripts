@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import 'zod/compile'
+
 import { Cli } from 'clipanion'
 import {
   CloudFrontInvalidateCommand,
