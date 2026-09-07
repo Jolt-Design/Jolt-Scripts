@@ -13,7 +13,11 @@ class MockAbortController {
   signal: { aborted: boolean; addEventListener: Mock }
 
   static _abort = vi.fn()
-  static _signal = { aborted: false, addEventListener: vi.fn() }
+  static _signal = {
+    aborted: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }
 
   constructor() {
     this.abort = MockAbortController._abort
