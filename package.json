@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@types/which": "^3.0.4",
     "@vitest/coverage-v8": "^5.0.0",
     "@vitest/ui": "^5.0.0",
