@@ -159,7 +159,7 @@ __metadata:
     ansis: "npm:^4.4.0"
     change-case: "npm:^5.4.4"
     clipanion: "npm:^4.0.0-rc.4"
-    dotenv: "npm:^18.0.3"
+    dotenv: "npm:^18.0.4"
     execa: "npm:^10.0.1"
     object-resolve-path: "npm:^1.1.1"
     rimraf: "npm:^6.1.3"
@@ -713,12 +713,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^18.0.3":
-  version: 18.0.3
-  resolution: "dotenv@npm:18.0.3"
+"dotenv@npm:^18.0.4":
+  version: 18.0.4
+  resolution: "dotenv@npm:18.0.4"
   bin:
     dotenv: dist/index.cjs
-  checksum: 10c0/0132d3dba2022808c31d0c8191cd8567351c8a1b932f751237cfe502563b9eaab309754bd66e5965f2ccee887c3527f883e29016cb4d691df8519e7fc3d452fd
+  checksum: 10c0/33be95df15269c0f1106da53b97bf8dd2ad17cec34aaa9e05ea1e97135195d50a9fbf0cdcac27a736b1dcd20575b2bfdea2287a5c86bf950430eb45de7ec4eda
   languageName: node
   linkType: hard
 
