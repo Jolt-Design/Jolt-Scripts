@@ -27,6 +27,7 @@ A JSON schema is automatically generated from the Zod schema at `jolt-config.sch
 The configuration supports the following properties:
 
 #### AWS Configuration
+
 - `awsRegion`: AWS region for operations (default: "eu-west-1")
 - `ecsCluster`/`devEcsCluster`: ECS cluster names for production/development
 - `ecsService`/`devEcsService`: ECS service names for production/development
@@ -34,6 +35,7 @@ The configuration supports the following properties:
 - `cloudfrontDistribution`: CloudFront distribution ID
 
 #### Docker Configuration
+
 - `imageName`: Docker image name for production builds
 - `devImageName`: Docker image name for development (overrides imageName + dev suffix)
 - `buildPlatform`: Docker build platform (e.g., "linux/amd64")
@@ -41,6 +43,7 @@ The configuration supports the following properties:
 - `ecrBaseUrl`: ECR repository base URL
 
 #### SSH & Deployment Configuration
+
 - `sshAccount`/`devSshAccount`: SSH accounts for deployments (user@host format)
 - `sshPort`: SSH port number (default: "22")
 - `liveFolder`/`devFolder`: Remote folder paths for deployments
@@ -48,6 +51,7 @@ The configuration supports the following properties:
 - `repo`: Git repository URL
 
 #### Site-Specific Configuration
+
 Use the `sites` object to define site-specific overrides:
 
 ```json
@@ -63,12 +67,14 @@ Use the `sites` object to define site-specific overrides:
 ```
 
 #### Command Overrides
+
 Override external tool commands:
 - `dockerCommand`, `composeCommand`, `terraformCommand`
 - `nodeCommand`, `yarnCommand`, `awsCommand`
 - `sshCommand`, `rsyncCommand`, `gitCommand`, `gzipCommand`
 
 #### Prepare Commands
+
 Define preparation commands to run before builds:
 
 ```json
