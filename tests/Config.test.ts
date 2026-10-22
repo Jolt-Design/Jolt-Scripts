@@ -151,6 +151,24 @@ describe('Config', () => {
       const result = await config.getDockerImageName(true)
       expect(result).toBe('test-image-dev')
     })
+
+    it('should return image name for production', async () => {
+      const config = new Config({ imageName: 'myapp' })
+      const result = await config.getDockerImageName(false)
+      expect(result).toBe('myapp')
+    })
+
+    it('should append dev suffix for development', async () => {
+      const config = new Config({ imageName: 'myapp' })
+      const result = await config.getDockerImageName(true)
+      expect(result).toBe('myapp-dev')
+    })
+
+    it('should handle custom dev suffix', async () => {
+      const config = new Config({ imageName: 'myapp', devSuffix: '-development' })
+      const result = await config.getDockerImageName(true)
+      expect(result).toBe('myapp-dev') // The actual implementation uses -dev suffix
+    })
   })
 
   describe('getComposeConfig', () => {
@@ -338,26 +356,6 @@ describe('Config', () => {
       const [command, args] = await config.getComposeCommand()
       expect(command).toBe('docker-compose')
       expect(args).toEqual([])
-    })
-  })
-
-  describe('getDockerImageName', () => {
-    it('should return image name for production', async () => {
-      const config = new Config({ imageName: 'myapp' })
-      const result = await config.getDockerImageName(false)
-      expect(result).toBe('myapp')
-    })
-
-    it('should append dev suffix for development', async () => {
-      const config = new Config({ imageName: 'myapp' })
-      const result = await config.getDockerImageName(true)
-      expect(result).toBe('myapp-dev')
-    })
-
-    it('should handle custom dev suffix', async () => {
-      const config = new Config({ imageName: 'myapp', devSuffix: '-development' })
-      const result = await config.getDockerImageName(true)
-      expect(result).toBe('myapp-dev') // The actual implementation uses -dev suffix
     })
   })
 
