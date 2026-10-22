@@ -3,6 +3,7 @@
 This is a TypeScript CLI tool that provides DevOps automation commands for WordPress/Docker development and AWS deployment workflows.
 
 ## Communication Style
+
 - Skip affirmations and compliments. No "great question!" or "you're absolutely right!" - just respond directly
 - Challenge flawed ideas openly when you spot issues
 - Ask clarifying questions whenever my request is ambiguous or unclear
@@ -16,6 +17,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 ## Core Architecture
 
 ### Command Pattern Implementation
+
 - All commands extend `JoltCommand` (abstract base class) which extends Clipanion's `Command`
 - Commands live in `src/Command/` and follow the pattern: export class implementing `command(): Promise<number | undefined>`
 - Commands register paths with static `paths = [['command', 'subcommand']]` and get auto-registered in `src/cli.ts`
@@ -24,6 +26,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Commands get `this.config` and `this.context` automatically injected for stdio and configuration access
 
 ### Configuration System & Schema
+
 - Multi-source config loading: `.jolt.json` (JSON) → `./bin/.env` → `.env` (environment files)
 - **Zod-based validation**: All config schemas defined in `src/schemas.ts` with `JoltConfigSchema` as the master schema
 - **Automated JSON Schema**: `yarn build` generates `jolt-config.schema.json` from Zod using native `toJSONSchema()`
@@ -33,6 +36,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - `jolt config init` command creates/updates `.jolt.json` with proper schema reference (Yarn PnP compatible)
 
 ### External Tool Integration
+
 - **execC() wrapper**: Use for ALL external commands - handles null arg filtering, context stdio, container runtime errors
 - Docker Compose operations: Use `config.getComposeCommand()` to get `[command, baseArgs]` tuple
 - Terraform/OpenTofu: Auto-detects `tofu` vs `terraform`, outputs cached via `config.tfVar()`
@@ -42,6 +46,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 ## Project Conventions
 
 ### Error Handling & Process Management
+
 - **Always use `execC()`** instead of raw `execa` - provides context passing, null filtering, container daemon error detection
 - Commands return exit codes (0 = success, >0 = error codes with specific meanings)
 - Use `ansis` for colored terminal output with consistent emoji prefixes: ⚡🐳🛢️⛅🗃️📋
@@ -49,18 +54,21 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Container runtime errors get friendly messages via `ContainerRuntimeError` class
 
 ### Schema & Configuration Management
+
 - **Add descriptions to Zod schemas**: Use `.describe()` for all properties to generate rich JSON Schema docs
 - **Use proper defaults**: `.default()` on Zod schemas, not in descriptions - auto-removes from required properties
 - Schema generation script (`scripts/generate-schema.js`) fixes Zod quirks and adds $schema property support
 - Test schema changes by regenerating with `yarn build` (includes schema generation)
 
 ### Testing Patterns
+
 - Vitest with extensive mocking of external dependencies (`execa`, file system, `which`)
 - Mock entire modules: `vi.mock('../../src/utils.js')` then use `vi.mocked()`
 - Abstract command testing via concrete test implementations extending base classes
 - Config validation testing with Zod schema validation error scenarios
 
 ### Development Workflow
+
 - Build: `yarn build` (TypeScript compilation + schema generation)
 - Test: `yarn test:run` (Vitest), `yarn test:coverage` for coverage reports
 - **CRITICAL: NEVER use `yarn test`** without `:run` suffix - blocks waiting for user input
@@ -72,12 +80,14 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Use British English throughout the project
 
 ### TypeScript Conventions
+
 - ES modules (`"type": "module"`) with `.js` imports for TS files in Node.js context
 - Strict TypeScript config with `NodeNext` module resolution
 - Type definitions in `src/*.d.ts` for external libs and internal config types
 - Use `export type` for type-only exports, regular exports for runtime values
 
 ### Coding Style
+
 - **Empty newlines before/after code blocks** (if, for, functions, etc.) - enforced project convention
 - Comments on separate lines, not inline
 - ES6 classes over function-based objects
@@ -92,11 +102,13 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 ## Key Integration Points
 
 ### Docker/Compose Operations
+
 - Image name resolution: `config.getDockerImageName(isDev)` handles dev suffixes automatically
 - Container discovery: Services found by image regex patterns (mysql/mariadb for DB, redis/valkey for cache)
 - Multi-stage workflows: build → tag → push → deploy sequences with proper context passing
 
 ### Environment-Aware Deployments
+
 - Dev vs Prod distinction throughout (ECS clusters, image tags, config keys)
 - Terraform state integration for dynamic config values via `config.tfVar()`
 - Site-specific overrides for multi-tenant deployments using `sites` config object
