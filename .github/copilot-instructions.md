@@ -114,6 +114,7 @@ This is a TypeScript CLI tool that provides DevOps automation commands for WordP
 - Site-specific overrides for multi-tenant deployments using `sites` config object
 
 When implementing new commands:
+
 1. Extend `JoltCommand`, implement `command(): Promise<number | undefined>`
 2. Add to command registration in `src/cli.ts` imports and CLI registration
 3. Use `execC()` for external commands with `{ context }` option
