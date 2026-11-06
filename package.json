@@ -4,7 +4,7 @@
   "bin": {
     "jolt": "./dist/cli.js"
   },
-  "version": "2.1.0",
+  "version": "2.1.1",
   "type": "module",
   "repository": {
     "type": "git",
