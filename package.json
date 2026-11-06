@@ -6,6 +6,10 @@
   },
   "version": "2.1.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jolt-Design/Jolt-Scripts.git"
+  },
   "jira-prepare-commit-msg": {
     "messagePattern": "$J $M",
     "ignoredBranchesPattern": "^(dependabot/|renovate/)"
