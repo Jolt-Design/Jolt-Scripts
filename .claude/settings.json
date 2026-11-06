@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(yarn lint)",
+      "Bash(yarn lint *)",
+      "Bash(yarn build)",
+      "Bash(yarn test:run)",
+      "Bash(yarn test:run *)",
+      "Bash(yarn test:coverage)",
+      "Bash(yarn test:coverage *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)"
+    ],
+    "deny": ["Bash(yarn test)", "Bash(yarn test *)", "Bash(yarn run test)", "Bash(yarn run test *)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path'); out=$(yarn lint --write --files-ignore-unknown=true --no-errors-on-unmatched \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; }",
+            "timeout": 60,
+            "statusMessage": "Running Biome"
+          }
+        ]
+      }
+    ]
+  }
+}
