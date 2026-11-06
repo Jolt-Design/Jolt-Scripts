@@ -4,7 +4,7 @@ import { pipeline } from 'node:stream/promises'
 import { createGzip } from 'node:zlib'
 import { execa } from 'execa'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DBDumpCommand } from '../../src/Command/DB.js'
+import { DBDumpCommand, DBResetCommand } from '../../src/Command/DB.js'
 import type { Config } from '../../src/Config.js'
 import { execC, which } from '../../src/utils.js'
 
@@ -275,5 +275,115 @@ describe('DBDumpCommand', () => {
     expect(mockStderr.write).not.toHaveBeenCalledWith(expect.stringContaining('Gzipping'))
     expect(which).not.toHaveBeenCalled()
     expect(pipeline).not.toHaveBeenCalled()
+  })
+})
+
+describe('DBResetCommand', () => {
+  let command: DBResetCommand
+  let mockCli: { run: ReturnType<typeof vi.fn> }
+  let mockConfig: {
+    get: ReturnType<typeof vi.fn>
+    command: ReturnType<typeof vi.fn>
+    getComposeCommand: ReturnType<typeof vi.fn>
+    getComposeConfig: ReturnType<typeof vi.fn>
+    getDBContainerInfo: ReturnType<typeof vi.fn>
+    getCacheContainerInfo: ReturnType<typeof vi.fn>
+    getDevPluginDelay: ReturnType<typeof vi.fn>
+  }
+  let mockStderr: { write: ReturnType<typeof vi.fn> }
+  let mockStdout: { write: ReturnType<typeof vi.fn> }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    mockStderr = { write: vi.fn() }
+    mockStdout = { write: vi.fn() }
+    mockCli = { run: vi.fn().mockResolvedValue(0) }
+
+    mockConfig = {
+      get: vi
+        .fn()
+        .mockImplementation((key: string) => Promise.resolve(key === 'devPlugins' ? 'plugin-a, plugin-b' : undefined)),
+      command: vi.fn().mockResolvedValue('docker'),
+      getComposeCommand: vi.fn().mockImplementation(() => Promise.resolve(['docker', ['compose']])),
+      getComposeConfig: vi.fn().mockResolvedValue({
+        services: { db: {} },
+        volumes: { db_data: { name: 'project_db_data' } },
+      }),
+      getDBContainerInfo: vi.fn().mockResolvedValue({
+        service: { volumes: [{ type: 'volume', source: 'db_data' }] },
+      }),
+      getCacheContainerInfo: vi.fn().mockResolvedValue(undefined),
+      getDevPluginDelay: vi.fn().mockResolvedValue(300),
+    }
+
+    command = new DBResetCommand()
+    command.config = mockConfig as unknown as Config
+    command.cli = mockCli as any
+    command.context = { stderr: mockStderr, stdout: mockStdout } as any
+    command.backup = false
+    command.quiet = false
+
+    vi.mocked(execC).mockResolvedValue({ exitCode: 0 } as any)
+  })
+
+  it('should wait for the DB to be ready before activating dev plugins', async () => {
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockCli.run).toHaveBeenNthCalledWith(1, ['db', 'await', '--timeout=300'], command.context)
+    expect(mockCli.run).toHaveBeenNthCalledWith(
+      2,
+      ['wp', 'plugin', 'activate', 'plugin-a', 'plugin-b'],
+      command.context,
+    )
+    expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Done resetting DB!'))
+  })
+
+  it('should pass --quiet through to db await', async () => {
+    command.quiet = true
+
+    await command.command()
+
+    expect(mockCli.run).toHaveBeenNthCalledWith(1, ['db', 'await', '--timeout=300', '--quiet'], command.context)
+    expect(mockStdout.write).not.toHaveBeenCalled()
+  })
+
+  it('should not activate dev plugins if the DB never becomes available', async () => {
+    mockCli.run.mockResolvedValueOnce(2)
+
+    const result = await command.command()
+
+    expect(result).toBe(2)
+    expect(mockCli.run).toHaveBeenCalledTimes(1)
+    expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Database did not become available'))
+    expect(mockStdout.write).not.toHaveBeenCalledWith(expect.stringContaining('Done resetting DB!'))
+  })
+
+  it('should return an error if dev plugin activation fails', async () => {
+    mockCli.run.mockResolvedValueOnce(0).mockResolvedValueOnce(1)
+
+    const result = await command.command()
+
+    expect(result).toBe(1)
+    expect(mockStderr.write).toHaveBeenCalledWith(expect.stringContaining('Failed to activate dev plugins!'))
+    expect(mockStdout.write).not.toHaveBeenCalledWith(expect.stringContaining('Done resetting DB!'))
+  })
+
+  it('should skip waiting when there are no dev plugins', async () => {
+    mockConfig.get.mockResolvedValue(undefined)
+
+    const result = await command.command()
+
+    expect(result).toBe(0)
+    expect(mockCli.run).not.toHaveBeenCalled()
+    expect(mockConfig.getDevPluginDelay).not.toHaveBeenCalled()
+  })
+
+  it('should delete the DB volumes before bringing containers back up', async () => {
+    await command.command()
+
+    expect(execC).toHaveBeenCalledWith('docker', ['volume', 'rm', 'project_db_data'], expect.any(Object))
+    expect(execC).toHaveBeenCalledWith('docker', ['compose', 'up', '--detach'], expect.any(Object))
   })
 })

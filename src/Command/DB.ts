@@ -354,44 +354,44 @@ export class DBResetCommand extends JoltCommand {
     }
 
     await execC(composeCommand, [...args, 'up', '--detach'], { context })
-    const devPlugins = await await config.get('devPlugins')
+    const devPlugins = await config.get('devPlugins')
 
     if (devPlugins) {
-      const devPluginDelay = await config.get('devPluginDelay')
-      let delaySeconds = Number.parseFloat(devPluginDelay || '5')
+      // Wait until the DB is ready rather than for a fixed time, so small seeds don't wait for the full delay
+      const timeout = await config.getDevPluginDelay()
+      const awaitArgs = ['db', 'await', `--timeout=${timeout}`]
 
-      if (Number.isNaN(delaySeconds)) {
-        if (!quiet) {
-          stdout.write(
-            ansis.yellow(`🛢️ Unreadable devPluginDelay config value "${devPluginDelay}". Defaulting to 5 seconds.\n`),
-          )
-        }
-
-        delaySeconds = 5
+      if (quiet) {
+        awaitArgs.push('--quiet')
       }
 
-      if (delaySeconds > 0) {
-        const delayMs = delaySeconds * 1000
+      const awaitResult = await cli.run(awaitArgs, context)
 
-        if (!quiet) {
-          stdout.write(ansis.blue(`🛢️ Waiting for ${delaySeconds} seconds for DB to populate...\n`))
-        }
-
-        await delay(delayMs)
+      if (awaitResult > 0) {
+        stderr.write(ansis.red('🛢️ Database did not become available, so dev plugins were not activated!\n'))
+        return awaitResult
       }
 
       if (!quiet) {
         stdout.write(ansis.blue('🛢️ Activating dev plugins...\n'))
       }
 
-      await cli.run(['wp', 'plugin', 'activate', ...devPlugins.split(',').map((x) => x.trim())], context)
+      const activateResult = await cli.run(
+        ['wp', 'plugin', 'activate', ...devPlugins.split(',').map((x) => x.trim())],
+        context,
+      )
 
-      if (!quiet) {
-        stdout.write(ansis.blue('🛢️ Done resetting DB!\n'))
+      if (activateResult > 0) {
+        stderr.write(ansis.red('🛢️ Failed to activate dev plugins!\n'))
+        return activateResult
       }
-
-      return 0
     }
+
+    if (!quiet) {
+      stdout.write(ansis.blue('🛢️ Done resetting DB!\n'))
+    }
+
+    return 0
   }
 }
 
