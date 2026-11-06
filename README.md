@@ -5,6 +5,7 @@ A TypeScript CLI tool that provides DevOps automation commands for WordPress/Doc
 ## Configuration
 
 Jolt Scripts supports configuration through multiple sources (in order of precedence):
+
 1. `.jolt.json` (JSON format)
 2. `./bin/.env` (Environment variables)
 3. `.env` (Environment variables)
@@ -69,6 +70,7 @@ Use the `sites` object to define site-specific overrides:
 #### Command Overrides
 
 Override external tool commands:
+
 - `dockerCommand`, `composeCommand`, `terraformCommand`
 - `nodeCommand`, `yarnCommand`, `awsCommand`
 - `sshCommand`, `rsyncCommand`, `gitCommand`, `gzipCommand`
