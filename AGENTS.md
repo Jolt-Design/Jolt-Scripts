@@ -30,8 +30,9 @@ Before finishing any change, run `yarn lint --write`, `yarn build` and `yarn tes
 - Node version is managed by mise (`.mise.toml`, Node 26). CI tests against Node 22, 24, 26 and latest, so don't use
   APIs newer than Node 22
 - TypeScript 7, ES modules (`"type": "module"`), `NodeNext` module resolution, `strict` mode
-- Husky pre-commit hook formats staged files with Biome. The prepare-commit-msg hook prefixes commit messages with
-  the Jira ticket from the branch name
+- Husky pre-commit hook formats staged files with Biome
+- Start commit messages with the Jira key from the branch name. The prepare-commit-msg hook adds the key when it's
+  missing, but it's only a backup: it doesn't always run, e.g. in a git worktree
 
 ## Project layout
 
