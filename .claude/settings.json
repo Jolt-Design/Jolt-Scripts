@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path'); out=$(yarn lint --write --files-ignore-unknown=true --no-errors-on-unmatched \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; }",
+            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path'); root=$(git -C \"$(dirname \"$f\")\" rev-parse --show-toplevel 2>/dev/null); [ -f \"$root/biome.json\" ] && cd \"$root\"; out=$(yarn lint --write --files-ignore-unknown=true --no-errors-on-unmatched \"$f\" 2>&1) || { echo \"$out\" >&2; exit 2; }",
             "timeout": 60,
             "statusMessage": "Running Biome"
           }
