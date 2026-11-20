@@ -132,6 +132,24 @@ describe('Config', () => {
       const result = await config.tfVar('nonexistent')
       expect(result).toBeUndefined()
     })
+
+    it('should redact sensitive outputs once they are read', async () => {
+      vi.mocked(utils.execC).mockResolvedValue({
+        stdout: JSON.stringify({
+          secret_var: { sensitive: true, value: 'tf-secret' },
+          nested_secret: { sensitive: true, value: { password: 'nested-secret' } },
+          plain_var: { sensitive: false, value: 'tf-plain' },
+        }),
+      } as any)
+
+      expect(config.redact('tf-secret nested-secret')).toBe('tf-secret nested-secret')
+
+      expect(await config.tfVar('secret_var')).toBe('tf-secret')
+      expect(await config.tfVar('nested_secret.password')).toBe('nested-secret')
+      expect(await config.tfVar('plain_var')).toBe('tf-plain')
+
+      expect(config.redact('tf-secret nested-secret tf-plain')).toBe('*** *** tf-plain')
+    })
   })
 
   describe('ssmParam', () => {

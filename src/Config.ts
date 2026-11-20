@@ -43,6 +43,7 @@ export class Config {
   private _configPath?: string
   private site: string | undefined
   private tfCache: Record<string, string> | undefined
+  private tfSensitiveKeys = new Set<string>()
   private ssmCache = new Map<string, Promise<string | undefined>>()
   private secretValues = new Set<string>()
   private packageJsonCache: PackageJson | false | undefined
@@ -241,7 +242,13 @@ export class Config {
     }
 
     try {
-      return this.tfCache ? resolvePath(this.tfCache, key) : undefined
+      const value = this.tfCache ? resolvePath(this.tfCache, key) : undefined
+
+      if (typeof value === 'string' && this.tfSensitiveKeys.has(key.split(/[.[]/)[0])) {
+        this.addSecret(value)
+      }
+
+      return value
     } catch {
       return undefined
     }
@@ -904,6 +911,10 @@ export class Config {
 
     for (const [key, value] of Object.entries(json)) {
       result[key] = value.value
+
+      if (value.sensitive) {
+        this.tfSensitiveKeys.add(key)
+      }
     }
 
     return result
