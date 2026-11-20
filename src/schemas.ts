@@ -22,12 +22,15 @@ export const PrepareCommandsSchema = z.array(
 // Site-specific configuration schema
 export const SiteConfigSchema = z.record(z.string(), z.string())
 
+export const DEFAULT_ACF_PRO_LICENSE = '{ssm:/prod/sharedInfrastructure/acfPro/licenseKey}'
+
 // WordPress resolved configuration schema (with required fields)
 export const WordPressConfigSchema = z.object({
   doNotUpdate: z.array(z.string()).describe('List of plugins/themes to skip during updates'),
   pluginFolder: z.string().describe('Path to WordPress plugins folder'),
   themeFolder: z.string().describe('Path to WordPress themes folder'),
   wpRoot: z.string().describe('Path to WordPress root directory'),
+  acfProLicense: z.string().optional().describe('ACF Pro license key used during updates (placeholders allowed)'),
 })
 
 // Complete Jolt configuration schema
@@ -126,6 +129,13 @@ export const JoltConfigSchema = z
           .default('code/wp-content/themes')
           .describe('Path to WordPress themes folder'),
         wpRoot: z.string().optional().default('code/').describe('Path to WordPress root directory'),
+        acfProLicense: z
+          .string()
+          .optional()
+          .default(DEFAULT_ACF_PRO_LICENSE)
+          .describe(
+            'ACF Pro license key to use while updating plugins. Placeholders such as {ssm:/name} are allowed. Falls back to the key stored in the database.',
+          ),
       })
       .optional()
       .describe('WordPress automatic update configuration'),

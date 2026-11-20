@@ -81,6 +81,16 @@ Config values and command arguments can contain `{type:name}` placeholders, such
 
 `{ssm:/path/to/parameter}` reads an AWS SSM parameter with `aws ssm get-parameter --with-decryption`, in `AWS_REGION` (default `eu-west-1`). Values are cached for the rest of the run. Values of `SecureString` parameters are replaced with `***` wherever Jolt Scripts prints the command it's running.
 
+#### WordPress Updates
+
+`wpUpdates` configures `jolt wp update`:
+
+- `doNotUpdate`: plugins and themes to skip
+- `pluginFolder`, `themeFolder`, `wpRoot`: WordPress paths (defaults: `code/wp-content/plugins`, `code/wp-content/themes`, `code/`)
+- `acfProLicense`: ACF Pro license key (default: `{ssm:/prod/sharedInfrastructure/acfPro/licenseKey}`)
+
+ACF Pro only sends its license key with update checks when the key was activated on the current home URL, and under WP-CLI that's usually the live URL from the database. When ACF Pro is installed, `jolt wp update` re-saves the key against the WP-CLI home URL before checking plugins, and puts the original option back afterwards. It uses `acfProLicense` if it resolves, otherwise the key already in the database.
+
 #### Prepare Commands
 
 Define preparation commands to run before builds:

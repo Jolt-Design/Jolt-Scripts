@@ -15,7 +15,8 @@
     "ignoredBranchesPattern": "^(dependabot/|renovate/)"
   },
   "files": [
-    "/dist"
+    "/dist",
+    "/php"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
