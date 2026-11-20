@@ -28,6 +28,7 @@ describe('CmdCommand', () => {
     // Create a mock config
     mockConfig = new Config({})
     vi.spyOn(mockConfig, 'parseArg').mockImplementation((value: string) => Promise.resolve(value))
+    vi.spyOn(mockConfig, 'redact').mockImplementation((text: string) => text)
 
     // Create command instance
     command = new CmdCommand()

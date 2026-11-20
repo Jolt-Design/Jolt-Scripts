@@ -60,6 +60,7 @@ describe('SSH Commands', () => {
       }
       return Promise.resolve(value)
     })
+    vi.spyOn(mockConfig, 'redact').mockImplementation((text: string) => text)
 
     // Mock execC
     vi.mocked(execC).mockResolvedValue({ exitCode: 0 } as any)

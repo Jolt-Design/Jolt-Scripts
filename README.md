@@ -75,6 +75,12 @@ Override external tool commands:
 - `nodeCommand`, `yarnCommand`, `awsCommand`
 - `sshCommand`, `rsyncCommand`, `gitCommand`, `gzipCommand`
 
+#### Placeholders
+
+Config values and command arguments can contain `{type:name}` placeholders, such as `{conf:themePath}`, `{tf:db_seeds_bucket}` or `{cmd:yarn}`. If a placeholder can't be resolved, it's left as written.
+
+`{ssm:/path/to/parameter}` reads an AWS SSM parameter with `aws ssm get-parameter --with-decryption`, in `AWS_REGION` (default `eu-west-1`). Values are cached for the rest of the run. Values of `SecureString` parameters are replaced with `***` wherever Jolt Scripts prints the command it's running.
+
 #### Prepare Commands
 
 Define preparation commands to run before builds:
