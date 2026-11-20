@@ -4,7 +4,7 @@
   "bin": {
     "jolt": "./bin/jolt.js"
   },
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "repository": {
     "type": "git",
