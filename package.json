@@ -2,7 +2,7 @@
   "name": "@joltdesign/scripts",
   "packageManager": "yarn@4.18.1+sha512.b2e1e7524f654f2749d32b4ebcb4622473cb5bcbc485df2007e12a154e50162a4d795526768bc5f5b8f81717bfd79deb2472813d86fb5ae2eb551fa9c872b08f",
   "bin": {
-    "jolt": "./dist/cli.js"
+    "jolt": "./bin/jolt.js"
   },
   "version": "2.2.0",
   "type": "module",
@@ -15,6 +15,7 @@
     "ignoredBranchesPattern": "^(dependabot/|renovate/)"
   },
   "files": [
+    "/bin",
     "/dist",
     "/php"
   ],
@@ -23,7 +24,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b && chmod +x dist/cli.js && yarn run generate-schema",
+    "build": "tsc -b && yarn run generate-schema",
     "clean": "rimraf dist",
     "debug": "node --inspect-brk ./dist/cli.js",
     "fmt": "biome format",

@@ -225,7 +225,7 @@ __metadata:
     which: "npm:^7.0.0"
     zod: "npm:^4.6.7"
   bin:
-    jolt: ./dist/cli.js
+    jolt: ./bin/jolt.js
   languageName: unknown
   linkType: soft
 
