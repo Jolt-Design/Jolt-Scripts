@@ -399,6 +399,17 @@ export class WPUpdateCommand extends JoltCommand {
     switch (result.status) {
       case 'ok':
         stdout.write(ansis.dim(`  Using the license key from the ${result.source}\n`))
+
+        if (result.activation === 'activated') {
+          stdout.write(ansis.dim('  Activated the license key for this site URL\n'))
+        } else if (result.activation === 'failed') {
+          stderr.write(
+            ansis.yellow(
+              `  Could not activate the ACF Pro license for this site URL${result.message ? `: ${result.message}` : ''}; ACF Pro may fail to update\n`,
+            ),
+          )
+        }
+
         return { original: result.original ?? false }
       case 'no-key':
         stderr.write(
