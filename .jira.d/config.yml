@@ -1,0 +1,3 @@
+# See https://github.com/go-jira/jira
+endpoint: https://joltdesign.atlassian.net/
+project: JSCRIPTS
