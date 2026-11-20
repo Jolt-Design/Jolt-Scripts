@@ -1108,6 +1108,33 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Updated WordPress core'))
   })
 
+  describe('hasCoreUpdate', () => {
+    it('should return the newest version when check-update lists a minor release before a major one', async () => {
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({
+        exitCode: 0,
+        stdout:
+          '[{"version":"7.0.9","update_type":"minor","package_url":"a"},{"version":"7.1.5","update_type":"major","package_url":"b"}]',
+      })
+
+      expect(await command.hasCoreUpdate()).toBe('7.1.5')
+    })
+
+    it('should compare version parts numerically', async () => {
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({
+        exitCode: 0,
+        stdout: '[{"version":"7.10"},{"version":"7.9.1"}]',
+      })
+
+      expect(await command.hasCoreUpdate()).toBe('7.10')
+    })
+
+    it('should return false when there are no updates', async () => {
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '[]' })
+
+      expect(await command.hasCoreUpdate()).toBe(false)
+    })
+  })
+
   it('should only stash changes inside the WordPress root during a core update', async () => {
     vi.spyOn(mockConfig, 'command').mockResolvedValue('git')
     vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue('6.3.2')

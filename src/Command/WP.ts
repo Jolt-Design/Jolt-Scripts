@@ -955,9 +955,11 @@ export class WPUpdateCommand extends JoltCommand {
       }
 
       const trimmed = result.stdout.substring(result.stdout.indexOf('[{'))
-      const parsed = JSON.parse(trimmed)
+      const parsed: { version?: string }[] = JSON.parse(trimmed)
+      const versions = parsed.map((update) => update.version).filter((version) => typeof version === 'string')
 
-      return parsed[0]?.version || false
+      // wp core update installs the newest version, but check-update can also list an older minor release first
+      return versions.sort((a, b) => b.localeCompare(a, 'en', { numeric: true }))[0] || false
     } catch {
       return false
     }
