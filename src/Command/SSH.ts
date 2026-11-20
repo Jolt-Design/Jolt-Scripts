@@ -66,7 +66,7 @@ export class RsyncCommand extends JoltCommand {
 
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x, params)))
     const fullArgs = [`--rsh="${sshCommand} -p${sshPort}"`, '-av', dryRunArg, ...parsedArgs]
-    stdout.write(ansis.blue(`Running command: ${rsyncCommand} ${fullArgs.join(' ')}...\n`))
+    stdout.write(ansis.blue(`Running command: ${config.redact(`${rsyncCommand} ${fullArgs.join(' ')}`)}...\n`))
     const result = await execC(rsyncCommand, fullArgs, { context })
 
     return result.exitCode

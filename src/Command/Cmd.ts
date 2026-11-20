@@ -47,7 +47,7 @@ export class CmdCommand extends JoltCommand {
     const commandArgs = parsedArgs.slice(i)
 
     if (!quiet) {
-      stdout.write(ansis.blue(`Running command: ${commandArgs.join(' ')}...\n`))
+      stdout.write(ansis.blue(`Running command: ${config.redact(commandArgs.join(' '))}...\n`))
     }
 
     const result = await execC(commandArgs[0], commandArgs.slice(1), { cwd: cwdArg, context, shell: true })

@@ -134,6 +134,71 @@ describe('Config', () => {
     })
   })
 
+  describe('ssmParam', () => {
+    const mockSsmResponse = (type: string, value: string) =>
+      vi.mocked(utils.execC).mockResolvedValue({
+        stdout: JSON.stringify({ Parameter: { Name: '/test/param', Type: type, Value: value } }),
+        exitCode: 0,
+      } as any)
+
+    it('should fetch the parameter with decryption in the configured region', async () => {
+      process.env.AWS_REGION = 'eu-west-2'
+      mockSsmResponse('String', 'plain-value')
+
+      const result = await config.ssmParam('/test/param')
+
+      expect(result).toBe('plain-value')
+      expect(utils.execC).toHaveBeenCalledWith(
+        'aws',
+        [
+          'ssm',
+          'get-parameter',
+          '--name',
+          '/test/param',
+          '--with-decryption',
+          '--region',
+          'eu-west-2',
+          '--output',
+          'json',
+        ],
+        { shell: false },
+      )
+    })
+
+    it('should cache parameters for the rest of the run', async () => {
+      mockSsmResponse('String', 'plain-value')
+
+      await config.ssmParam('/test/param')
+      await config.ssmParam('/test/param')
+
+      expect(utils.execC).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return undefined when the AWS CLI fails', async () => {
+      vi.mocked(utils.execC).mockRejectedValue(new Error('ParameterNotFound'))
+
+      const result = await config.ssmParam('/test/missing')
+
+      expect(result).toBeUndefined()
+    })
+
+    it('should redact SecureString values', async () => {
+      mockSsmResponse('SecureString', 'top-secret')
+
+      await config.ssmParam('/test/param')
+
+      expect(config.redact('run --key=top-secret now')).toBe('run --key=*** now')
+    })
+
+    it('should not redact plain String values', async () => {
+      mockSsmResponse('String', 'plain-value')
+
+      await config.ssmParam('/test/param')
+
+      expect(config.redact('run --key=plain-value now')).toBe('run --key=plain-value now')
+    })
+  })
+
   describe('getDockerImageName', () => {
     it('should return undefined when no image name is configured', async () => {
       const result = await config.getDockerImageName()
@@ -626,6 +691,26 @@ describe('Config', () => {
       const result = await config.parseArg('Deploy target: {site:name}')
 
       expect(result).toBe('Deploy target: prod-us-west-2')
+    })
+
+    it('should replace {ssm:/path/name} with the parameter value', async () => {
+      const config = new Config()
+      vi.mocked(utils.execC).mockResolvedValue({
+        stdout: JSON.stringify({ Parameter: { Type: 'String', Value: 'from-ssm' } }),
+      } as any)
+
+      const result = await config.parseArg('Value: {ssm:/prod/test/param}')
+
+      expect(result).toBe('Value: from-ssm')
+    })
+
+    it('should leave {ssm:…} unchanged when the parameter cannot be read', async () => {
+      const config = new Config()
+      vi.mocked(utils.execC).mockRejectedValue(new Error('AccessDenied'))
+
+      const result = await config.parseArg('Value: {ssm:/prod/test/param}')
+
+      expect(result).toBe('Value: {ssm:/prod/test/param}')
     })
   })
 })

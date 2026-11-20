@@ -22,7 +22,7 @@ import { constToCamel, execC, fileExists, keyToConst, replaceAsync, which } from
 
 const dbImageRegex = /\b(?<type>mysql|mariadb)\b/i
 const ARG_REGEX =
-  /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git|site)):(?<variable>[a-z0-9_.[\]"-]+)}/gi
+  /{(?<type>(?:arg|param|cmd|db|tf|tofu|terraform|conf|config|git|site|ssm)):(?<variable>[a-z0-9_.[\]"/-]+)}/gi
 const DEFAULT_DEV_PLUGIN_DELAY = 120
 
 function parseEnvFile(env: Record<string, string>): InternalConfig {
@@ -43,6 +43,8 @@ export class Config {
   private _configPath?: string
   private site: string | undefined
   private tfCache: Record<string, string> | undefined
+  private ssmCache = new Map<string, Promise<string | undefined>>()
+  private secretValues = new Set<string>()
   private packageJsonCache: PackageJson | false | undefined
   private parseArgCache = new Map<string, Promise<string>>()
   private commandOverrideCache = new Map<string, CommandOverride>()
@@ -247,6 +249,57 @@ export class Config {
 
   awsRegion(): string {
     return process.env.AWS_REGION ?? DEFAULT_AWS_REGION
+  }
+
+  async ssmParam(name: string): Promise<string | undefined> {
+    let promise = this.ssmCache.get(name)
+
+    if (!promise) {
+      promise = this.fetchSsmParam(name)
+      this.ssmCache.set(name, promise)
+    }
+
+    return await promise
+  }
+
+  private async fetchSsmParam(name: string): Promise<string | undefined> {
+    try {
+      const result = await execC(
+        await this.command('aws'),
+        ['ssm', 'get-parameter', '--name', name, '--with-decryption', '--region', this.awsRegion(), '--output', 'json'],
+        { shell: false },
+      )
+
+      const parameter = JSON.parse(String(result.stdout ?? '')).Parameter
+
+      if (typeof parameter?.Value !== 'string') {
+        return undefined
+      }
+
+      if (parameter.Type === 'SecureString') {
+        this.addSecret(parameter.Value)
+      }
+
+      return parameter.Value
+    } catch {
+      return undefined
+    }
+  }
+
+  addSecret(value: string): void {
+    if (value) {
+      this.secretValues.add(value)
+    }
+  }
+
+  redact(text: string): string {
+    let result = text
+
+    for (const secret of this.secretValues) {
+      result = result.split(secret).join('***')
+    }
+
+    return result
   }
 
   async getDockerImageName(isDev = false): Promise<string | undefined> {
@@ -666,6 +719,8 @@ export class Config {
         return (await this.gitVar(name)) ?? substring
       case 'site':
         return (await this.siteArg(name)) ?? substring
+      case 'ssm':
+        return (await this.ssmParam(name)) ?? substring
     }
 
     return substring
