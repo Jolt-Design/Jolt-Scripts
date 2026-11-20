@@ -89,7 +89,7 @@ Config values and command arguments can contain `{type:name}` placeholders, such
 - `pluginFolder`, `themeFolder`, `wpRoot`: WordPress paths (defaults: `code/wp-content/plugins`, `code/wp-content/themes`, `code/`)
 - `acfProLicense`: ACF Pro license key (default: `{ssm:/prod/sharedInfrastructure/acfPro/licenseKey}`)
 
-ACF Pro only sends its license key with update checks when the key was activated on the current home URL, and under WP-CLI that's usually the live URL from the database. When ACF Pro is installed, `jolt wp update` re-saves the key against the WP-CLI home URL before checking plugins, and puts the original option back afterwards. It uses `acfProLicense` if it resolves, otherwise the key already in the database.
+ACF Pro only sends its license key with update checks when the key was activated on the current home URL, and under WP-CLI that's usually the live URL from the database. When ACF Pro is installed, `jolt wp update` re-saves the key against the WP-CLI home URL before checking plugins, and puts the original option back afterwards. If ACF's server says the key isn't activated on that URL, it activates it there. It uses `acfProLicense` if it resolves, otherwise the key already in the database.
 
 #### Prepare Commands
 

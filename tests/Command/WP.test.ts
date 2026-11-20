@@ -1585,6 +1585,28 @@ describe('WPUpdateCommand', () => {
       expect(mockContext.stderr.write).not.toHaveBeenCalledWith(expect.stringContaining('Could not restore'))
     })
 
+    it('reports when the key had to be activated for the site URL', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
+      mockWpCli({ status: 'ok', source: 'config', original: false, activation: 'activated' })
+
+      await command.command()
+
+      expect(evalInputs[0]).toContain('acf_pro_activate_license($key, true)')
+      expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Activated the license key'))
+    })
+
+    it('warns when the key cannot be activated for the site URL', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
+      mockWpCli({ status: 'ok', source: 'config', original: false, activation: 'failed', message: 'Limit reached' })
+
+      await command.command()
+
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Could not activate the ACF Pro license for this site URL: Limit reached'),
+      )
+      expect(evalInputs).toHaveLength(2)
+    })
+
     it('warns when the original option cannot be restored', async () => {
       vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
       mockWpCli({ status: 'ok', source: 'config', original: 'original-option' }, { status: 'unavailable' })
