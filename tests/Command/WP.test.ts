@@ -1108,6 +1108,31 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('Updated WordPress core'))
   })
 
+  it('should only stash changes inside the WordPress root during a core update', async () => {
+    vi.spyOn(mockConfig, 'command').mockResolvedValue('git')
+    vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue('6.3.2')
+    vi.spyOn(command, 'getCurrentCoreVersion').mockResolvedValue('6.3.1')
+    vi.spyOn(command, 'hasGitChanges').mockResolvedValue(true)
+    vi.spyOn(command, 'doCoreUpdate').mockResolvedValue(undefined)
+
+    const wpConfig = await mockConfig.loadWordPressConfig()
+    const result = await command.maybeUpdateCore(wpConfig, { branch: undefined, created: false })
+
+    expect(result.updated).toBe(true)
+
+    const gitCalls = vi
+      .mocked(execC)
+      .mock.calls.filter(([cmd]) => cmd === 'git')
+      .map(([, args]) => args)
+
+    expect(gitCalls).toEqual([
+      ['add', '--', 'wp'],
+      ['stash', 'push', '-m', expect.stringContaining('Automated stash'), '--', 'wp'],
+      ['stash', 'pop'],
+      ['reset', 'HEAD', '--', 'wp'],
+    ])
+  })
+
   it('should show next steps when updates are made', async () => {
     command.skipThemes = true
     command.skipCore = true

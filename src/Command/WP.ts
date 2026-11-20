@@ -863,7 +863,7 @@ export class WPUpdateCommand extends JoltCommand {
 
     if (shouldStash) {
       stdout.write(ansis.yellow('    Stashing changes temporarily...\n'))
-      await this.stashChanges()
+      await this.stashChanges(wpConfig.wpRoot)
     }
 
     try {
@@ -880,7 +880,7 @@ export class WPUpdateCommand extends JoltCommand {
     } finally {
       if (shouldStash) {
         stdout.write(ansis.yellow('    Restoring stashed changes...\n'))
-        await this.unstashChanges()
+        await this.unstashChanges(wpConfig.wpRoot)
       }
     }
   }
@@ -925,23 +925,23 @@ export class WPUpdateCommand extends JoltCommand {
     }
   }
 
-  private async stashChanges(): Promise<void> {
+  private async stashChanges(path: string): Promise<void> {
     const { config } = this
     const date = new Date().toISOString()
 
     const gitCommand = await config.command('git')
-    await execC(gitCommand, ['add', '.'])
-    await execC(gitCommand, ['stash', 'save', '--', `Automated stash by Jolt WP Updater at ${date}`], {
+    await execC(gitCommand, ['add', '--', path])
+    await execC(gitCommand, ['stash', 'push', '-m', `Automated stash by Jolt WP Updater at ${date}`, '--', path], {
       shell: false,
     })
   }
 
-  private async unstashChanges(): Promise<void> {
+  private async unstashChanges(path: string): Promise<void> {
     const { config } = this
 
     const gitCommand = await config.command('git')
     await execC(gitCommand, ['stash', 'pop'])
-    await execC(gitCommand, ['reset', 'HEAD', '--'])
+    await execC(gitCommand, ['reset', 'HEAD', '--', path])
   }
 
   private async doCoreUpdate(path: string, version: string, branchRef: BranchRef): Promise<void> {
