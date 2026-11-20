@@ -671,17 +671,27 @@ export class WPUpdateCommand extends JoltCommand {
       const fromVersion = details.version
       const prettyTitle = this.cleanTitle(details.title)
       const location = `${itemConfig.getFolder(wpConfig)}/${item.name}`
+      const wasClean = !(await this.hasGitChanges(location))
       const updateResult = await this.executeWpCli(itemConfig.updateCommand(item.name), { silent: true })
 
       if (updateResult.exitCode !== 0) {
         stderr.write(ansis.red(`    Error updating ${item.name}\n`))
+        await this.restoreItemFolder(location, wasClean)
         return { updated: false }
       }
 
-      const newDetails = await this.getDetails(item.name, itemConfig.type)
+      let detailsError = ''
+      const newDetails = await this.getDetails(item.name, itemConfig.type, (reason) => {
+        detailsError = reason
+      })
 
       if (!newDetails || newDetails.version === details.version) {
-        stderr.write(ansis.red('    Update failed!\n'))
+        const reason = newDetails
+          ? `version is still ${newDetails.version}`
+          : `couldn't check the new version: ${detailsError}`
+
+        stderr.write(ansis.red(`    Update failed! ${reason}\n`))
+        await this.restoreItemFolder(location, wasClean)
         return { updated: false }
       }
 
@@ -803,15 +813,27 @@ export class WPUpdateCommand extends JoltCommand {
     }
   }
 
-  private async getDetails(name: string, type: 'plugin' | 'theme'): Promise<PluginDetails | ThemeDetails | null> {
+  private async getDetails(
+    name: string,
+    type: 'plugin' | 'theme',
+    onError?: (reason: string) => void,
+  ): Promise<PluginDetails | ThemeDetails | null> {
+    let output = ''
+
     try {
       const result = await this.executeWpCli([type, 'get', '--json', name], { silent: true })
 
-      if (!result.stdout) {
+      if (result.stdout === null) {
+        onError?.(`wp ${type} get exited with code ${result.exitCode}`)
         return null
       }
 
-      let output = result.stdout
+      if (!result.stdout) {
+        onError?.(`wp ${type} get printed nothing`)
+        return null
+      }
+
+      output = result.stdout
 
       if (output.startsWith('$')) {
         // Older Yarn versions include the script name in stdout so we need to trim the first line off
@@ -822,9 +844,33 @@ export class WPUpdateCommand extends JoltCommand {
       const trimmed = output.substring(output.indexOf('{"')).trim()
 
       return JSON.parse(trimmed)
-    } catch {
+    } catch (error) {
+      onError?.(`couldn't read the output of wp ${type} get (${error}): ${output.trim().slice(0, 500)}`)
       return null
     }
+  }
+
+  /**
+   * Put an item's folder back to its committed state after a failed update
+   *
+   * @param location the item's folder
+   * @param wasClean whether the folder had no uncommitted changes before the update
+   */
+  private async restoreItemFolder(location: string, wasClean: boolean): Promise<void> {
+    const {
+      config,
+      context: { stdout, stderr },
+    } = this
+
+    if (!wasClean) {
+      stderr.write(ansis.yellow(`    Left ${location} as it is because it had uncommitted changes before the update\n`))
+      return
+    }
+
+    const gitCommand = await config.command('git')
+    await execC(gitCommand, ['checkout', '--', location], { reject: false })
+    await execC(gitCommand, ['clean', '-fd', '--', location], { reject: false })
+    stdout.write(ansis.dim(`    Restored ${location} to its committed state\n`))
   }
 
   private cleanTitle(name: string): string {
