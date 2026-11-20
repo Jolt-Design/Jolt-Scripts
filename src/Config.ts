@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 import resolvePath from 'object-resolve-path'
 import { z } from 'zod'
 import { ConfigValidationError } from './errors.js'
-import { PrepareCommandsSchema } from './schemas.js'
+import { DEFAULT_ACF_PRO_LICENSE, PrepareCommandsSchema } from './schemas.js'
 import type {
   CommandOverride,
   ComposeConfig,
@@ -625,6 +625,7 @@ export class Config {
         pluginFolder: wpUpdatesConfig.pluginFolder || 'code/wp-content/plugins',
         themeFolder: wpUpdatesConfig.themeFolder || 'code/wp-content/themes',
         wpRoot: wpUpdatesConfig.wpRoot || 'code/',
+        acfProLicense: wpUpdatesConfig.acfProLicense || DEFAULT_ACF_PRO_LICENSE,
       }
 
       this.wordPressConfigCache = config
@@ -646,6 +647,7 @@ export class Config {
           pluginFolder: json.pluginFolder || 'code/wp-content/plugins',
           themeFolder: json.themeFolder || 'code/wp-content/themes',
           wpRoot: json.wpRoot || 'code/',
+          acfProLicense: json.acfProLicense || DEFAULT_ACF_PRO_LICENSE,
         }
 
         this.wordPressConfigCache = config
@@ -665,6 +667,7 @@ export class Config {
       pluginFolder: 'code/wp-content/plugins',
       themeFolder: 'code/wp-content/themes',
       wpRoot: 'code/',
+      acfProLicense: DEFAULT_ACF_PRO_LICENSE,
     }
 
     this.wordPressConfigCache = defaultConfig

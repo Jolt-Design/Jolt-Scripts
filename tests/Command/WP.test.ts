@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
 import { WPCLICommand, WPCommand } from '../../src/Command/WP.js'
 import { Config } from '../../src/Config.js'
-import { execC, which } from '../../src/utils.js'
+import { execC, fileExists, which } from '../../src/utils.js'
 
 vi.mock('../../src/utils.js')
 vi.mock('node:os', () => ({
@@ -1294,5 +1294,123 @@ describe('WPUpdateCommand', () => {
       ['jolt', 'wp', 'cli', 'language', 'theme', 'update', '--all'],
       expect.any(Object),
     )
+  })
+
+  describe('ACF Pro license', () => {
+    const header = (vars: unknown) =>
+      `<?php $jolt = json_decode(base64_decode('${Buffer.from(JSON.stringify(vars)).toString('base64')}'), true); ?><?php`
+    let evalInputs: string[]
+
+    const mockWpCli = (
+      prepareResult: Record<string, unknown>,
+      restoreResult: Record<string, unknown> = { status: 'ok' },
+    ) => {
+      vi.spyOn(command, 'executeWpCli').mockImplementation(async (args: any, options: any) => {
+        if (args[0] === 'eval-file') {
+          evalInputs.push(options.input)
+          const result = evalInputs.length === 1 ? prepareResult : restoreResult
+          return { exitCode: 0, stdout: `Warning\nJOLT_RESULT:${JSON.stringify(result)}\n` }
+        }
+
+        return { exitCode: 0, stdout: '[]' }
+      })
+    }
+
+    beforeEach(async () => {
+      const fs = await import('node:fs')
+
+      if (vi.isMockFunction(fs.promises.readFile)) {
+        vi.mocked(fs.promises.readFile).mockRestore()
+      }
+
+      evalInputs = []
+      command.skipThemes = true
+      command.skipCore = true
+      command.skipLanguages = true
+      vi.spyOn(mockConfig, 'loadWordPressConfig').mockResolvedValue({
+        doNotUpdate: [],
+        pluginFolder: 'wp-content/plugins',
+        themeFolder: 'wp-content/themes',
+        wpRoot: 'wp',
+        acfProLicense: '{ssm:/prod/test/acfKey}',
+      })
+      vi.mocked(fileExists).mockResolvedValue(true)
+    })
+
+    it('does nothing when ACF Pro is not installed', async () => {
+      vi.mocked(fileExists).mockResolvedValue(false)
+      mockWpCli({ status: 'ok', source: 'config', original: 'abc' })
+
+      await command.command()
+
+      expect(evalInputs).toHaveLength(0)
+    })
+
+    it('does nothing when plugin updates are skipped', async () => {
+      command.skipPlugins = true
+      mockWpCli({ status: 'ok', source: 'config', original: 'abc' })
+
+      await command.command()
+
+      expect(evalInputs).toHaveLength(0)
+    })
+
+    it('binds the configured key on stdin and restores the original option afterwards', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
+      mockWpCli({ status: 'ok', source: 'config', original: 'original-option' })
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockConfig.parseArg).toHaveBeenCalledWith('{ssm:/prod/test/acfKey}')
+      expect(evalInputs).toHaveLength(2)
+      expect(evalInputs[0].startsWith(header({ configuredKey: 'config-key' }))).toBe(true)
+      expect(evalInputs[0]).toContain('acf_pro_update_license($key)')
+      expect(evalInputs[1].startsWith(header({ original: 'original-option' }))).toBe(true)
+      expect(evalInputs[1]).toContain("acf_pro_update_license_option('acf_pro_license', $original)")
+      expect(evalInputs.join('')).not.toContain('config-key')
+      expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('license key from the config'))
+      expect(mockContext.stderr.write).not.toHaveBeenCalledWith(expect.stringContaining('Could not restore'))
+    })
+
+    it('warns when the original option cannot be restored', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
+      mockWpCli({ status: 'ok', source: 'config', original: 'original-option' }, { status: 'unavailable' })
+
+      await command.command()
+
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(expect.stringContaining('Could not restore'))
+    })
+
+    it('falls back to the database key when the placeholder cannot be resolved', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockImplementation(async (value: string) => value)
+      mockWpCli({ status: 'ok', source: 'database', original: false })
+
+      await command.command()
+
+      expect(evalInputs[0].startsWith(header({ configuredKey: null }))).toBe(true)
+      expect(evalInputs[1].startsWith(header({ original: false }))).toBe(true)
+      expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining("Couldn't resolve"))
+    })
+
+    it('warns and skips the restore when no key is available', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockImplementation(async (value: string) => value)
+      mockWpCli({ status: 'no-key' })
+
+      await command.command()
+
+      expect(evalInputs).toHaveLength(1)
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(expect.stringContaining('No ACF Pro license key found'))
+    })
+
+    it('restores the original option when the plugin updates throw', async () => {
+      vi.spyOn(mockConfig, 'parseArg').mockResolvedValue('config-key')
+      mockWpCli({ status: 'ok', source: 'config', original: 'original-option' })
+      vi.spyOn(command, 'processItemUpdates').mockRejectedValue(new Error('boom'))
+
+      await expect(command.command()).rejects.toThrow('boom')
+
+      expect(evalInputs).toHaveLength(2)
+    })
   })
 })

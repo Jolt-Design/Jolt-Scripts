@@ -61,6 +61,14 @@ type BranchRef = {
   created: boolean
 }
 
+type AcfLicenseBackup = {
+  original: string | false
+}
+
+const ACF_PRO_SLUG = 'advanced-custom-fields-pro'
+const PHP_RESULT_MARKER = 'JOLT_RESULT:'
+const PHP_SCRIPT_DIR = path.join(import.meta.dirname, '..', '..', 'php')
+
 // Possible sub-arguments for the CLI command as of WP-CLI v2.12.0
 const possibleCliArgs = [
   'alias',
@@ -233,8 +241,13 @@ export class WPUpdateCommand extends JoltCommand {
 
     // Disable git hooks temporarily
     const originalHookPath = await this.disableGitHooks()
+    let acfLicenseBackup: AcfLicenseBackup | undefined
 
     try {
+      if (!skipPlugins) {
+        acfLicenseBackup = await this.prepareAcfProLicense(wpConfig)
+      }
+
       // Update plugins
       const pluginUpdates = await this.processItemUpdates<PluginDetails>('plugin', skipPlugins, wpConfig, branchRef)
       updatedPluginCount = pluginUpdates.count
@@ -256,6 +269,10 @@ export class WPUpdateCommand extends JoltCommand {
         }
       }
     } finally {
+      if (acfLicenseBackup) {
+        await this.restoreAcfProLicense(acfLicenseBackup)
+      }
+
       await this.rollbackGitHooks(originalHookPath)
     }
 
@@ -340,10 +357,112 @@ export class WPUpdateCommand extends JoltCommand {
     return `${yarnCommand} jolt wp update ${subCommand}`
   }
 
+  /**
+   * Make sure ACF Pro sends its license key when WP-CLI checks for updates
+   *
+   * @param wpConfig the WP updater config
+   * @returns the original license option to restore afterwards, if it was changed
+   */
+  private async prepareAcfProLicense(wpConfig: WordPressConfig): Promise<AcfLicenseBackup | undefined> {
+    const {
+      config,
+      context: { stdout, stderr },
+    } = this
+
+    if (!(await fileExists(path.join(wpConfig.pluginFolder, ACF_PRO_SLUG, 'acf.php')))) {
+      return undefined
+    }
+
+    stdout.write(ansis.cyan('🔑 Preparing ACF Pro license for updates...\n'))
+
+    let configuredKey: string | null = null
+
+    if (wpConfig.acfProLicense) {
+      const resolved = await config.parseArg(wpConfig.acfProLicense)
+
+      if (resolved && !/{[a-z]+:[^}]*}/i.test(resolved)) {
+        configuredKey = resolved
+      } else {
+        stdout.write(
+          ansis.dim(`  Couldn't resolve ${wpConfig.acfProLicense}, falling back to the key in the database\n`),
+        )
+      }
+    }
+
+    const result = await this.runPhpScript('acf-prepare-license.php', { configuredKey })
+
+    if (!result) {
+      stderr.write(ansis.yellow('  Could not prepare the ACF Pro license; ACF Pro may fail to update\n'))
+      return undefined
+    }
+
+    switch (result.status) {
+      case 'ok':
+        stdout.write(ansis.dim(`  Using the license key from the ${result.source}\n`))
+        return { original: result.original ?? false }
+      case 'no-key':
+        stderr.write(
+          ansis.yellow('  No ACF Pro license key found in config or the database; ACF Pro may fail to update\n'),
+        )
+        return undefined
+      default:
+        stdout.write(ansis.dim('  ACF Pro is not active, skipping\n'))
+        return undefined
+    }
+  }
+
+  /**
+   * Put the ACF Pro license option back how it was before the updates
+   *
+   * @param backup the backup from prepareAcfProLicense
+   */
+  private async restoreAcfProLicense(backup: AcfLicenseBackup): Promise<void> {
+    const result = await this.runPhpScript('acf-restore-license.php', { original: backup.original })
+
+    if (result?.status !== 'ok') {
+      this.context.stderr.write(ansis.yellow('⚠️ Could not restore the original ACF Pro license option\n'))
+    }
+  }
+
+  /**
+   * Run one of the package's PHP scripts through `wp eval-file -`
+   *
+   * The script is sent on stdin because WP-CLI runs in a container that can't see this package's files.
+   * Values are passed as `$jolt` in a header on stdin too, so secrets stay out of process arguments.
+   *
+   * @param name the file name in the package's `php` folder
+   * @param vars values for the script, available as `$jolt`
+   * @returns the script's JOLT_RESULT line, or null if it failed or printed none
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: the result shape depends on the script
+  private async runPhpScript(name: string, vars: Record<string, unknown>): Promise<Record<string, any> | null> {
+    const script = await fs.readFile(path.join(PHP_SCRIPT_DIR, name), 'utf-8')
+    const encoded = Buffer.from(JSON.stringify(vars)).toString('base64')
+    const header = `<?php $jolt = json_decode(base64_decode('${encoded}'), true); ?>`
+
+    const result = await this.executeWpCli(['eval-file', '-'], { silent: true, input: header + script })
+
+    if (result.exitCode !== 0 || result.stdout === null) {
+      return null
+    }
+
+    const line = result.stdout.split('\n').find((x) => x.startsWith(PHP_RESULT_MARKER))
+
+    if (!line) {
+      return null
+    }
+
+    try {
+      return JSON.parse(line.slice(PHP_RESULT_MARKER.length))
+    } catch {
+      return null
+    }
+  }
+
   // Helper method to execute WP CLI commands
   private async executeWpCli(
     args: string[],
-    options?: { reject?: boolean; silent?: boolean },
+    options?: { reject?: boolean; silent?: boolean; input?: string },
   ): Promise<{ exitCode: number; stdout: string | null }> {
     const { config, context } = this
     const yarnCommand = await config.command('yarn')
