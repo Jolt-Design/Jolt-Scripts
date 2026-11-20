@@ -844,7 +844,7 @@ export class WPUpdateCommand extends JoltCommand {
     branchRef: BranchRef,
   ): Promise<{ updated: boolean; details?: { fromVersion: string; toVersion: string } }> {
     const {
-      context: { stdout },
+      context: { stdout, stderr },
     } = this
 
     const newVersion = await this.hasCoreUpdate()
@@ -867,7 +867,13 @@ export class WPUpdateCommand extends JoltCommand {
     }
 
     try {
-      await this.doCoreUpdate(wpConfig.wpRoot, newVersion, branchRef)
+      const failure = await this.doCoreUpdate(wpConfig.wpRoot, newVersion, branchRef)
+
+      if (failure) {
+        stderr.write(ansis.red(`    WordPress core update failed: ${failure}\n`))
+        return { updated: false }
+      }
+
       stdout.write(ansis.green(`    Updated WordPress core to ${newVersion}\n`))
 
       return {
@@ -944,14 +950,26 @@ export class WPUpdateCommand extends JoltCommand {
     await execC(gitCommand, ['reset', 'HEAD', '--'])
   }
 
-  private async doCoreUpdate(path: string, version: string, branchRef: BranchRef): Promise<void> {
+  private async doCoreUpdate(path: string, version: string, branchRef: BranchRef): Promise<string | null> {
     const { config } = this
+
+    const updateResult = await this.executeWpCli(['core', 'update'], { silent: true })
+
+    if (updateResult.exitCode !== 0) {
+      return `wp core update exited with code ${updateResult.exitCode}`
+    }
+
+    // Older Yarn versions and PHP warnings can add lines before the version
+    const installedVersion = (await this.getCurrentCoreVersion())?.split('\n').pop()?.trim()
+
+    if (installedVersion !== version) {
+      return `expected version ${version} but found ${installedVersion ?? 'unknown'}`
+    }
 
     // Ensure branch is created before making our first commit
     await this.ensureBranchCreated(branchRef)
 
     const gitCommand = await config.command('git')
-    await this.executeWpCli(['core', 'update'], { silent: true })
     await execC(gitCommand, ['add', path])
 
     const commitMessage = this.sanitizeCommitMessage(`Update WordPress to ${version}`)
@@ -959,6 +977,8 @@ export class WPUpdateCommand extends JoltCommand {
       shell: false,
       env: { SKIP: 'prepare-commit-msg' },
     })
+
+    return null
   }
 
   private async maybeUpdateTranslations(branchRef: BranchRef): Promise<boolean> {

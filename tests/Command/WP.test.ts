@@ -1144,6 +1144,68 @@ describe('WPUpdateCommand', () => {
     expect(mockContext.stdout.write).toHaveBeenCalledWith(expect.stringContaining('jolt wp update merge'))
   })
 
+  describe('core update failures', () => {
+    let wpConfig: any
+    let branchRef: { branch: string | undefined; created: boolean }
+
+    beforeEach(async () => {
+      vi.spyOn(mockConfig, 'command').mockResolvedValue('git')
+      vi.spyOn(command, 'hasCoreUpdate').mockResolvedValue('6.3.2')
+      vi.spyOn(command, 'hasGitChanges').mockResolvedValue(false)
+      wpConfig = await mockConfig.loadWordPressConfig()
+      branchRef = { branch: undefined, created: false }
+    })
+
+    const gitCalls = () =>
+      vi
+        .mocked(execC)
+        .mock.calls.filter(([cmd]) => cmd === 'git')
+        .map(([, args]) => args)
+
+    it('should report a failure and not commit when wp core update exits with an error', async () => {
+      vi.spyOn(command, 'getCurrentCoreVersion').mockResolvedValue('6.3.1')
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 1, stdout: null })
+
+      const result = await command.maybeUpdateCore(wpConfig, branchRef)
+
+      expect(result.updated).toBe(false)
+      expect(branchRef.created).toBe(false)
+      expect(gitCalls()).toEqual([])
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('WordPress core update failed: wp core update exited with code 1'),
+      )
+    })
+
+    it('should report a failure and not commit when the core version did not change', async () => {
+      vi.spyOn(command, 'getCurrentCoreVersion').mockResolvedValue('6.3.1')
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '' })
+
+      const result = await command.maybeUpdateCore(wpConfig, branchRef)
+
+      expect(result.updated).toBe(false)
+      expect(gitCalls()).toEqual([])
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('expected version 6.3.2 but found 6.3.1'),
+      )
+    })
+
+    it('should commit when the core version matches after the update', async () => {
+      vi.spyOn(command, 'getCurrentCoreVersion')
+        .mockResolvedValueOnce('6.3.1')
+        .mockResolvedValueOnce('$ jolt wp cli core version\n6.3.2')
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '' })
+      vi.spyOn(command, 'createBranch').mockResolvedValue('joltWpUpdate/test-branch')
+
+      const result = await command.maybeUpdateCore(wpConfig, branchRef)
+
+      expect(result).toEqual({ updated: true, details: { fromVersion: '6.3.1', toVersion: '6.3.2' } })
+      expect(gitCalls()).toEqual([
+        ['add', 'wp'],
+        ['commit', '-m', 'Update WordPress to 6.3.2'],
+      ])
+    })
+  })
+
   it('should overwrite Redis dropin and stage it when redis-cache plugin is updated', async () => {
     // Prepare command instance
     vi.mocked(execC).mockClear()
