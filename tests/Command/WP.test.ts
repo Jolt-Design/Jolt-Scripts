@@ -1283,6 +1283,104 @@ describe('WPUpdateCommand', () => {
     ])
   })
 
+  describe('failed plugin updates', () => {
+    const plugin = { name: 'test-plugin', status: 'active', update: 'available', version: '1.0.0', title: 'Test' }
+    const location = 'wp-content/plugins/test-plugin'
+
+    const runUpdate = async () =>
+      command.maybeUpdateItem(
+        plugin,
+        await mockConfig.loadWordPressConfig(),
+        { branch: undefined, created: false },
+        command.getItemConfig('plugin'),
+      )
+
+    const gitCalls = () =>
+      vi
+        .mocked(execC)
+        .mock.calls.filter(([cmd]) => cmd === 'git')
+        .map(([, args]) => args)
+
+    beforeEach(() => {
+      vi.spyOn(mockConfig, 'command').mockResolvedValue('git')
+      vi.spyOn(command, 'hasGitChanges').mockResolvedValue(false)
+    })
+
+    it('should explain an unchanged version and restore the plugin folder', async () => {
+      vi.spyOn(command, 'executeWpCli')
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+
+      const result = await runUpdate()
+
+      expect(result.updated).toBe(false)
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('Update failed! version is still 1.0.0'),
+      )
+      expect(gitCalls()).toEqual([
+        ['checkout', '--', location],
+        ['clean', '-fd', '--', location],
+      ])
+    })
+
+    it('should explain unreadable plugin details after the update', async () => {
+      vi.spyOn(command, 'executeWpCli')
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: 'Notice: something went wrong' })
+
+      const result = await runUpdate()
+
+      expect(result.updated).toBe(false)
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining("couldn't read the output of wp plugin get"),
+      )
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(expect.stringContaining('Notice: something went wrong'))
+    })
+
+    it('should explain when wp plugin get fails after the update', async () => {
+      vi.spyOn(command, 'executeWpCli')
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '' })
+        .mockResolvedValueOnce({ exitCode: 255, stdout: null })
+
+      await runUpdate()
+
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('wp plugin get exited with code 255'),
+      )
+    })
+
+    it('should restore the plugin folder when the update command fails', async () => {
+      vi.spyOn(command, 'executeWpCli')
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+        .mockResolvedValueOnce({ exitCode: 1, stdout: null })
+
+      const result = await runUpdate()
+
+      expect(result.updated).toBe(false)
+      expect(gitCalls()).toEqual([
+        ['checkout', '--', location],
+        ['clean', '-fd', '--', location],
+      ])
+    })
+
+    it('should leave the plugin folder alone if it had uncommitted changes before the update', async () => {
+      vi.spyOn(command, 'hasGitChanges').mockResolvedValue(true)
+      vi.spyOn(command, 'executeWpCli')
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '{"name":"test-plugin","title":"Test","version":"1.0.0"}' })
+        .mockResolvedValueOnce({ exitCode: 1, stdout: null })
+
+      await runUpdate()
+
+      expect(gitCalls()).toEqual([])
+      expect(mockContext.stderr.write).toHaveBeenCalledWith(
+        expect.stringContaining('had uncommitted changes before the update'),
+      )
+    })
+  })
+
   it('should suggest short form commands when update script exists', async () => {
     command.skipThemes = true
     command.skipCore = true
