@@ -4,7 +4,7 @@ import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { createGzip } from 'node:zlib'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import { execa } from 'execa'
 import * as t from 'typanion'
 import { delay, execC, which } from '../utils.js'
@@ -114,6 +114,23 @@ function startProgressMonitor(filePath: string, stderr: NodeJS.WritableStream, e
 
 export class DBDumpCommand extends JoltCommand {
   static paths = [['db', 'dump']]
+
+  static usage = Command.Usage({
+    category: 'Database',
+    description: 'Dump the local Docker database to the seed file, or to a timestamped backup',
+    details: `
+      Runs the dump command inside the MySQL/MariaDB container. Without \`--backup\`, writes to the \`dbSeed\` file,
+      overwriting it. With \`--backup\`, writes \`backup-<date>.sql.gz\` into \`dbBackupPath\`. A \`.gz\` seed name is
+      gzipped.
+
+      Requires docker, compose and \`dbSeed\` (or \`dbBackupPath\` with \`--backup\`). Exits 2 if no database container
+      is found.
+    `,
+    examples: [
+      ['Update the seed file', '$0 db dump'],
+      ['Take a timestamped backup', '$0 db dump --backup'],
+    ],
+  })
   requiredCommands = ['docker', 'compose']
   backup = Option.Boolean('--backup', false, { description: 'Create a timestamped backup file' })
   quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress progress output' })
@@ -270,6 +287,22 @@ export class DBDumpCommand extends JoltCommand {
 
 export class DBResetCommand extends JoltCommand {
   static paths = [['db', 'reset']]
+
+  static usage = Command.Usage({
+    category: 'Database',
+    description: 'Destroy the local database and cache volumes and recreate them from the seed',
+    details: `
+      Backs up the database first (\`db dump --backup\`; skip with \`--no-backup\`), runs \`compose down\`, **deletes
+      the database and cache Docker volumes**, then runs \`compose up --detach\`. If \`devPlugins\` is configured, it
+      waits for the database and activates those plugins.
+
+      Without a backup the local data is lost. Only local Docker volumes are affected.
+    `,
+    examples: [
+      ['Reset, keeping a backup', '$0 db reset'],
+      ['Reset quietly without a backup', '$0 db reset --quiet --no-backup'],
+    ],
+  })
   requiredCommands = ['docker', 'compose']
   quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
   backup = Option.Boolean('--backup', true, { description: 'Backup existing DB first' })
@@ -397,6 +430,21 @@ export class DBResetCommand extends JoltCommand {
 
 export class DBAwaitCommand extends JoltCommand {
   static paths = [['db', 'await']]
+
+  static usage = Command.Usage({
+    category: 'Database',
+    description: 'Wait until the local database container accepts connections',
+    details: `
+      Pings the database once a second until it answers or the timeout (default 300 seconds) passes. The container
+      defaults to the one found in the Compose config; pass a service name to choose another.
+
+      Exits 0 when the database is ready, 1 if the container can't be found and 2 on timeout.
+    `,
+    examples: [
+      ['Wait up to 5 minutes', '$0 db await'],
+      ['Wait up to 60 seconds, quietly', '$0 db await --timeout=60 --quiet'],
+    ],
+  })
   requiredCommands = ['docker', 'compose']
 
   quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })

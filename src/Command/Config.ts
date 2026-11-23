@@ -1,6 +1,6 @@
 import { access, readFile, writeFile } from 'node:fs/promises'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import * as t from 'typanion'
 import { execC, which } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
@@ -13,6 +13,20 @@ enum ConfigCommandFormat {
 
 export class ConfigCommand extends JoltCommand {
   static paths = [['config']]
+
+  static usage = Command.Usage({
+    category: 'Config',
+    description: 'Show the resolved config and the external commands Jolt will use',
+    details: `
+      Prints every config value after the config file, site selection and environment overrides have been applied.
+      Check here before assuming what a key resolves to. \`--format json\` prints the config as JSON and \`--format env\`
+      as KEY=value lines. The default is \`pretty\`.
+    `,
+    examples: [
+      ['Show the config', '$0 config'],
+      ['Show one site as JSON', '$0 config --site live --format json'],
+    ],
+  })
 
   format: ConfigCommandFormat | undefined = Option.String('--format', {
     required: false,
@@ -178,6 +192,16 @@ export class ConfigCommand extends JoltCommand {
 
 export class ConfigInitCommand extends JoltCommand {
   static paths = [['config', 'init']]
+
+  static usage = Command.Usage({
+    category: 'Config',
+    description: 'Create or update .jolt.json with a $schema reference',
+    details: `
+      Creates \`.jolt.json\` if it doesn't exist. If it does, adds the \`$schema\` reference so editors offer
+      autocompletion, keeping the existing values.
+    `,
+    examples: [['Set up config for editor autocompletion', '$0 config init']],
+  })
 
   requiredCommands: string[] = []
 
@@ -360,6 +384,16 @@ export class ConfigInitCommand extends JoltCommand {
 
 export class ConfigSitesCommand extends JoltCommand {
   static paths = [['config', 'sites']]
+
+  static usage = Command.Usage({
+    category: 'Config',
+    description: 'List the configured site names',
+    details: `
+      Prints the keys of the \`sites\` config. The default format is a JSON array; \`spaces\` and \`lines\` are handy
+      in shell loops.
+    `,
+    examples: [['List sites one per line', '$0 config sites --format lines']],
+  })
 
   format = Option.String('-f,--format', {
     required: false,

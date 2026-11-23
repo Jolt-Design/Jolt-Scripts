@@ -1,11 +1,31 @@
 import path from 'node:path'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import { fileExists } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 export class NexcessDeployCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy']]
+
+  static usage = Command.Usage({
+    category: 'Hosting',
+    description: 'Deploy the latest commit of the configured branch to a Nexcess server over SSH',
+    details: `
+      On the server, clones \`repo\` (branch \`branch\`, or \`devBranch\` with \`--dev\`) into a temporary folder, copies
+      \`codeSubfolder\` into \`liveFolder\` (\`devFolder\` with \`--dev\`), deletes the temporary folder and clears the
+      Cache Enabler cache. If \`bin/nexcess-deploy-script.sh\` exists locally, it is run on the server instead of the
+      copy steps. \`nexcessCleanupScript\` can remove files that shouldn't be deployed.
+
+      This deploys what is on the remote repo, not local changes (see \`nexcess deploy-local\`).
+
+      Requires ssh and the config keys \`repo\`, \`codeSubfolder\`, \`liveFolder\` and \`branch\` (or \`devFolder\` and
+      \`devBranch\` with \`--dev\`).
+    `,
+    examples: [
+      ['Deploy to live', '$0 nexcess deploy'],
+      ['Deploy to the dev environment', '$0 nexcess deploy --dev'],
+    ],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   requiredCommands = ['ssh']
@@ -80,6 +100,17 @@ export class NexcessDeployCommand extends JoltCommand {
 
 export class NexcessDeploySpecificCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy-specific']]
+
+  static usage = Command.Usage({
+    category: 'Hosting',
+    description: 'Deploy a specific commit to a Nexcess server over SSH',
+    details: `
+      Works like \`nexcess deploy\` but checks out the given commit instead of a branch. Use it to roll back.
+
+      Requires ssh and the config keys \`repo\`, \`codeSubfolder\` and \`liveFolder\` (or \`devFolder\` with \`--dev\`).
+    `,
+    examples: [['Roll live back to a commit', '$0 nexcess deploy-specific 1a2b3c4d']],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   commit = Option.String({ required: true })
@@ -158,6 +189,21 @@ export class NexcessDeploySpecificCommand extends JoltCommand {
 
 export class NexcessDeployLocalCommand extends JoltCommand {
   static paths = [['nexcess', 'deploy-local']]
+
+  static usage = Command.Usage({
+    category: 'Hosting',
+    description: 'Rsync the local `codeSubfolder` to a Nexcess server, without going through Git',
+    details: `
+      Runs \`jolt rsync\` for \`./<codeSubfolder>/\` into the server's content folder, excluding anything listed in
+      \`.rsyncignore\` if that file exists. Use \`--dry-run\` first to see what would change.
+
+      Requires rsync, ssh and the \`codeSubfolder\` config key, plus the SSH account keys that \`rsync\` needs.
+    `,
+    examples: [
+      ['Preview a local deploy to dev', '$0 nexcess deploy-local --dev --dry-run'],
+      ['Deploy local code to live', '$0 nexcess deploy-local'],
+    ],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   dryRun = Option.Boolean('--dry-run', false, { description: 'Show what would be synced without actually syncing' })

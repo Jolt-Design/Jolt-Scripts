@@ -1,10 +1,24 @@
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import { execC } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 export class CmdCommand extends JoltCommand {
   static paths = [['cmd']]
+
+  static usage = Command.Usage({
+    category: 'Utilities',
+    description: 'Run a shell command after resolving {type:variable} placeholders in its arguments',
+    details: `
+      Everything after \`cmd\` is the command. \`-q\`/\`--quiet\` and \`-c\`/\`--cwd\` are only recognised before the
+      command itself. Placeholders such as \`{tf:cluster_name}\` or \`{config:imageName}\` are resolved first, and
+      secrets are redacted from the echoed command line. The command runs in a shell.
+    `,
+    examples: [
+      ['Run a command in a subfolder', '$0 cmd --cwd code yarn install'],
+      ['Use a Terraform output', '$0 cmd echo {tf:cluster_name}'],
+    ],
+  })
 
   cwd = Option.String('-c,--cwd', { required: false, description: 'Working directory to run the command in' })
   quiet = Option.Boolean('-q,--quiet', false, { description: 'Suppress command execution output' })

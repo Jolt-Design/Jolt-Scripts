@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import * as t from 'typanion'
 import getConfig from '../Config.js'
 import { ConfigValidationError } from '../errors.js'
@@ -38,6 +38,24 @@ async function shouldPrepareDevPlugins(): Promise<boolean> {
 
 export class PrepareCommand extends JoltCommand {
   static paths = [['prepare']]
+
+  static usage = Command.Usage({
+    category: 'Local development',
+    description: 'Prepare a fresh checkout for development',
+    details: `
+      Runs, in order: \`early\` prepare commands from config; Husky hooks (if \`.husky\` exists); \`tofu init\` and
+      \`tofu refresh\` (if there are .tf or .tofu files); \`yarn run download-db-seeds\` (if package.json has that
+      script); starting the Compose stack, waiting for the DB and activating \`devPlugins\` (if configured and
+      package.json has a \`wp\` script); then the \`normal\` prepare commands from config.
+
+      Each built-in step can be skipped with its \`--no-*\` flag. A prepare command from config that has \`fail\` set
+      stops the run with its exit code.
+    `,
+    examples: [
+      ['Prepare everything', '$0 prepare'],
+      ['Prepare without starting the stack or plugins', '$0 prepare --no-dev-plugins'],
+    ],
+  })
 
   devPlugins = Option.Boolean('--dev-plugins', true, { description: 'Install development plugins' })
   husky = Option.Boolean('--husky', true, { description: 'Install Husky Git hooks' })

@@ -2,6 +2,12 @@
 
 A TypeScript CLI tool that provides DevOps automation commands for WordPress/Docker development and AWS deployment workflows.
 
+## Help
+
+- `jolt --help` lists the commands and `jolt <command> --help` describes one, with its options, requirements and examples.
+- `jolt reference` prints the help for every command plus the shared concepts (config files, sites, templating, exit codes) in one go.
+- `jolt --version` prints the installed version.
+
 ## Configuration
 
 Jolt Scripts supports configuration through multiple sources (in order of precedence):

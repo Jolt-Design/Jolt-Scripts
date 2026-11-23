@@ -27,6 +27,7 @@ import {
 } from './Command/Docker.js'
 import { NexcessDeployCommand, NexcessDeployLocalCommand, NexcessDeploySpecificCommand } from './Command/Nexcess.js'
 import { PrepareCommand } from './Command/Prepare.js'
+import { ReferenceCommand } from './Command/Reference.js'
 import { RsyncCommand, SSHCommand } from './Command/SSH.js'
 import { TemplateCommand } from './Command/Template.js'
 import {
@@ -50,6 +51,7 @@ const cli = new Cli({
 
 cli.register(Builtins.HelpCommand)
 cli.register(Builtins.VersionCommand)
+cli.register(ReferenceCommand)
 cli.register(BuildCommand)
 cli.register(ConfigCommand)
 cli.register(ConfigInitCommand)
