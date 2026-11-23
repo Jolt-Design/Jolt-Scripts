@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import ansis from 'ansis'
-import { type BaseContext, Option } from 'clipanion'
+import { type BaseContext, Command, Option } from 'clipanion'
 import * as t from 'typanion'
 import { AWSConsoleUrlGenerator } from '../AWSConsoleUrlGenerator.js'
 import { delay, execC } from '../utils.js'
@@ -67,6 +67,24 @@ abstract class AWSCommand extends JoltCommand {
 
 export class ECSDeployCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy']]
+
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Start a new deployment of the ECS service',
+    details: `
+      Runs \`ecs update-service --force-new-deployment\` (disable with \`--no-force-new-deployment\`), which makes ECS
+      pull the current image for its tag. The cluster and service come from \`ecsCluster\` and \`ecsService\`
+      (\`devEcsCluster\` and \`devEcsService\` with \`--dev\`), falling back to the Terraform outputs \`ecs_cluster\`
+      and \`ecs_service\` (\`dev_\` prefixed with \`--dev\`). Prints AWS Console links.
+
+      Requires aws. Exits 1 if no cluster or service is found. The region comes from \`--region\`, then
+      \`awsRegion\`, then eu-west-1.
+    `,
+    examples: [
+      ['Deploy production', '$0 aws ecs deploy'],
+      ['Deploy the dev service in another region', '$0 aws ecs deploy --dev --region us-east-1'],
+    ],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   forceNew = Option.Boolean('--force-new-deployment', true, {
@@ -154,6 +172,19 @@ export class ECSDeployCommand extends AWSCommand {
 export class S3SyncCommand extends AWSCommand {
   static paths = [['aws', 's3', 'sync']]
 
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Run `aws s3 sync` between two locations, with placeholders resolved',
+    details: `
+      Both arguments can be local paths or S3 URLs and can contain placeholders such as \`{tf:bucket_name}\`.
+      \`--delete\` removes files from the destination that aren't in the source, which is permanent unless the
+      bucket is versioned.
+
+      Requires aws.
+    `,
+    examples: [['Upload a folder to a bucket', '$0 aws s3 sync ./dist s3://{tf:bucket_name}/assets']],
+  })
+
   deleteOpt = Option.Boolean('--delete', { description: 'Delete files in destination that do not exist in source' })
   from = Option.String()
   to = Option.String()
@@ -200,6 +231,22 @@ export class S3SyncCommand extends AWSCommand {
 
 export class LogsTailCommand extends AWSCommand {
   static paths = [['aws', 'logs', 'tail']]
+
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Follow a CloudWatch log group with `aws logs tail --follow`',
+    details: `
+      The first argument is the log group, with placeholders resolved. Any further arguments go to
+      \`aws logs tail\`. \`--clean\` hides health-check, heartbeat and similar repetitive lines. It runs until
+      interrupted.
+
+      Requires aws.
+    `,
+    examples: [
+      ['Follow a log group', '$0 aws logs tail {tf:log_group}'],
+      ['Follow with noise filtered out, last 10 minutes first', '$0 aws logs tail --clean /ecs/site --since 10m'],
+    ],
+  })
 
   group = Option.String()
   clean = Option.Boolean('--clean', false, { description: 'Filter out repetitive log entries' })
@@ -322,6 +369,22 @@ export class LogsTailCommand extends AWSCommand {
 
 export class CodeBuildStartCommand extends AWSCommand {
   static paths = [['aws', 'codebuild', 'start']]
+
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Start a CodeBuild build',
+    details: `
+      The project is the argument if given, otherwise \`codebuildProject\` (\`devCodebuildProject\` with \`--dev\`),
+      otherwise the Terraform output \`codebuild_project_name\` (\`dev_\` prefixed with \`--dev\`). \`--batch\` starts a
+      batch build. Prints the build ID and AWS Console links.
+
+      Requires aws. Exits 1 if no project is found.
+    `,
+    examples: [
+      ['Start the configured project', '$0 aws codebuild start'],
+      ['Start a named project as a batch build', '$0 aws codebuild start --batch my-project'],
+    ],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Use development CodeBuild project' })
   batch = Option.Boolean('--batch', false, { description: 'Start a batch build instead of a regular build' })
@@ -451,6 +514,22 @@ export class CodeBuildStartCommand extends AWSCommand {
 export class CloudFrontInvalidateCommand extends AWSCommand {
   static paths = [['aws', 'cf', 'invalidate']]
 
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Create a CloudFront cache invalidation',
+    details: `
+      Invalidates \`/*\` unless \`--path\` is given (repeatable). \`--invalidation-batch\` passes a batch ID to the AWS
+      CLI instead of paths, and can't be combined with \`--path\`. The distribution ID is required and can contain
+      placeholders.
+
+      Requires aws.
+    `,
+    examples: [
+      ['Invalidate everything', '$0 aws cf invalidate {tf:cloudfront_distribution}'],
+      ['Invalidate specific paths', '$0 aws cf invalidate E123ABC --path "/css/*" --path "/index.html"'],
+    ],
+  })
+
   distribution = Option.String({ required: true })
   invalidationPaths = Option.Array('--path', { required: false, description: 'Specific paths to invalidate' })
   invalidationBatch = Option.String('--invalidation-batch', {
@@ -539,6 +618,21 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
 
 export class ECSStatusCommand extends AWSCommand {
   static paths = [['aws', 'status']]
+
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Show the status of the ECS cluster and service',
+    details: `
+      Read-only. Looks up the cluster and service the same way as \`aws ecs deploy\`, then prints their state and AWS
+      Console links. If no ECS config is found it says so and exits 0.
+
+      Requires aws.
+    `,
+    examples: [
+      ['Check production', '$0 aws status'],
+      ['Check dev', '$0 aws status --dev'],
+    ],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Check development environment status' })
 
@@ -729,6 +823,20 @@ export class ECSStatusCommand extends AWSCommand {
 
 export class ECSDeploySpecificCommand extends AWSCommand {
   static paths = [['aws', 'ecs', 'deploy-specific']]
+
+  static usage = Command.Usage({
+    category: 'AWS',
+    description: 'Deploy a specific image tag to the ECS service',
+    details: `
+      Registers a new task definition revision with the first container's image changed to the given tag, then
+      deploys the service. The cluster, service and task definition family come from the Terraform outputs
+      \`ecs_cluster\`, \`ecs_service\` and \`ecs_task_definition\` (with a \`_dev\` suffix for \`--dev\`). Use it to
+      roll back to an earlier tag, such as a commit SHA created by \`docker push\`.
+
+      Requires aws. Exits 1 if a Terraform output is missing.
+    `,
+    examples: [['Roll production back to a commit image', '$0 aws ecs deploy-specific 1a2b3c4d']],
+  })
 
   dev = Option.Boolean('--dev', false, { description: 'Deploy to development environment' })
   tag = Option.String({ required: true })

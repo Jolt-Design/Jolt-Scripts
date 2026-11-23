@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import { userInfo } from 'node:os'
 import path from 'node:path'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import * as t from 'typanion'
 import type { WordPressConfig } from '../types/index.js'
 import { execC, fileExists, which } from '../utils.js'
@@ -87,6 +87,15 @@ let maybeAddCliArg = true
 
 export class WPCommand extends JoltCommand {
   static paths = [['wp']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Run a WP-CLI command (alias for `wp cli`; `wp update` is a separate command)',
+    details: `
+      Passes its arguments to \`jolt wp-cli\`. \`wp update\` and its subcommands are handled separately.
+    `,
+    examples: [['List active plugins', '$0 wp plugin list --status=active']],
+  })
   wpArgs = Option.Proxy()
 
   async command(): Promise<number | undefined> {
@@ -103,6 +112,23 @@ export class WPCommand extends JoltCommand {
 
 export class WPCLICommand extends JoltCommand {
   static paths = [['wp', 'cli'], ['wp-cli']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Run WP-CLI against the local site',
+    details: `
+      Uses a \`wp\` executable on the PATH if there is one and package.json has no \`wp\` script. Otherwise runs
+      \`wp\` in the Compose WP-CLI service with \`compose run --rm\`. The service is the first whose image matches
+      \`wp-cli\`, or \`wpCliContainer\` (and \`wpCliContainerProfile\`) from config. Arguments are passed through with
+      placeholders resolved.
+
+      Requires docker and compose. Exits 1 if no WP-CLI container is found.
+    `,
+    examples: [
+      ['Activate a plugin', '$0 wp cli plugin activate akismet'],
+      ['Search-replace a URL', '$0 wp-cli search-replace old.test new.test --dry-run'],
+    ],
+  })
   requiredCommands = ['docker', 'compose']
 
   wpArgs = Option.Proxy()
@@ -197,6 +223,27 @@ export class WPCLICommand extends JoltCommand {
 
 export class WPUpdateCommand extends JoltCommand {
   static paths = [['wp', 'update']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Update WordPress core, plugins, themes and translations, with one Git commit per update',
+    details: `
+      Creates a \`joltWpUpdate/<date>\` branch from the current branch and commits each update separately. It does
+      not push. It temporarily disables Git hooks and activates the ACF Pro license for the site URL.
+
+      Configure it under \`wpUpdates\` in .jolt.json: \`doNotUpdate\`, \`pluginFolder\`, \`themeFolder\`, \`wpRoot\`
+      and \`acfProLicense\`. The legacy \`.jolt-wp-updater.json\` file is still read.
+
+      After it finishes, review the commits with \`wp update modify\` and merge them with \`wp update merge\`. Remove old
+      branches with \`wp update clean\`.
+
+      Requires git. Exits 1 if the WordPress config can't be loaded.
+    `,
+    examples: [
+      ['Update everything', '$0 wp update'],
+      ['Update plugins only', '$0 wp update --skip-core --skip-themes --skip-languages'],
+    ],
+  })
   requiredCommands = ['git']
 
   skipCore = Option.Boolean('--skip-core', false, { description: 'Skip WordPress core updates' })
@@ -1154,6 +1201,22 @@ export class WPUpdateCommand extends JoltCommand {
 
 export class WPUpdateMergeCommand extends JoltCommand {
   static paths = [['wp', 'update', 'merge']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Merge the current `joltWpUpdate/*` branch into the main branch',
+    details: `
+      Must be run on a \`joltWpUpdate/*\` branch (exits 1 otherwise). Switches to \`branch\` (default \`master\`), then
+      merges the update branch, or with \`--rebase\` rebases the main branch onto it. Choose at most one of
+      \`--rebase\`, \`--ff-only\` and \`--no-ff\`.
+
+      Requires git.
+    `,
+    examples: [
+      ['Merge the update branch', '$0 wp update merge'],
+      ['Merge with a merge commit', '$0 wp update merge --no-ff'],
+    ],
+  })
   requiredCommands = ['git']
 
   rebase = Option.Boolean('--rebase', false, {
@@ -1237,6 +1300,22 @@ export class WPUpdateMergeCommand extends JoltCommand {
 
 export class WPUpdateCleanCommand extends JoltCommand {
   static paths = [['wp', 'update', 'clean']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Delete old `joltWpUpdate/*` branches',
+    details: `
+      Deletes local \`joltWpUpdate/*\` branches other than the current one. By default only merged branches are
+      deleted. \`--delete-unmerged\` also force-deletes unmerged ones, which loses their commits. Run with
+      \`--dry-run\` first.
+
+      Requires git.
+    `,
+    examples: [
+      ['See what would be deleted', '$0 wp update clean --dry-run'],
+      ['Delete merged update branches', '$0 wp update clean'],
+    ],
+  })
   requiredCommands = ['git']
 
   dryRun = Option.Boolean('--dry-run', false, { description: 'Show what would be deleted without actually deleting' })
@@ -1367,6 +1446,18 @@ export class WPUpdateCleanCommand extends JoltCommand {
 
 export class WPUpdateModifyCommand extends JoltCommand {
   static paths = [['wp', 'update', 'modify']]
+
+  static usage = Command.Usage({
+    category: 'WordPress',
+    description: 'Interactively rebase the commits on the current `joltWpUpdate/*` branch',
+    details: `
+      Must be run on a \`joltWpUpdate/*\` branch (exits 1 otherwise). Starts \`git rebase -i\` over every commit since
+      \`branch\` (default \`master\`). It needs an interactive terminal for the editor.
+
+      Requires git.
+    `,
+    examples: [['Review and edit the update commits', '$0 wp update modify --autostash']],
+  })
   requiredCommands = ['git']
 
   autostash = Option.Boolean('--autostash', false, {

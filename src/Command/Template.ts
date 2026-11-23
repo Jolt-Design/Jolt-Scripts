@@ -1,11 +1,26 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import ansis from 'ansis'
-import { Option } from 'clipanion'
+import { Command, Option } from 'clipanion'
 import { fileExists } from '../utils.js'
 import JoltCommand from './JoltCommand.js'
 
 export class TemplateCommand extends JoltCommand {
   static paths = [['template']]
+
+  static usage = Command.Usage({
+    category: 'Utilities',
+    description: 'Write a copy of a file with its {type:variable} placeholders resolved',
+    details: `
+      Reads the input file, resolves placeholders, and writes the result to the output file, overwriting it unless
+      \`--if-not-exists\` is set.
+
+      Exit codes: 1 if the input can't be read, 2 if a placeholder can't be resolved, 3 if the output can't be written.
+    `,
+    examples: [
+      ['Generate a file from a template', '$0 template compose.template.yml compose.yml'],
+      ['Only generate it the first time', '$0 template --if-not-exists .env.template .env'],
+    ],
+  })
 
   input = Option.String({ required: true })
   output = Option.String({ required: true })
