@@ -7,6 +7,7 @@ A TypeScript CLI tool that provides DevOps automation commands for WordPress/Doc
 - `jolt --help` lists the commands and `jolt <command> --help` describes one, with its options, requirements and examples.
 - `jolt reference` prints the help for every command plus the shared concepts (config files, sites, templating, exit codes) in one go.
 - `jolt --version` prints the installed version.
+- [docs/agent-guide.md](docs/agent-guide.md) is shipped in the package for agents working in repos that use Jolt Scripts, at `node_modules/@joltdesign/scripts/docs/agent-guide.md`.
 
 ## Configuration
 
