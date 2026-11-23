@@ -616,6 +616,49 @@ export class CloudFrontInvalidateCommand extends AWSCommand {
   }
 }
 
+type ECSStatusDeployment = {
+  status: string
+  taskDefinition: string
+  runningCount: number
+  pendingCount: number
+  desiredCount: number
+}
+
+type ECSStatusTask = {
+  id: string
+  arn: string
+  status: string
+  cpu: string
+  memory: string
+  createdAt?: string
+}
+
+type ECSStatus = {
+  region: string
+  environment: 'dev' | 'prod'
+  configured: boolean
+  cluster: {
+    name: string
+    consoleUrl: string
+    status?: string
+    activeServicesCount?: number
+    runningTasksCount?: number
+    pendingTasksCount?: number
+    registeredContainerInstancesCount?: number
+  } | null
+  service: {
+    name: string
+    consoleUrl?: string
+    status?: string
+    runningCount?: number
+    pendingCount?: number
+    desiredCount?: number
+    taskDefinition?: string
+    deployments: ECSStatusDeployment[]
+    tasks: ECSStatusTask[]
+  } | null
+}
+
 export class ECSStatusCommand extends AWSCommand {
   static paths = [['aws', 'status']]
 
@@ -626,21 +669,32 @@ export class ECSStatusCommand extends AWSCommand {
       Read-only. Looks up the cluster and service the same way as \`aws ecs deploy\`, then prints their state and AWS
       Console links. If no ECS config is found it says so and exits 0.
 
+      \`--format json\` prints a single JSON object to stdout instead, with \`region\`, \`environment\`, \`configured\`,
+      \`cluster\` and \`service\`. Each of \`cluster\` and \`service\` is null when it isn't configured. Warnings still go
+      to stderr.
+
       Requires aws.
     `,
     examples: [
       ['Check production', '$0 aws status'],
       ['Check dev', '$0 aws status --dev'],
+      ['Get the status as JSON', '$0 aws status --format json'],
     ],
   })
 
   dev = Option.Boolean('--dev', false, { description: 'Check development environment status' })
 
+  format = Option.String('--format', 'pretty', {
+    validator: t.isEnum(['pretty', 'json']),
+    description: 'Output format: "pretty" for people or "json" for scripts and agents',
+  })
+
   async command(): Promise<number | undefined> {
     const {
       config,
       dev,
-      context: { stdout, stderr },
+      context: { stdout },
+      format,
     } = this
 
     const awsCommand = await config.command('aws')
@@ -657,55 +711,77 @@ export class ECSStatusCommand extends AWSCommand {
       service = await config.tfVar(dev ? 'dev_ecs_service' : 'ecs_service')
     }
 
+    const region = await this.getRegion()
+    const environment = dev ? 'dev' : 'prod'
+
     // Check if ECS is configured
     if (!cluster && !service) {
+      if (format === 'json') {
+        const status: ECSStatus = { region, environment, configured: false, cluster: null, service: null }
+        stdout.write(`${JSON.stringify(status, null, 2)}\n`)
+        return 0
+      }
+
       stdout.write(ansis.yellow('⛅ No ECS configuration detected\n'))
       stdout.write(ansis.dim('   Configure ecsCluster/ecsService or use Terraform variables\n'))
       return 0
     }
 
-    stdout.write(ansis.blue.bold('⛅ AWS ECS Status\n'))
-    stdout.write(ansis.blue(`${'─'.repeat(50)}\n`))
+    const status = await this.collectStatus({ awsCommand, regionArg, region, environment, cluster, service })
 
-    // Add console URLs if we have configuration
-    const region = await this.getRegion()
-    if (cluster || service) {
-      stdout.write(`${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
-      if (cluster) {
-        stdout.write(`${ansis.white('ECS Cluster:')} ${AWSConsoleUrlGenerator.ecsCluster(region, cluster)}\n`)
-      }
-      if (cluster && service) {
-        stdout.write(`${ansis.white('ECS Service:')} ${AWSConsoleUrlGenerator.ecsService(region, cluster, service)}\n`)
-      }
-      stdout.write('\n')
+    if (format === 'json') {
+      stdout.write(`${JSON.stringify(status, null, 2)}\n`)
+    } else {
+      this.printStatus(status)
     }
 
-    if (cluster) {
-      stdout.write(`${ansis.white('Cluster:')} ${cluster}\n`)
+    return 0
+  }
 
-      // Get cluster information
+  private async collectStatus(options: {
+    awsCommand: string
+    regionArg: string
+    region: string
+    environment: 'dev' | 'prod'
+    cluster: string | undefined
+    service: string | undefined
+  }): Promise<ECSStatus> {
+    const { awsCommand, regionArg, region, environment, cluster, service } = options
+    const { stderr } = this.context
+    const awsOptions = { env: { AWS_PAGER: '' }, extendEnv: true }
+
+    const status: ECSStatus = {
+      region,
+      environment,
+      configured: true,
+      cluster: cluster ? { name: cluster, consoleUrl: AWSConsoleUrlGenerator.ecsCluster(region, cluster) } : null,
+      service: service
+        ? {
+            name: service,
+            consoleUrl: cluster ? AWSConsoleUrlGenerator.ecsService(region, cluster, service) : undefined,
+            deployments: [],
+            tasks: [],
+          }
+        : null,
+    }
+
+    if (cluster && status.cluster) {
       try {
         const clusterResult = await execC(
           awsCommand,
           [regionArg, 'ecs', 'describe-clusters', '--clusters', cluster, '--include', 'STATISTICS'],
-          {
-            env: { AWS_PAGER: '' },
-            extendEnv: true,
-          },
+          awsOptions,
         )
 
         if (clusterResult.exitCode === 0 && clusterResult.stdout) {
-          const clusterData = JSON.parse(clusterResult.stdout.toString())
-          const clusterInfo = clusterData.clusters?.[0]
+          const clusterInfo = JSON.parse(clusterResult.stdout.toString()).clusters?.[0]
 
           if (clusterInfo) {
-            stdout.write(`${ansis.white('Status:')} ${clusterInfo.status}\n`)
-            stdout.write(`${ansis.white('Active Services:')} ${clusterInfo.activeServicesCount}\n`)
-            stdout.write(`${ansis.white('Running Tasks:')} ${clusterInfo.runningTasksCount}\n`)
-            stdout.write(`${ansis.white('Pending Tasks:')} ${clusterInfo.pendingTasksCount}\n`)
-            stdout.write(
-              `${ansis.white('Registered Container Instances:')} ${clusterInfo.registeredContainerInstancesCount}\n`,
-            )
+            status.cluster.status = clusterInfo.status
+            status.cluster.activeServicesCount = clusterInfo.activeServicesCount
+            status.cluster.runningTasksCount = clusterInfo.runningTasksCount
+            status.cluster.pendingTasksCount = clusterInfo.pendingTasksCount
+            status.cluster.registeredContainerInstancesCount = clusterInfo.registeredContainerInstancesCount
           }
         }
       } catch (error) {
@@ -713,111 +789,168 @@ export class ECSStatusCommand extends AWSCommand {
       }
     }
 
-    if (service) {
-      stdout.write(`\n${ansis.white('Service:')} ${service}\n`)
+    if (cluster && service && status.service) {
+      try {
+        const serviceResult = await execC(
+          awsCommand,
+          [regionArg, 'ecs', 'describe-services', '--cluster', cluster, '--services', service],
+          awsOptions,
+        )
 
-      if (cluster) {
-        try {
-          // Get service information
-          const serviceResult = await execC(
-            awsCommand,
-            [regionArg, 'ecs', 'describe-services', '--cluster', cluster, '--services', service],
-            {
-              env: { AWS_PAGER: '' },
-              extendEnv: true,
-            },
-          )
+        if (serviceResult.exitCode === 0 && serviceResult.stdout) {
+          const serviceInfo = JSON.parse(serviceResult.stdout.toString()).services?.[0]
 
-          if (serviceResult.exitCode === 0 && serviceResult.stdout) {
-            const serviceData = JSON.parse(serviceResult.stdout.toString())
-            const serviceInfo = serviceData.services?.[0]
+          if (serviceInfo) {
+            status.service.status = serviceInfo.status
+            status.service.runningCount = serviceInfo.runningCount
+            status.service.pendingCount = serviceInfo.pendingCount
+            status.service.desiredCount = serviceInfo.desiredCount
+            status.service.taskDefinition = serviceInfo.taskDefinition
+            status.service.deployments = (serviceInfo.deployments ?? []).map((deployment: ECSStatusDeployment) => ({
+              status: deployment.status,
+              taskDefinition: deployment.taskDefinition,
+              runningCount: deployment.runningCount,
+              pendingCount: deployment.pendingCount,
+              desiredCount: deployment.desiredCount,
+            }))
 
-            if (serviceInfo) {
-              stdout.write(`${ansis.white('Status:')} ${serviceInfo.status}\n`)
-              stdout.write(`${ansis.white('Running Count:')} ${serviceInfo.runningCount}\n`)
-              stdout.write(`${ansis.white('Pending Count:')} ${serviceInfo.pendingCount}\n`)
-              stdout.write(`${ansis.white('Desired Count:')} ${serviceInfo.desiredCount}\n`)
-              stdout.write(`${ansis.white('Task Definition:')} ${serviceInfo.taskDefinition}\n`)
-
-              if (serviceInfo.deployments?.length > 0) {
-                stdout.write(`\n${ansis.white.bold('Deployments:')}\n`)
-                serviceInfo.deployments.forEach(
-                  (
-                    deployment: {
-                      status: string
-                      taskDefinition: string
-                      runningCount: number
-                      pendingCount: number
-                      desiredCount: number
-                    },
-                    index: number,
-                  ) => {
-                    const status =
-                      deployment.status === 'PRIMARY' ? ansis.green(deployment.status) : ansis.yellow(deployment.status)
-                    stdout.write(`  ${index + 1}. ${status} - ${deployment.taskDefinition}\n`)
-                    stdout.write(
-                      `     Running: ${deployment.runningCount}, Pending: ${deployment.pendingCount}, Desired: ${deployment.desiredCount}\n`,
-                    )
-                  },
-                )
-              }
-
-              // Get running tasks
-              const tasksResult = await execC(
-                awsCommand,
-                [regionArg, 'ecs', 'list-tasks', '--cluster', cluster, '--service-name', service],
-                {
-                  env: { AWS_PAGER: '' },
-                  extendEnv: true,
-                },
-              )
-
-              if (tasksResult.exitCode === 0 && tasksResult.stdout) {
-                const tasksData = JSON.parse(tasksResult.stdout.toString())
-                if (tasksData.taskArns?.length > 0) {
-                  stdout.write(`\n${ansis.white.bold('Active Tasks:')}\n`)
-
-                  // Get detailed task information
-                  const taskDetailsResult = await execC(
-                    awsCommand,
-                    [regionArg, 'ecs', 'describe-tasks', '--cluster', cluster, '--tasks', ...tasksData.taskArns],
-                    {
-                      env: { AWS_PAGER: '' },
-                      extendEnv: true,
-                    },
-                  )
-
-                  if (taskDetailsResult.exitCode === 0 && taskDetailsResult.stdout) {
-                    const taskDetails = JSON.parse(taskDetailsResult.stdout.toString())
-                    taskDetails.tasks?.forEach(
-                      (
-                        task: { taskArn: string; lastStatus: string; cpu: string; memory: string; createdAt?: string },
-                        index: number,
-                      ) => {
-                        const taskId = task.taskArn.split('/').pop()
-                        const status =
-                          task.lastStatus === 'RUNNING' ? ansis.green(task.lastStatus) : ansis.yellow(task.lastStatus)
-                        stdout.write(`  ${index + 1}. ${taskId} - ${status}\n`)
-                        stdout.write(`     CPU/Memory: ${task.cpu}/${task.memory}\n`)
-                        if (task.createdAt) {
-                          stdout.write(`     Created: ${new Date(task.createdAt).toLocaleString()}\n`)
-                        }
-                      },
-                    )
-                  }
-                }
-              }
-            }
+            status.service.tasks = await this.collectTasks(awsCommand, regionArg, cluster, service)
           }
-        } catch (error) {
-          stderr.write(ansis.yellow(`⛅ Warning: Could not retrieve service information: ${error}\n`))
         }
-      } else {
-        stdout.write(ansis.yellow('   Service configured but no cluster found\n'))
+      } catch (error) {
+        stderr.write(ansis.yellow(`⛅ Warning: Could not retrieve service information: ${error}\n`))
       }
     }
 
-    return 0
+    return status
+  }
+
+  private async collectTasks(
+    awsCommand: string,
+    regionArg: string,
+    cluster: string,
+    service: string,
+  ): Promise<ECSStatusTask[]> {
+    const awsOptions = { env: { AWS_PAGER: '' }, extendEnv: true }
+
+    const tasksResult = await execC(
+      awsCommand,
+      [regionArg, 'ecs', 'list-tasks', '--cluster', cluster, '--service-name', service],
+      awsOptions,
+    )
+
+    if (tasksResult.exitCode !== 0 || !tasksResult.stdout) {
+      return []
+    }
+
+    const { taskArns } = JSON.parse(tasksResult.stdout.toString())
+
+    if (!taskArns?.length) {
+      return []
+    }
+
+    const taskDetailsResult = await execC(
+      awsCommand,
+      [regionArg, 'ecs', 'describe-tasks', '--cluster', cluster, '--tasks', ...taskArns],
+      awsOptions,
+    )
+
+    if (taskDetailsResult.exitCode !== 0 || !taskDetailsResult.stdout) {
+      return []
+    }
+
+    const taskDetails = JSON.parse(taskDetailsResult.stdout.toString())
+
+    return (taskDetails.tasks ?? []).map(
+      (task: { taskArn: string; lastStatus: string; cpu: string; memory: string; createdAt?: string }) => ({
+        id: task.taskArn.split('/').pop() ?? task.taskArn,
+        arn: task.taskArn,
+        status: task.lastStatus,
+        cpu: task.cpu,
+        memory: task.memory,
+        createdAt: task.createdAt,
+      }),
+    )
+  }
+
+  private printStatus(status: ECSStatus): void {
+    const { stdout } = this.context
+    const { cluster, service } = status
+
+    stdout.write(ansis.blue.bold('⛅ AWS ECS Status\n'))
+    stdout.write(ansis.blue(`${'─'.repeat(50)}\n`))
+
+    stdout.write(`${ansis.blue.bold('🔗 AWS Console Links:')}\n`)
+
+    if (cluster) {
+      stdout.write(`${ansis.white('ECS Cluster:')} ${cluster.consoleUrl}\n`)
+    }
+
+    if (cluster && service) {
+      stdout.write(`${ansis.white('ECS Service:')} ${service.consoleUrl}\n`)
+    }
+
+    stdout.write('\n')
+
+    if (cluster) {
+      stdout.write(`${ansis.white('Cluster:')} ${cluster.name}\n`)
+
+      if (cluster.status !== undefined) {
+        stdout.write(`${ansis.white('Status:')} ${cluster.status}\n`)
+        stdout.write(`${ansis.white('Active Services:')} ${cluster.activeServicesCount}\n`)
+        stdout.write(`${ansis.white('Running Tasks:')} ${cluster.runningTasksCount}\n`)
+        stdout.write(`${ansis.white('Pending Tasks:')} ${cluster.pendingTasksCount}\n`)
+        stdout.write(`${ansis.white('Registered Container Instances:')} ${cluster.registeredContainerInstancesCount}\n`)
+      }
+    }
+
+    if (!service) {
+      return
+    }
+
+    stdout.write(`\n${ansis.white('Service:')} ${service.name}\n`)
+
+    if (!cluster) {
+      stdout.write(ansis.yellow('   Service configured but no cluster found\n'))
+      return
+    }
+
+    if (service.status === undefined) {
+      return
+    }
+
+    stdout.write(`${ansis.white('Status:')} ${service.status}\n`)
+    stdout.write(`${ansis.white('Running Count:')} ${service.runningCount}\n`)
+    stdout.write(`${ansis.white('Pending Count:')} ${service.pendingCount}\n`)
+    stdout.write(`${ansis.white('Desired Count:')} ${service.desiredCount}\n`)
+    stdout.write(`${ansis.white('Task Definition:')} ${service.taskDefinition}\n`)
+
+    if (service.deployments.length > 0) {
+      stdout.write(`\n${ansis.white.bold('Deployments:')}\n`)
+
+      service.deployments.forEach((deployment, index) => {
+        const deploymentStatus =
+          deployment.status === 'PRIMARY' ? ansis.green(deployment.status) : ansis.yellow(deployment.status)
+        stdout.write(`  ${index + 1}. ${deploymentStatus} - ${deployment.taskDefinition}\n`)
+        stdout.write(
+          `     Running: ${deployment.runningCount}, Pending: ${deployment.pendingCount}, Desired: ${deployment.desiredCount}\n`,
+        )
+      })
+    }
+
+    if (service.tasks.length > 0) {
+      stdout.write(`\n${ansis.white.bold('Active Tasks:')}\n`)
+
+      service.tasks.forEach((task, index) => {
+        const taskStatus = task.status === 'RUNNING' ? ansis.green(task.status) : ansis.yellow(task.status)
+        stdout.write(`  ${index + 1}. ${task.id} - ${taskStatus}\n`)
+        stdout.write(`     CPU/Memory: ${task.cpu}/${task.memory}\n`)
+
+        if (task.createdAt) {
+          stdout.write(`     Created: ${new Date(task.createdAt).toLocaleString()}\n`)
+        }
+      })
+    }
   }
 }
 

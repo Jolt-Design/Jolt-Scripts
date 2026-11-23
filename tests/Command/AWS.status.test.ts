@@ -37,6 +37,7 @@ describe('ECSStatusCommand', () => {
     command.config = mockConfig
     // Reset dev mode to false by default
     command.dev = false
+    command.region = undefined
   })
 
   describe('when no ECS configuration exists', () => {
@@ -51,6 +52,22 @@ describe('ECSStatusCommand', () => {
       expect(result).toBe(0)
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('No ECS configuration detected'))
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Configure ecsCluster/ecsService'))
+    })
+
+    it('should print JSON with configured false when --format json is used', async () => {
+      command.format = 'json'
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockStdout.write).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(mockStdout.write.mock.calls[0][0])).toEqual({
+        region: 'eu-west-1',
+        environment: 'prod',
+        configured: false,
+        cluster: null,
+        service: null,
+      })
     })
   })
 
@@ -246,6 +263,43 @@ describe('ECSStatusCommand', () => {
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('Active Tasks:'))
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('task1 - '))
       expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('CPU/Memory: 256/512'))
+    })
+
+    it('should print only a JSON object with --format json', async () => {
+      command.format = 'json'
+
+      const result = await command.command()
+
+      expect(result).toBe(0)
+      expect(mockStdout.write).toHaveBeenCalledTimes(1)
+
+      const output = JSON.parse(mockStdout.write.mock.calls[0][0])
+
+      expect(output).toMatchObject({
+        region: 'eu-west-1',
+        environment: 'prod',
+        configured: true,
+        cluster: { name: 'test-cluster', status: 'ACTIVE', activeServicesCount: 2, runningTasksCount: 3 },
+        service: {
+          name: 'test-service',
+          status: 'ACTIVE',
+          runningCount: 2,
+          desiredCount: 2,
+          taskDefinition: 'test-task-def:1',
+          deployments: [{ status: 'PRIMARY', taskDefinition: 'test-task-def:1' }],
+          tasks: [{ id: 'task1', status: 'RUNNING', cpu: '256', memory: '512' }],
+        },
+      })
+      expect(output.cluster.consoleUrl).toContain('test-cluster')
+      expect(output.service.consoleUrl).toContain('test-service')
+    })
+
+    it('should keep the pretty output when the format is pretty', async () => {
+      command.format = 'pretty'
+
+      await command.command()
+
+      expect(mockStdout.write).toHaveBeenCalledWith(expect.stringContaining('AWS ECS Status'))
     })
   })
 
