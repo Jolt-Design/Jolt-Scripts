@@ -2,7 +2,7 @@
 
 import 'zod/compile'
 
-import { Cli } from 'clipanion'
+import { Builtins, Cli } from 'clipanion'
 import {
   CloudFrontInvalidateCommand,
   CodeBuildStartCommand,
@@ -48,6 +48,8 @@ const cli = new Cli({
   binaryVersion: packageInfo.version,
 })
 
+cli.register(Builtins.HelpCommand)
+cli.register(Builtins.VersionCommand)
 cli.register(BuildCommand)
 cli.register(ConfigCommand)
 cli.register(ConfigInitCommand)
