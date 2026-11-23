@@ -2,6 +2,19 @@
 
 A TypeScript CLI tool that provides DevOps automation commands for WordPress/Docker development and AWS deployment workflows.
 
+## Commands
+
+Commands are grouped as follows. Run `jolt --help` for the full list.
+
+- **AWS** (`jolt aws ...`): ECS deploys and status, S3 sync, log tailing, CodeBuild, CloudFront invalidation.
+- **Config** (`jolt config ...`): show the resolved config, list sites, create `.jolt.json`.
+- **Database** (`jolt db ...`): dump, reset and wait for the local database.
+- **Docker** (`jolt docker ...`, `jolt build`): build, tag, log in to ECR, push.
+- **Hosting** (`jolt nexcess ...`, `jolt ssh`, `jolt rsync`): Nexcess deploys and server access.
+- **Local development** (`jolt prepare`, `jolt cache flush`): set up a checkout and clear the cache.
+- **Utilities** (`jolt cmd`, `jolt template`): run commands and files with placeholders resolved.
+- **WordPress** (`jolt wp ...`): WP-CLI and WordPress updates.
+
 ## Help
 
 - `jolt --help` lists the commands and `jolt <command> --help` describes one, with its options, requirements and examples.
