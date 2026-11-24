@@ -218,9 +218,9 @@ export class NexcessDeployLocalCommand extends JoltCommand {
 
     return await cli.run(
       [
-        'rsync',
         devArg,
         dryRunArg,
+        'rsync',
         excludeArg,
         `./${await config.get('codeSubfolder')}/`,
         '{arg:acc}:~/{arg:contentFolder}',

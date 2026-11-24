@@ -23,6 +23,7 @@ export class CmdCommand extends JoltCommand {
   cwd = Option.String('-c,--cwd', { required: false, description: 'Working directory to run the command in' })
   quiet = Option.Boolean('-q,--quiet', false, { description: 'Suppress command execution output' })
   args = Option.Proxy()
+  passThroughOptions = ['--quiet', '--cwd']
 
   getProxyArgs(): string[] {
     return this.args

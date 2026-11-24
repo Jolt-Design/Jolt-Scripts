@@ -20,6 +20,11 @@ Templating
 Dev and prod
   Commands with --dev use the development variants of config keys, image tags, ECS clusters and so on.
 
+Pass-through commands
+  ssh, rsync, cmd, docker build and wp cli pass everything after the command name to the tool they wrap, so put
+  jolt's own options before it: \`jolt --dev ssh ls\`, \`jolt --site shop rsync …\`. A jolt option straight after the
+  command name is rejected rather than passed on. -h or --help straight after it shows the command's help.
+
 External command overrides
   Each external tool can be replaced with an environment variable (JOLT_<NAME> first, then <NAME>) or a camelCase
   config key. Names: DOCKER_COMMAND, COMPOSE_COMMAND, TERRAFORM_COMMAND, NODE_COMMAND, YARN_COMMAND, AWS_COMMAND,

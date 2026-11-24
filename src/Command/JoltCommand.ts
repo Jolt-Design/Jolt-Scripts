@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import ansis from 'ansis'
-import { Command, Option } from 'clipanion'
+import { Command, type CommandClass, Option, UsageError } from 'clipanion'
 import * as t from 'typanion'
 import type { Config } from '../Config.js'
 import getConfig, { getSiteConfig } from '../Config.js'
@@ -53,6 +53,26 @@ export default abstract class JoltCommand extends Command {
     return []
   }
 
+  passThroughOptions: string[] = []
+
+  private getMisplacedOption(): string | undefined {
+    const [firstProxyArg] = this.getProxyArgs()
+
+    if (!firstProxyArg?.startsWith('--')) {
+      return undefined
+    }
+
+    const [name] = firstProxyArg.split('=')
+    const definition = this.cli.definition(this.constructor as CommandClass)
+    const optionNames = definition?.options.flatMap((option) => option.definition.match(/--[\w-]+/g) ?? []) ?? []
+
+    if (optionNames.includes(name) && !this.passThroughOptions.includes(name)) {
+      return name
+    }
+
+    return undefined
+  }
+
   private async validateRequiredConfig(): Promise<number | undefined> {
     if (process.env.JOLT_IGNORE_REQUIRED_CONFIG) {
       return undefined
@@ -102,6 +122,13 @@ export default abstract class JoltCommand extends Command {
     if (firstProxyArg === '-h' || firstProxyArg === '--help') {
       stdout.write(this.cli.usage(this, { detailed: true }))
       return 0
+    }
+
+    const misplacedOption = this.getMisplacedOption()
+
+    if (misplacedOption) {
+      const command = [this.cli.binaryName, misplacedOption, ...this.path].join(' ')
+      throw new UsageError(`Put ${misplacedOption} before the command name, e.g. \`${command} …\``)
     }
 
     const config = await getConfig()
