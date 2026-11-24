@@ -251,6 +251,7 @@ export class LogsTailCommand extends AWSCommand {
   group = Option.String()
   clean = Option.Boolean('--clean', false, { description: 'Filter out repetitive log entries' })
   args = Option.Proxy()
+  passThroughOptions = ['--region']
 
   getProxyArgs(): string[] {
     return this.args

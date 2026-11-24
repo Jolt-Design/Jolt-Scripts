@@ -33,7 +33,7 @@ export class DockerCombinedCommand extends DockerCommand {
     const { cli, context, deploy, dev } = this
     const devArg = dev ? '--dev' : ''
 
-    await cli.run(['docker', 'build', devArg].filter(notEmpty), context)
+    await cli.run([devArg, 'docker', 'build'].filter(notEmpty), context)
     await cli.run(['docker', 'tag', devArg].filter(notEmpty), context)
 
     if (deploy) {
@@ -61,7 +61,7 @@ export class DockerBuildCommand extends DockerCommand {
     `,
     examples: [
       ['Build the production image', '$0 docker build'],
-      ['Build the dev image without cache', '$0 docker build --dev --no-cache'],
+      ['Build the dev image without cache', '$0 --dev docker build --no-cache'],
     ],
   })
 
@@ -411,7 +411,7 @@ export class DockerManifestCommand extends DockerCommand {
     await cli.run(['docker', 'login', devArg].filter(notEmpty), { stdout: stderr })
 
     if (build) {
-      await cli.run(['docker', 'build', devArg, '--no-provenance'].filter(notEmpty), { stdout: stderr })
+      await cli.run([devArg, 'docker', 'build', '--no-provenance'].filter(notEmpty), { stdout: stderr })
     }
 
     const result = await execC(await config.command('docker'), [

@@ -17,7 +17,7 @@ export class SSHCommand extends JoltCommand {
     `,
     examples: [
       ['Open a shell on the live server', '$0 ssh'],
-      ['Run one command on the dev server', '$0 ssh --dev ls -la'],
+      ['Run one command on the dev server', '$0 --dev ssh ls -la'],
     ],
   })
   requiredCommands = ['ssh']

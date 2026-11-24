@@ -357,7 +357,7 @@ describe('Nexcess Commands', () => {
 
         await command.command()
 
-        expect(mockCli.run).toHaveBeenCalledWith(['rsync', '--dev', './web/', '{arg:acc}:~/{arg:contentFolder}'])
+        expect(mockCli.run).toHaveBeenCalledWith(['--dev', 'rsync', './web/', '{arg:acc}:~/{arg:contentFolder}'])
       })
 
       it('should include dry-run flag when dryRun is true', async () => {
@@ -366,7 +366,7 @@ describe('Nexcess Commands', () => {
 
         await command.command()
 
-        expect(mockCli.run).toHaveBeenCalledWith(['rsync', '--dry-run', './web/', '{arg:acc}:~/{arg:contentFolder}'])
+        expect(mockCli.run).toHaveBeenCalledWith(['--dry-run', 'rsync', './web/', '{arg:acc}:~/{arg:contentFolder}'])
       })
 
       it('should include exclude file when .rsyncignore exists', async () => {
@@ -394,9 +394,9 @@ describe('Nexcess Commands', () => {
         await command.command()
 
         expect(mockCli.run).toHaveBeenCalledWith([
-          'rsync',
           '--dev',
           '--dry-run',
+          'rsync',
           '--exclude-from=.rsyncignore',
           './web/',
           '{arg:acc}:~/{arg:contentFolder}',

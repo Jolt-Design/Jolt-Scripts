@@ -241,7 +241,7 @@ describe('DockerCombinedCommand', () => {
 
     await command.command()
 
-    expect(mockCli.run).toHaveBeenCalledWith(['docker', 'build', '--dev'], {})
+    expect(mockCli.run).toHaveBeenCalledWith(['--dev', 'docker', 'build'], {})
     expect(mockCli.run).toHaveBeenCalledWith(['docker', 'tag', '--dev'], {})
     expect(mockCli.run).toHaveBeenCalledWith(['docker', 'push', '--dev'], {})
     expect(mockCli.run).toHaveBeenCalledWith(['aws', 'ecs', 'deploy', '--dev'], {})
