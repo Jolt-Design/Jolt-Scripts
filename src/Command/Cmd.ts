@@ -65,6 +65,11 @@ export class CmdCommand extends JoltCommand {
 
     const commandArgs = parsedArgs.slice(i)
 
+    if (commandArgs[0] === '-h' || commandArgs[0] === '--help') {
+      stdout.write(this.cli.usage(this, { detailed: true }))
+      return 0
+    }
+
     if (!quiet) {
       stdout.write(ansis.blue(`Running command: ${config.redact(commandArgs.join(' '))}...\n`))
     }

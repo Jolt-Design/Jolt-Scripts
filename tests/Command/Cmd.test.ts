@@ -311,6 +311,29 @@ describe('CmdCommand', () => {
       expect(execC).toHaveBeenCalledWith('echo', ['--help'], expect.any(Object))
     })
 
+    it.each([[['-q', '--help']], [['--quiet', '-h']], [['-c', 'code', '--help']], [['--cwd=code', '-q', '--help']]])(
+      'should print usage for %j without running anything',
+      async (args) => {
+        command.args = args
+        command.cli = { usage: vi.fn().mockReturnValue('jolt cmd usage') } as any
+
+        const result = await command.command()
+
+        expect(result).toBe(0)
+        expect(command.cli.usage).toHaveBeenCalledWith(command, { detailed: true })
+        expect(mockStdout.write).toHaveBeenCalledWith('jolt cmd usage')
+        expect(execC).not.toHaveBeenCalled()
+      },
+    )
+
+    it('should pass --help to the command after its own options', async () => {
+      command.args = ['-q', 'echo', '--help']
+
+      await command.command()
+
+      expect(execC).toHaveBeenCalledWith('echo', ['--help'], expect.any(Object))
+    })
+
     it('should handle cwd flag without value', async () => {
       command.args = ['--cwd']
 
