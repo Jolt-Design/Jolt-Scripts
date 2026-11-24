@@ -133,7 +133,7 @@ export class DBDumpCommand extends JoltCommand {
   })
   requiredCommands = ['docker', 'compose']
   backup = Option.Boolean('--backup', false, { description: 'Create a timestamped backup file' })
-  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress progress output' })
+  quiet = Option.Boolean('--quiet,-q', false, { description: 'Suppress progress output' })
 
   getRequiredConfig(): string[] {
     return this.backup ? ['dbBackupPath'] : ['dbSeed']
@@ -304,7 +304,7 @@ export class DBResetCommand extends JoltCommand {
     ],
   })
   requiredCommands = ['docker', 'compose']
-  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
+  quiet = Option.Boolean('--quiet,-q', false, { description: 'Suppress status output' })
   backup = Option.Boolean('--backup', true, { description: 'Backup existing DB first' })
 
   async command(): Promise<number | undefined> {
@@ -447,9 +447,9 @@ export class DBAwaitCommand extends JoltCommand {
   })
   requiredCommands = ['docker', 'compose']
 
-  quiet = Option.Boolean('--quiet, -q', false, { description: 'Suppress status output' })
+  quiet = Option.Boolean('--quiet,-q', false, { description: 'Suppress status output' })
 
-  timeout = Option.String('--timeout, -t', '300', {
+  timeout = Option.String('--timeout,-t', '300', {
     tolerateBoolean: false,
     validator: t.cascade(t.isNumber(), t.isPositive(), t.isInteger()),
     description: 'Timeout in seconds to wait for database availability',

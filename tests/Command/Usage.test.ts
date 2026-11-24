@@ -77,3 +77,18 @@ describe('built-in commands', () => {
     expect(stdout).toContain('EXIT CODES')
   })
 })
+
+describe('option names', () => {
+  it('never contain whitespace, which would make short aliases unusable', () => {
+    const cli = new Cli()
+
+    for (const commandClass of commandClasses) {
+      cli.register(commandClass)
+    }
+
+    const names = cli.definitions().flatMap((definition) => definition.options.flatMap((option) => option.nameSet))
+
+    expect(names.length).toBeGreaterThan(30)
+    expect(names.filter((name) => /\s/.test(name))).toEqual([])
+  })
+})
