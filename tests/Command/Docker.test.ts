@@ -246,4 +246,25 @@ describe('DockerCombinedCommand', () => {
     expect(mockCli.run).toHaveBeenCalledWith(['docker', 'push', '--dev'], {})
     expect(mockCli.run).toHaveBeenCalledWith(['aws', 'ecs', 'deploy', '--dev'], {})
   })
+
+  it('should stop and return the exit code when the build fails', async () => {
+    command.deploy = true
+    mockCli.run.mockResolvedValueOnce(3)
+
+    const result = await command.command()
+
+    expect(result).toBe(3)
+    expect(mockCli.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('should stop and return the exit code when a later step fails', async () => {
+    command.deploy = true
+    mockCli.run.mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(0).mockResolvedValueOnce(5)
+
+    const result = await command.command()
+
+    expect(result).toBe(5)
+    expect(mockCli.run).toHaveBeenCalledTimes(4)
+    expect(mockCli.run).not.toHaveBeenCalledWith(['aws', 'ecs', 'deploy'], {})
+  })
 })

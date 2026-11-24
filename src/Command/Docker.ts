@@ -19,7 +19,7 @@ export class DockerCombinedCommand extends DockerCommand {
     description: 'Build and tag the image, and with --deploy also log in, push and deploy to ECS',
     details: `
       Runs \`docker build\` then \`docker tag\`. With \`--deploy\` it continues with \`docker login\`, \`docker push\`
-      and \`aws ecs deploy\`. Always returns 0, even if a step fails, so check the output.
+      and \`aws ecs deploy\`. Stops at the first step that fails and exits with that step's code.
     `,
     examples: [
       ['Build and tag only', '$0 docker combined'],
@@ -33,13 +33,24 @@ export class DockerCombinedCommand extends DockerCommand {
     const { cli, context, deploy, dev } = this
     const devArg = dev ? '--dev' : ''
 
-    await cli.run([devArg, 'docker', 'build'].filter(notEmpty), context)
-    await cli.run(['docker', 'tag', devArg].filter(notEmpty), context)
+    const steps = [
+      [devArg, 'docker', 'build'],
+      ['docker', 'tag', devArg],
+      ...(deploy
+        ? [
+            ['docker', 'login'],
+            ['docker', 'push', devArg],
+            ['aws', 'ecs', 'deploy', devArg],
+          ]
+        : []),
+    ]
 
-    if (deploy) {
-      await cli.run(['docker', 'login'], context)
-      await cli.run(['docker', 'push', devArg].filter(notEmpty), context)
-      await cli.run(['aws', 'ecs', 'deploy', devArg].filter(notEmpty), context)
+    for (const step of steps) {
+      const code = await cli.run(step.filter(notEmpty), context)
+
+      if (code) {
+        return code
+      }
     }
 
     return 0
