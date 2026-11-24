@@ -48,6 +48,11 @@ export default abstract class JoltCommand extends Command {
   getRequiredConfig(): string[] {
     return this.requiredConfig
   }
+
+  getProxyArgs(): string[] {
+    return []
+  }
+
   private async validateRequiredConfig(): Promise<number | undefined> {
     if (process.env.JOLT_IGNORE_REQUIRED_CONFIG) {
       return undefined
@@ -91,7 +96,14 @@ export default abstract class JoltCommand extends Command {
   }
 
   async execute(): Promise<number | undefined> {
-    const { stderr } = this.context
+    const { stderr, stdout } = this.context
+    const [firstProxyArg] = this.getProxyArgs()
+
+    if (firstProxyArg === '-h' || firstProxyArg === '--help') {
+      stdout.write(this.cli.usage(this, { detailed: true }))
+      return 0
+    }
+
     const config = await getConfig()
     this.config = config
 

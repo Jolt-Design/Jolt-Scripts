@@ -24,6 +24,10 @@ export class CmdCommand extends JoltCommand {
   quiet = Option.Boolean('-q,--quiet', false, { description: 'Suppress command execution output' })
   args = Option.Proxy()
 
+  getProxyArgs(): string[] {
+    return this.args
+  }
+
   async command(): Promise<number | undefined> {
     const {
       args,

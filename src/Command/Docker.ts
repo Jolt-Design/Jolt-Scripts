@@ -67,6 +67,10 @@ export class DockerBuildCommand extends DockerCommand {
 
   args = Option.Proxy()
 
+  getProxyArgs(): string[] {
+    return this.args
+  }
+
   async command(): Promise<number | undefined> {
     const {
       config,
