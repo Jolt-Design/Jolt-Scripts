@@ -967,9 +967,9 @@ export class ECSDeploySpecificCommand extends AWSCommand {
     description: 'Deploy a specific image tag to the ECS service',
     details: `
       Registers a new task definition revision with the first container's image changed to the given tag, then
-      deploys the service. The cluster, service and task definition family come from the Terraform outputs
-      \`ecs_cluster\`, \`ecs_service\` and \`ecs_task_definition\` (with a \`_dev\` suffix for \`--dev\`). Use it to
-      roll back to an earlier tag, such as a commit SHA created by \`docker push\`.
+      deploys the service as \`aws ecs deploy\` does, so the cluster and service come from the same config keys and
+      Terraform outputs. The task definition family comes from the Terraform output \`ecs_task_definition\`
+      (\`dev_ecs_task_definition\` with \`--dev\`). Use it to roll back to an earlier tag, such as a commit SHA created by \`docker push\`.
 
       Requires aws. Exits 1 if a Terraform output is missing.
     `,
@@ -989,9 +989,13 @@ export class ECSDeploySpecificCommand extends AWSCommand {
     } = this
 
     const awsCommand = await config.command('aws')
-    const cluster = await config.tfVar(dev ? 'ecs_cluster_dev' : 'ecs_cluster')
-    const service = await config.tfVar(dev ? 'ecs_service_dev' : 'ecs_service')
-    const family = await config.tfVar(dev ? 'ecs_task_definition_dev' : 'ecs_task_definition')
+    const cluster =
+      (await config.get(dev ? 'devEcsCluster' : 'ecsCluster')) ||
+      (await config.tfVar(dev ? 'dev_ecs_cluster' : 'ecs_cluster'))
+    const service =
+      (await config.get(dev ? 'devEcsService' : 'ecsService')) ||
+      (await config.tfVar(dev ? 'dev_ecs_service' : 'ecs_service'))
+    const family = await config.tfVar(dev ? 'dev_ecs_task_definition' : 'ecs_task_definition')
 
     if (!tag) {
       stderr.write(ansis.red('⛅ Image tag parameter must be specified\n'))
@@ -1080,6 +1084,12 @@ export class ECSDeploySpecificCommand extends AWSCommand {
     stdout.write(`${ansis.white('ECS Cluster:')} ${AWSConsoleUrlGenerator.ecsCluster(region, cluster)}\n`)
     stdout.write(`${ansis.white('ECS Service:')} ${AWSConsoleUrlGenerator.ecsService(region, cluster, service)}\n\n`)
 
-    return await cli.run(['aws', 'ecs', 'deploy'])
+    return await cli.run([
+      'aws',
+      'ecs',
+      'deploy',
+      ...(dev ? ['--dev'] : []),
+      ...(this.region ? ['--region', this.region] : []),
+    ])
   }
 }
