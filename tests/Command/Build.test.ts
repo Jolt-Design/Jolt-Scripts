@@ -56,7 +56,7 @@ describe('BuildCommand', () => {
       expect(mockContext.stdout.write).toHaveBeenCalledWith(
         expect.stringContaining('Found a configured image name (test-image) - assuming you wanted to build Docker.'),
       )
-      expect(mockCli.run).toHaveBeenCalledWith(['build', 'docker', ''], mockContext)
+      expect(mockCli.run).toHaveBeenCalledWith(['docker', 'build'], mockContext)
       expect(result).toBe(0)
     })
 
@@ -68,7 +68,7 @@ describe('BuildCommand', () => {
       expect(mockContext.stdout.write).toHaveBeenCalledWith(
         expect.stringContaining('Found a configured image name (test-image) - assuming you wanted to build Docker.'),
       )
-      expect(mockCli.run).toHaveBeenCalledWith(['build', 'docker', '--dev'], mockContext)
+      expect(mockCli.run).toHaveBeenCalledWith(['--dev', 'docker', 'build'], mockContext)
       expect(result).toBe(0)
     })
 

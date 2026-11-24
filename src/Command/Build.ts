@@ -35,8 +35,7 @@ export class BuildCommand extends JoltCommand {
         ansis.yellow(`Found a configured image name (${imageName}) - assuming you wanted to build Docker.\n\n`),
       )
 
-      const args = ['build', 'docker']
-      args.push(dev ? '--dev' : '')
+      const args = dev ? ['--dev', 'docker', 'build'] : ['docker', 'build']
       return await this.cli.run(args, context)
     }
 
