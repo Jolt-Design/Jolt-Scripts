@@ -55,6 +55,7 @@ describe('LogsTailCommand', () => {
             stdout: mockStdout,
             stderr: mockStderr,
           }),
+          reject: false,
         },
       )
     })

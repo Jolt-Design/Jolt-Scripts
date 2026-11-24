@@ -367,7 +367,7 @@ export class LogsTailCommand extends AWSCommand {
     awsArgs: string[],
     context: BaseContext,
   ): Promise<number | undefined> {
-    const result = await execC(command, awsArgs, { context })
+    const result = await execC(command, awsArgs, { context, reject: false })
     return result.exitCode
   }
 }

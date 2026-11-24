@@ -110,7 +110,7 @@ export class DockerBuildCommand extends DockerCommand {
     const command = [dockerCommand, ...args].join(' ')
     stdout.write(`Running command: ${config.redact(command)}\n`)
 
-    const result = await execC(dockerCommand, args, { context })
+    const result = await execC(dockerCommand, args, { context, reject: false })
 
     return result.exitCode
   }

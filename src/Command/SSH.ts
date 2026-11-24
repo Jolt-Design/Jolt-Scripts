@@ -41,7 +41,7 @@ export class SSHCommand extends JoltCommand {
 
     // sshAccount is guaranteed to exist due to getRequiredConfig() validation
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x)))
-    const result = await execC(sshCommand, [sshAccount as string, ...parsedArgs], { context })
+    const result = await execC(sshCommand, [sshAccount as string, ...parsedArgs], { context, reject: false })
     return result.exitCode
   }
 }
@@ -108,7 +108,7 @@ export class RsyncCommand extends JoltCommand {
     const parsedArgs = await Promise.all(args.map((x) => config.parseArg(x, params)))
     const fullArgs = [`--rsh="${sshCommand} -p${sshPort}"`, '-av', dryRunArg, ...parsedArgs]
     stdout.write(ansis.blue(`Running command: ${config.redact(`${rsyncCommand} ${fullArgs.join(' ')}`)}...\n`))
-    const result = await execC(rsyncCommand, fullArgs, { context })
+    const result = await execC(rsyncCommand, fullArgs, { context, reject: false })
 
     return result.exitCode
   }

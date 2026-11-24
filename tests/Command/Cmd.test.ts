@@ -85,6 +85,16 @@ describe('CmdCommand', () => {
 
       expect(result).toBe(1)
     })
+
+    it("should pass on the command's exit code without throwing", async () => {
+      command.args = ['sh', '-c', 'exit 3']
+      vi.mocked(execC).mockResolvedValue({ exitCode: 3 } as any)
+
+      const result = await command.command()
+
+      expect(result).toBe(3)
+      expect(execC).toHaveBeenCalledWith('sh', ['-c', 'exit 3'], expect.objectContaining({ reject: false }))
+    })
   })
 
   describe('argument parsing', () => {

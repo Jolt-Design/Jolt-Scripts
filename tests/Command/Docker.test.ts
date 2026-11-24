@@ -159,6 +159,7 @@ describe('DockerBuildCommand', () => {
 
       expect(execCMock).toHaveBeenCalledWith('docker', expect.arrayContaining(['buildx', 'build', '-t test-image']), {
         context: command.context,
+        reject: false,
       })
       expect(result).toBe(0)
     })
