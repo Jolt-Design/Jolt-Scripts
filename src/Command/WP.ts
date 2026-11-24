@@ -133,6 +133,10 @@ export class WPCLICommand extends JoltCommand {
 
   wpArgs = Option.Proxy()
 
+  getProxyArgs(): string[] {
+    return this.wpArgs
+  }
+
   async command(): Promise<number | undefined> {
     const {
       config,

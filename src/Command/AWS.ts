@@ -252,6 +252,10 @@ export class LogsTailCommand extends AWSCommand {
   clean = Option.Boolean('--clean', false, { description: 'Filter out repetitive log entries' })
   args = Option.Proxy()
 
+  getProxyArgs(): string[] {
+    return this.args
+  }
+
   async command(): Promise<number | undefined> {
     const { config, context, clean } = this
     const group = await config.parseArg(this.group)

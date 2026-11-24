@@ -29,6 +29,10 @@ export class SSHCommand extends JoltCommand {
     return this.dev ? ['devSshAccount'] : ['sshAccount']
   }
 
+  getProxyArgs(): string[] {
+    return this.args
+  }
+
   async command(): Promise<number | undefined> {
     const { args, config, context, dev } = this
 
@@ -70,6 +74,10 @@ export class RsyncCommand extends JoltCommand {
 
   getRequiredConfig(): string[] {
     return this.dev ? ['devSshAccount'] : ['sshAccount']
+  }
+
+  getProxyArgs(): string[] {
+    return this.args
   }
 
   async command(): Promise<number | undefined> {
