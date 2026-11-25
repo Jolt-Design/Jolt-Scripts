@@ -1247,14 +1247,40 @@ describe('WPUpdateCommand', () => {
         .mockResolvedValueOnce('$ jolt wp cli core version\n6.3.2')
       vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '' })
       vi.spyOn(command, 'createBranch').mockResolvedValue('joltWpUpdate/test-branch')
+      vi.mocked(execC).mockImplementation((async (_cmd: string, args: string[]) => ({
+        stdout: args[0] === 'ls-files' ? 'wp/wp-admin/new.php\0wp/wp-content/themes/twentytwentysix/style.css\0' : '',
+        exitCode: 0,
+      })) as any)
 
       const result = await command.maybeUpdateCore(wpConfig, branchRef)
 
       expect(result).toEqual({ updated: true, details: { fromVersion: '6.3.1', toVersion: '6.3.2' } })
       expect(gitCalls()).toEqual([
-        ['add', 'wp'],
+        ['add', '-u', '--', 'wp'],
+        [
+          'ls-files',
+          '--others',
+          '--exclude-standard',
+          '-z',
+          '--',
+          'wp/wp-admin',
+          'wp/wp-includes',
+          ':(glob)wp/wp-content/themes/twenty*/**',
+        ],
+        ['add', '--', 'wp/wp-admin/new.php', 'wp/wp-content/themes/twentytwentysix/style.css'],
         ['commit', '-m', 'Update WordPress to 6.3.2'],
       ])
+    })
+
+    it('should not run git add for new files when there are none', async () => {
+      vi.spyOn(command, 'getCurrentCoreVersion').mockResolvedValueOnce('6.3.1').mockResolvedValueOnce('6.3.2')
+      vi.spyOn(command, 'executeWpCli').mockResolvedValue({ exitCode: 0, stdout: '' })
+      vi.spyOn(command, 'createBranch').mockResolvedValue('joltWpUpdate/test-branch')
+      vi.mocked(execC).mockImplementation((async () => ({ stdout: '', exitCode: 0 })) as any)
+
+      await command.maybeUpdateCore(wpConfig, branchRef)
+
+      expect(gitCalls().map(([subcommand]) => subcommand)).toEqual(['add', 'ls-files', 'commit'])
     })
   })
 
@@ -1482,7 +1508,9 @@ describe('WPUpdateCommand', () => {
       .mockResolvedValueOnce(mockTranslationResult as any) // core language update
       .mockResolvedValueOnce(mockTranslationResult as any) // plugin language update
       .mockResolvedValueOnce(mockTranslationResult as any) // theme language update
-      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git add
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git add -u
+      .mockResolvedValueOnce({ stdout: 'wp/wp-content/languages/a.mo\0', stderr: '', exitCode: 0 } as any) // git ls-files
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git add new files
       .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 } as any) // git diff --cached (has changes)
       .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 } as any) // git commit
 

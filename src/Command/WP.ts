@@ -1060,7 +1060,31 @@ export class WPUpdateCommand extends JoltCommand {
     await execC(gitCommand, ['reset', 'HEAD', '--', path])
   }
 
-  private async doCoreUpdate(path: string, version: string, branchRef: BranchRef): Promise<string | null> {
+  /**
+   * Stage tracked changes under wpRoot, plus untracked files only under newFilePaths, so stray files such as
+   * wp-content/upgrade/index.php are never committed
+   */
+  private async stageChanges(gitCommand: string, wpRoot: string, newFilePaths: string[]): Promise<void> {
+    await execC(gitCommand, ['add', '-u', '--', wpRoot])
+
+    // git add fails when a pathspec matches nothing, so list the new files first. shell: false keeps `*` literal
+    const listed = await execC(
+      gitCommand,
+      ['ls-files', '--others', '--exclude-standard', '-z', '--', ...newFilePaths],
+      {
+        shell: false,
+      },
+    )
+    const newFiles = String(listed.stdout || '')
+      .split('\0')
+      .filter(Boolean)
+
+    if (newFiles.length > 0) {
+      await execC(gitCommand, ['add', '--', ...newFiles], { shell: false })
+    }
+  }
+
+  private async doCoreUpdate(wpRoot: string, version: string, branchRef: BranchRef): Promise<string | null> {
     const { config } = this
 
     const updateResult = await this.executeWpCli(['core', 'update'], { silent: true })
@@ -1080,7 +1104,11 @@ export class WPUpdateCommand extends JoltCommand {
     await this.ensureBranchCreated(branchRef)
 
     const gitCommand = await config.command('git')
-    await execC(gitCommand, ['add', path])
+    await this.stageChanges(gitCommand, wpRoot, [
+      path.join(wpRoot, 'wp-admin'),
+      path.join(wpRoot, 'wp-includes'),
+      `:(glob)${path.join(wpRoot, 'wp-content', 'themes', 'twenty*', '**')}`,
+    ])
 
     const commitMessage = this.sanitizeCommitMessage(`Update WordPress to ${version}`)
     await execC(gitCommand, ['commit', '-m', commitMessage], {
@@ -1136,8 +1164,7 @@ export class WPUpdateCommand extends JoltCommand {
 
         const gitCommand = await config.command('git')
 
-        // Add all language files that might have been updated
-        await execC(gitCommand, ['add', wpConfig.wpRoot])
+        await this.stageChanges(gitCommand, wpConfig.wpRoot, [path.join(wpConfig.wpRoot, 'wp-content', 'languages')])
 
         // Check if there are any changes to commit
         const statusResult = await execC(gitCommand, ['diff', '--cached', '--exit-code'], {
