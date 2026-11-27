@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>Jolt-Design/Renovate-Config"],
+  "extends": ["github>Jolt-Design/Renovate-Config", "github>Jolt-Design/Renovate-Config:automerge-biome"],
   "ignorePaths": ["**/.yarn/**"],
   "packageRules": [
     {
